@@ -10,8 +10,7 @@ export const ADMIN_EMAILS = [
   // 'admin@example.com',  // 已註解掉的範例 email
   // 'admin@yourdomain.com', // 已註解掉的範例 email
   
-  // TODO: 請在這裡添加實際的管理員 email
-  // 範例：'your-admin@yourdomain.com',
+  'nonstopjazz@gmail.com',  // 您的管理員 email
   
   // 注意：在生產環境中，建議使用環境變數來管理這些設定
   // 例如：process.env.ADMIN_EMAILS?.split(',') || []

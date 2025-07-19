@@ -3,13 +3,21 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Shield, AlertTriangle } from 'lucide-react'
+import CaptchaVerification from '@/components/CaptchaVerification'
+import { recordAttempt, logSecurityEvent, checkRateLimit } from '@/lib/rate-limiter'
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [securityWarning, setSecurityWarning] = useState('')
+  const [requireCaptcha, setRequireCaptcha] = useState(false)
+  const [captchaValid, setCaptchaValid] = useState(false)
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [blockTime, setBlockTime] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,7 +28,7 @@ export default function AuthPage() {
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect')
 
-  // 🔧 新增：檢查是否已經登入
+  // 🔧 新增：檢查是否已經登入和安全狀態
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -38,7 +46,38 @@ export default function AuthPage() {
     }
 
     checkAuth()
+    checkSecurityStatus()
   }, [redirectUrl])
+
+  // 🔒 檢查安全狀態
+  const checkSecurityStatus = async () => {
+    try {
+      // 檢查當前 IP 的登入嘗試狀態
+      const clientIP = await getClientIP()
+      const { allowed, remainingAttempts } = checkRateLimit(clientIP, 'LOGIN_ATTEMPTS')
+      
+      if (!allowed) {
+        setIsBlocked(true)
+        setSecurityWarning('由於多次登入失敗，您的 IP 已被暫時封鎖。請稍後再試。')
+      } else if (remainingAttempts && remainingAttempts <= 2) {
+        setRequireCaptcha(true)
+        setSecurityWarning(`還有 ${remainingAttempts} 次嘗試機會，請小心輸入。`)
+      }
+    } catch (error) {
+      console.error('Security check error:', error)
+    }
+  }
+
+  // 獲取客戶端 IP（簡化版本）
+  const getClientIP = async () => {
+    try {
+      const response = await fetch('/api/debug/ip')
+      const data = await response.json()
+      return data.ip || 'unknown'
+    } catch {
+      return 'unknown'
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -49,9 +88,22 @@ export default function AuthPage() {
     if (error) setError('')
   }
 
-  // 🔧 修復：使用 Supabase Auth 登入
+  // 🔧 修復：使用 Supabase Auth 登入（加強安全版本）
   const handleLogin = async (email: string, password: string) => {
+    const clientIP = await getClientIP()
+    
     try {
+      // 檢查速率限制
+      const { allowed } = checkRateLimit(clientIP, 'LOGIN_ATTEMPTS')
+      if (!allowed) {
+        throw new Error('登入嘗試次數過多，請稍後再試')
+      }
+
+      // 如果需要驗證碼但未通過驗證
+      if (requireCaptcha && !captchaValid) {
+        throw new Error('請完成驗證碼驗證')
+      }
+
       const { supabase } = await import('@/lib/supabase')
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -60,8 +112,29 @@ export default function AuthPage() {
       })
 
       if (error) {
+        // 記錄失敗嘗試
+        recordAttempt(clientIP, 'LOGIN_ATTEMPTS', false)
+        logSecurityEvent(clientIP, 'login', false, navigator.userAgent)
+        
+        setLoginAttempts(prev => prev + 1)
+        
+        // 增加失敗次數後檢查是否需要驗證碼
+        if (loginAttempts >= 2) {
+          setRequireCaptcha(true)
+          setSecurityWarning('由於多次登入失敗，現在需要完成驗證碼驗證')
+        }
+        
         throw new Error(error.message)
       }
+
+      // 記錄成功登入
+      recordAttempt(clientIP, 'LOGIN_ATTEMPTS', true)
+      logSecurityEvent(clientIP, 'login', true, navigator.userAgent)
+      
+      // 清除安全警告
+      setSecurityWarning('')
+      setRequireCaptcha(false)
+      setLoginAttempts(0)
 
       return data.user
     } catch (error) {
@@ -97,6 +170,12 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // 檢查是否被封鎖
+    if (isBlocked) {
+      setError('您的 IP 已被暫時封鎖，請稍後再試')
+      return
+    }
+    
     if (!formData.email || !formData.password) {
       setError('請填寫所有必填欄位')
       return
@@ -104,6 +183,12 @@ export default function AuthPage() {
 
     if (!isLogin && !formData.fullName) {
       setError('請輸入姓名')
+      return
+    }
+
+    // 如果需要驗證碼但未通過驗證
+    if (requireCaptcha && !captchaValid) {
+      setError('請完成驗證碼驗證')
       return
     }
 
@@ -173,6 +258,34 @@ export default function AuthPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* 安全警告 */}
+          {securityWarning && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-start">
+                <Shield className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                <p className="text-sm text-yellow-800">{securityWarning}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 封鎖警告 */}
+          {isBlocked && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-start">
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-red-800 font-medium">帳戶暫時鎖定</p>
+                  <p className="text-sm text-red-700 mt-1">由於多次登入失敗，您的 IP 已被暫時封鎖。</p>
+                  {blockTime && (
+                    <p className="text-xs text-red-600 mt-1">
+                      解除時間：{new Date(blockTime).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 錯誤訊息 */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -257,6 +370,20 @@ export default function AuthPage() {
                 </button>
               </div>
             </div>
+
+            {/* 驗證碼 */}
+            {requireCaptcha && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  安全驗證
+                </label>
+                <CaptchaVerification
+                  onVerify={setCaptchaValid}
+                  required={requireCaptcha}
+                  size="medium"
+                />
+              </div>
+            )}
 
             {/* 提交按鈕 */}
             <div>
