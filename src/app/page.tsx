@@ -12,7 +12,8 @@ export default function Homepage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         
         // 檢查當前用戶
         const { data: { user } } = await supabase.auth.getUser();
@@ -36,7 +37,8 @@ export default function Homepage() {
 
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
       window.location.reload();

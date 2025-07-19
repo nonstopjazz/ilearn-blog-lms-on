@@ -14,7 +14,8 @@ export default function UserDebugPage() {
 
   const loadUserInfo = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
@@ -31,7 +32,8 @@ export default function UserDebugPage() {
 
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
       alert('已登出！');

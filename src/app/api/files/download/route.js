@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 export async function GET(request) {
   try {
     // 使用你現有的 Supabase 客戶端
-    const { supabase } = await import('@/lib/supabase')
+    const { getSupabase } = await import('@/lib/supabase');
+    const supabase = getSupabase();
     const { searchParams } = new URL(request.url)
     
     // 獲取參數

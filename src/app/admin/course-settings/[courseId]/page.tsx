@@ -537,7 +537,8 @@ const LessonEditor: React.FC<{
   const loadLessons = async () => {
     try {
       setLoading(true);
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       
       const { data, error } = await supabase
         .from('course_lessons')
@@ -593,7 +594,8 @@ const LessonEditor: React.FC<{
   const saveLessonToDatabase = async (lesson: CourseLesson) => {
     try {
       setSaving(true);
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
 
       const lessonData = {
         id: lesson.id,
@@ -652,7 +654,8 @@ const LessonEditor: React.FC<{
   const deleteLessonFromDatabase = async (lessonId: string) => {
     try {
       setSaving(true);
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
 
       const { error } = await supabase
         .from('course_lessons')
@@ -750,7 +753,8 @@ const LessonEditor: React.FC<{
     
     try {
       setSaving(true);
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
 
       const lesson1 = lessons[lessonIndex];
       const lesson2 = lessons[newIndex];
@@ -1303,7 +1307,8 @@ const CourseSettingsPage: React.FC = () => {
         return;
       }
 
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       
       // 🎯 從 courses 表格讀取實際資料
       const { data: courseData, error: courseError } = await supabase
@@ -1365,7 +1370,8 @@ const CourseSettingsPage: React.FC = () => {
       setSaving(true);
       setMessage('');
 
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       
       // 🎯 儲存到真實資料庫
       const { error } = await supabase

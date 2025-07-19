@@ -67,7 +67,8 @@ const BlogAdminEdit: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
       } catch (error) {
@@ -83,7 +84,8 @@ const BlogAdminEdit: React.FC = () => {
   // 登出處理
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
       router.push('/');

@@ -589,7 +589,8 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (!error && user) {
@@ -610,7 +611,8 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
     setError(null);
     
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       
       if (isDevelopment) console.log('🔍 開始查詢課程:', courseId);
 

@@ -32,7 +32,8 @@ function AuthContent() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase')
+        const { getSupabase } = await import('@/lib/supabase')
+        const supabase = getSupabase()
         const { data: { user } } = await supabase.auth.getUser()
         
         if (user) {
@@ -104,7 +105,8 @@ function AuthContent() {
         throw new Error('請完成驗證碼驗證')
       }
 
-      const { supabase } = await import('@/lib/supabase')
+      const { getSupabase } = await import('@/lib/supabase')
+      const supabase = getSupabase()
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -145,7 +147,8 @@ function AuthContent() {
   // 🔧 修復：使用 Supabase Auth 註冊
   const handleRegister = async (email: string, password: string, fullName: string) => {
     try {
-      const { supabase } = await import('@/lib/supabase')
+      const { getSupabase } = await import('@/lib/supabase')
+      const supabase = getSupabase()
       
       const { data, error } = await supabase.auth.signUp({
         email,

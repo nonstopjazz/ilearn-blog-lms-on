@@ -63,7 +63,8 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ params }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
       } catch (error) {
@@ -78,7 +79,8 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ params }) => {
 
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
       router.push('/auth');

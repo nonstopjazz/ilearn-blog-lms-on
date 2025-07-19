@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isAdmin, getUserRole, hasPermission, Permission, getRoutePermissionLevel } from '@/lib/security-config';
 
@@ -41,7 +41,7 @@ export default function AuthMiddleware({
         setError(null);
 
         // 獲取當前用戶
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await getSupabase().auth.getUser();
         
         if (userError) {
           console.error('認證錯誤:', userError);
@@ -94,7 +94,7 @@ export default function AuthMiddleware({
     };
 
     // 監聽認證狀態變化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange(
       async (event, session) => {
         console.log('認證狀態變化:', event, session?.user?.id);
         

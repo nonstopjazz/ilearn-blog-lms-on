@@ -46,7 +46,8 @@ export default function UserReminderPreferencesPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
       } catch (error) {
@@ -62,7 +63,8 @@ export default function UserReminderPreferencesPage() {
   // 登出處理
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
       window.location.href = '/';
@@ -83,7 +85,8 @@ export default function UserReminderPreferencesPage() {
       setLoading(true);
       
       // 獲取 Supabase session token
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       
       const headers: HeadersInit = {};
@@ -114,7 +117,8 @@ export default function UserReminderPreferencesPage() {
     setSaving(true);
     try {
       // 獲取 Supabase session token
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       
       const headers: HeadersInit = {
@@ -170,7 +174,8 @@ export default function UserReminderPreferencesPage() {
       }));
 
       // 獲取 Supabase session token
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       
       const headers: HeadersInit = {

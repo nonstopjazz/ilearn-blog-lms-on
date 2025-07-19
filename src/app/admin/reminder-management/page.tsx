@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, Plus, Edit2, Trash2, Save, AlertCircle, CheckCircle, Clock, Mail, Smartphone, Monitor, Filter, Search, BookOpen, Settings, Users, Activity, Send, Eye, Play, BarChart, RefreshCw, Zap } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 interface Course {
   id: string;
@@ -103,7 +103,7 @@ export default function AdminReminderManagementPage() {
   // 🔧 修復：獲取 Supabase 認證 token
   const getSupabaseAuthToken = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await getSupabase().auth.getSession();
       if (error) {
         console.error('獲取 session 失敗:', error);
         return null;
@@ -124,7 +124,7 @@ export default function AdminReminderManagementPage() {
   // 🔧 修復：檢查用戶認證狀態
   const checkAuthStatus = async () => {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const { data: { user }, error } = await getSupabase().auth.getUser();
       
       if (error) {
         console.error('獲取用戶失敗:', error);

@@ -112,7 +112,8 @@ const StudentQuizPage: React.FC = () => {
   const startQuiz = async () => {
     try {
       // 🔧 建立測驗嘗試記錄
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError) {

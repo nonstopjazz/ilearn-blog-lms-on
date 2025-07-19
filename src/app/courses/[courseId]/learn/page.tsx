@@ -274,7 +274,8 @@ export default function CourseLearnPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase')
+        const { getSupabase } = await import('@/lib/supabase')
+        const supabase = getSupabase()
         
         // 檢查當前用戶
         const { data: { user } } = await supabase.auth.getUser()
@@ -306,7 +307,8 @@ export default function CourseLearnPage() {
   // 🔧 修復：登出處理
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase')
+      const { getSupabase } = await import('@/lib/supabase')
+      const supabase = getSupabase()
       await supabase.auth.signOut()
       setUser(null)
     } catch (error) {

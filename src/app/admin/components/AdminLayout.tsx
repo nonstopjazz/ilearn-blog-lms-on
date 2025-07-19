@@ -23,7 +23,7 @@ import {
   User
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import AuthMiddleware from '@/lib/auth-middleware';
 
 interface AdminLayoutProps {
@@ -72,14 +72,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     // 獲取當前用戶
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getSupabase().auth.getUser();
       setUser(user);
     };
 
     getCurrentUser();
 
     // 監聽認證狀態變化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
     });
 
@@ -101,7 +101,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await getSupabase().auth.signOut();
       window.location.href = '/';
     } catch (error) {
       console.error('登出失敗:', error);

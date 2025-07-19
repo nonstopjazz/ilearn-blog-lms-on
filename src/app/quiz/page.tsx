@@ -48,7 +48,8 @@ const QuizListPage: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase');
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
         
         // 檢查當前用戶
         const { data: { user } } = await supabase.auth.getUser();
@@ -77,7 +78,8 @@ const QuizListPage: React.FC = () => {
   // 🔧 修復：Supabase Auth 登出處理
   const handleSignOut = async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
+      const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
       await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
@@ -119,7 +121,8 @@ const QuizListPage: React.FC = () => {
       const quizSetsWithCount = await Promise.all(
         result.quizSets.map(async (quiz: QuizSet) => {
           try {
-            const { supabase } = await import('@/lib/supabase');
+            const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
             const { count } = await supabase
               .from('quiz_questions')
               .select('*', { count: 'exact', head: true })
