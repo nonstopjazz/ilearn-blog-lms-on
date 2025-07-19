@@ -34,3 +34,14 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 📋 開發規範
+
+### Course ID 格式
+- 統一使用 `course_XXX` 格式（三位數字）
+- 詳細規範請參考：[Course ID Standards](./docs/course-id-standards.md)
+
+### 當前課程 ID 範圍
+- course_001 ~ course_003：原始課程
+- course_011 ~ course_015：轉換後課程
+- 下一個新課程：course_016

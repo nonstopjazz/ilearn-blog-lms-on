@@ -1,0 +1,86 @@
+列出磁碟區 OS 的資料夾 PATH
+磁碟區序號為 F476-C82E
+C:\USERS\USER\ILEARN-BLOG-LMS\SRC\APP
+|   favicon.ico
+|   globals.css
+|   layout.tsx
+|   page.tsx
+|   
++---admin
+|   +---courses
+|   |       page.tsx
+|   |       
+|   +---quiz-analytics
+|   |       page.tsx
+|   |       
+|   +---quiz-create
+|   |       page.tsx
+|   |       
+|   +---quiz-results
+|   |       page.tsx
+|   |       
+|   +---quiz-settings
+|   |       page.tsx
+|   |       
+|   +---quiz-upload
+|   |       page.tsx
+|   |       
+|   \---requests
+|           page.tsx
+|           
++---api
+|   +---course-requests
+|   |       route.ts
+|   |       
+|   +---notifications
+|   |       route.ts
+|   |       
+|   +---orders
+|   |       route.ts
+|   |       
+|   \---quiz
+|       +---create
+|       |       route.js
+|       |       
+|       +---results
+|       |       route.js
+|       |       
+|       +---take
+|       |   \---[quizId]
+|       |           route.js
+|       |           
+|       \---upload
+|               route.js
+|               
++---auth
+|       page.tsx
+|       
++---courses
+|   |   page.tsx
+|   |   
+|   \---[courseId]
+|       |   page.tsx
+|       |   
+|       \---learn
+|               page.tsx
+|               
++---debug
+|   \---user
+|           page.tsx
+|           
++---my-courses
+|       page.tsx
+|       
++---quiz
+|   |   page.tsx
+|   |   
+|   \---[quizId]
+|           page.tsx
+|           
++---student
+|   \---results
+|           page.tsx
+|           
+\---test
+        page.tsx
+        

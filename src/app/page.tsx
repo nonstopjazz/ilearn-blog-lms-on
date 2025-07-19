@@ -1,32 +1,53 @@
-import React from 'react';
-import { Play, Star, Users, Clock, CheckCircle, ArrowRight, BookOpen, Award, Shield } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Navbar from '@/components/Navbar';
+import { Play, Star, Users, Clock, CheckCircle, ArrowRight, BookOpen, Award, Shield, LogOut, User } from 'lucide-react';
 
 export default function Homepage() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+        
+        // 檢查當前用戶
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        
+        // 監聽認證狀態變化
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Auth error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      await supabase.auth.signOut();
+      setUser(null);
+      window.location.reload();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-lg border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">學習平台</span>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#" className="text-gray-700 hover:text-blue-600 transition-colors">課程</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 transition-colors">試聽</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 transition-colors">Blog</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 transition-colors">關於我們</a>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="text-blue-600 hover:text-blue-800 font-medium">登入</button>
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                開始學習
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar user={user} onSignOut={handleSignOut} />
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
@@ -35,7 +56,7 @@ export default function Homepage() {
             <div>
               <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
                 <Star className="h-4 w-4 mr-2" />
-                台灣最專業的線上學習平台
+                Joe老師專為學生提供的線上學習平台
               </div>
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 掌握技能，
@@ -44,26 +65,26 @@ export default function Homepage() {
                 </span>
               </h1>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                專業講師團隊、實戰項目課程、完整學習路徑。
-                從基礎到進階，打造你的專業技能。
+                實戰項目課程、完整學習路徑。
+                從基礎到進階，打造你的英語實力。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <button className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 font-semibold">
-                  免費試聽課程
-                </button>
-                <button className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg hover:bg-blue-50 transition-colors font-semibold flex items-center justify-center">
-                  <Play className="h-5 w-5 mr-2" />
-                  觀看介紹影片
-                </button>
+                <Link href="/courses" className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 font-semibold text-center">
+                  瀏覽所有課程
+                </Link>
+                <Link href="/auth" className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg hover:bg-blue-50 transition-colors font-semibold flex items-center justify-center">
+                  <User className="h-5 w-5 mr-2" />
+                  免費註冊
+                </Link>
               </div>
               <div className="flex items-center space-x-8 text-sm text-gray-600">
                 <div className="flex items-center">
                   <Users className="h-5 w-5 mr-2" />
-                  10,000+ 學員
+                  1,000+ 學員
                 </div>
                 <div className="flex items-center">
                   <Star className="h-5 w-5 mr-2 text-yellow-500" />
-                  4.9 星評價
+                  5星評價
                 </div>
                 <div className="flex items-center">
                   <Award className="h-5 w-5 mr-2" />
@@ -72,17 +93,19 @@ export default function Homepage() {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg mb-6 flex items-center justify-center">
-                  <Play className="h-16 w-16 text-white" />
+              <Link href="/courses/course_011" className="block">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300 cursor-pointer">
+                  <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg mb-6 flex items-center justify-center">
+                    <Play className="h-16 w-16 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">JavaScript 完整課程</h3>
+                  <p className="text-gray-600 mb-2">從零基礎到專業開發者</p>
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>120 個單元</span>
+                    <span className="text-green-600 font-semibold">NT$ 2,999</span>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">JavaScript 完整課程</h3>
-                <p className="text-gray-600 mb-4">從零基礎到專業開發者</p>
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>120 個單元</span>
-                  <span className="text-green-600 font-semibold">NT$ 2,999</span>
-                </div>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
@@ -92,9 +115,9 @@ export default function Homepage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">為什麼選擇我們？</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Joe老師學生專屬園地</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              我們提供最完整的學習體驗，從課程設計到學習支援，每個細節都為你的成功而設計
+              提供最完整的學習體驗，從實體上課到線上課程，每個細節都為你的成功而設計
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -111,9 +134,9 @@ export default function Homepage() {
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4">互動學習社群</h3>
+              <h3 className="text-xl font-semibold mb-4">完整測驗題庫</h3>
               <p className="text-gray-600">
-                與同學討論、向講師發問，在學習路上你不會孤單
+                多練習題目、向老師發問，在學習路上你不會孤單
               </p>
             </div>
             <div className="text-center p-8 rounded-xl hover:shadow-lg transition-shadow">
@@ -133,8 +156,8 @@ export default function Homepage() {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">免費試聽課程</h2>
-            <p className="text-xl text-gray-600">體驗我們的教學品質，完全免費</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">目前提供給Joe老師的學生的課程</h2>
+            <p className="text-xl text-gray-600">符合資格的學員可提出申請</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -143,21 +166,24 @@ export default function Homepage() {
                 description: "網頁設計入門必學",
                 duration: "2 小時",
                 students: "5,200+",
-                image: "bg-gradient-to-br from-orange-400 to-red-500"
+                image: "bg-gradient-to-br from-orange-400 to-red-500",
+                courseId: "course_012"
               },
               {
-                title: "JavaScript 入門",
-                description: "程式設計第一步",
+                title: "JavaScript 完整課程",
+                description: "從零基礎到專業開發者",
                 duration: "3 小時",
                 students: "8,100+",
-                image: "bg-gradient-to-br from-yellow-400 to-orange-500"
+                image: "bg-gradient-to-br from-yellow-400 to-orange-500",
+                courseId: "course_011"
               },
               {
-                title: "React 基礎概念",
-                description: "現代前端框架",
+                title: "React 進階開發",
+                description: "現代前端框架深度學習",
                 duration: "2.5 小時",
                 students: "3,600+",
-                image: "bg-gradient-to-br from-blue-400 to-cyan-500"
+                image: "bg-gradient-to-br from-blue-400 to-cyan-500",
+                courseId: "course_013"
               }
             ].map((course, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
@@ -177,12 +203,19 @@ export default function Homepage() {
                       {course.students}
                     </div>
                   </div>
-                  <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                  <Link href={`/courses/${course.courseId}`} className="block w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-center">
                     立即試聽
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
+          </div>
+          
+          <div className="text-center mt-12">
+            <Link href="/courses" className="inline-flex items-center bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors font-semibold border-2 border-blue-600">
+              查看所有課程
+              <ArrowRight className="h-5 w-5 ml-2" />
+            </Link>
           </div>
         </div>
       </section>
@@ -218,13 +251,13 @@ export default function Homepage() {
             準備好開始你的學習旅程了嗎？
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            加入我們，與上萬名學員一起成長，掌握未來所需的技能
+            Joe老師的學生請點擊課程申請，老師會放行
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center justify-center">
+            <Link href="/auth" className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center justify-center">
               免費註冊
               <ArrowRight className="h-5 w-5 ml-2" />
-            </button>
+            </Link>
             <button className="border-2 border-white text-white px-8 py-4 rounded-lg hover:bg-white hover:text-blue-600 transition-colors font-semibold">
               聯絡我們
             </button>
@@ -248,28 +281,28 @@ export default function Homepage() {
             <div>
               <h3 className="font-semibold mb-4">課程分類</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">程式設計</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">數據分析</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">設計創意</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">商業技能</a></li>
+                <li><Link href="/courses?category=programming" className="hover:text-white transition-colors">程式設計</Link></li>
+                <li><Link href="/courses?category=data" className="hover:text-white transition-colors">數據分析</Link></li>
+                <li><Link href="/courses?category=design" className="hover:text-white transition-colors">設計創意</Link></li>
+                <li><Link href="/courses?category=business" className="hover:text-white transition-colors">商業技能</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">支援</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">幫助中心</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">聯絡我們</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">常見問題</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">學習指南</a></li>
+                <li><Link href="/help" className="hover:text-white transition-colors">幫助中心</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">聯絡我們</Link></li>
+                <li><Link href="/faq" className="hover:text-white transition-colors">常見問題</Link></li>
+                <li><Link href="/guide" className="hover:text-white transition-colors">學習指南</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">關於</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">關於我們</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">講師合作</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">隱私政策</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">服務條款</a></li>
+                <li><Link href="/about" className="hover:text-white transition-colors">關於我們</Link></li>
+                <li><Link href="/instructor" className="hover:text-white transition-colors">講師合作</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">隱私政策</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">服務條款</Link></li>
               </ul>
             </div>
           </div>
