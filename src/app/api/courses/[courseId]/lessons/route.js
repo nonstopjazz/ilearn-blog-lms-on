@@ -33,7 +33,7 @@ export async function GET(request, { params }) {
 
     console.log('✅ 找到課程:', course.title);
 
-    // 獲取課程單元
+    // 獲取課程單元（包含附件）
     const { data: lessons, error: lessonsError } = await supabase
       .from('course_lessons')
       .select(`
@@ -49,6 +49,7 @@ export async function GET(request, { params }) {
         order_index,
         is_preview,
         is_published,
+        attachments,
         created_at,
         updated_at
       `)
@@ -64,6 +65,16 @@ export async function GET(request, { params }) {
     }
 
     console.log(`✅ 找到 ${lessons?.length || 0} 個課程單元`);
+    
+    // 記錄附件資訊
+    if (lessons && lessons.length > 0) {
+      const attachmentCounts = lessons.map(lesson => ({
+        title: lesson.title,
+        attachmentCount: lesson.attachments ? 
+          (Array.isArray(lesson.attachments) ? lesson.attachments.length : 0) : 0
+      }));
+      console.log('📎 各單元附件數量:', attachmentCounts);
+    }
 
     // 即使沒有課程單元，也要返回成功，讓前端處理
     // 如果提供了 user_id，獲取使用者的學習進度
@@ -99,6 +110,8 @@ export async function GET(request, { params }) {
         
         return {
           ...lesson,
+          // 確保 attachments 欄位存在（即使是 null 或空陣列）
+          attachments: lesson.attachments || [],
           user_progress: progress ? {
             user_id: userId,
             lesson_id: lesson.id,

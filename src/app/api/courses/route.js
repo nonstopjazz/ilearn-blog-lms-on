@@ -36,8 +36,36 @@ export async function GET(request) {
       }, { status: 500 });
     }
 
+    // 📊 統計每個課程的真實學員人數（已核准的申請）
+    const courseIds = courses ? courses.map(course => course.id) : [];
+    
+    // 查詢所有已核准的課程申請
+    const { data: enrollmentStats, error: statsError } = await supabase
+      .from('course_requests')
+      .select('course_id')
+      .eq('status', 'approved')
+      .in('course_id', courseIds);
+
+    if (statsError) {
+      console.error('統計學員人數失敗:', statsError);
+    }
+
+    // 計算每個課程的學員人數
+    const enrollmentCounts = {};
+    if (enrollmentStats) {
+      enrollmentStats.forEach(request => {
+        enrollmentCounts[request.course_id] = (enrollmentCounts[request.course_id] || 0) + 1;
+      });
+    }
+
+    // 將真實學員人數加入課程資料
+    const coursesWithEnrollment = courses ? courses.map(course => ({
+      ...course,
+      enrolled_count: enrollmentCounts[course.id] || 0
+    })) : [];
+
     // 應用搜尋篩選 - 修復：使用存在的欄位
-    let filteredCourses = courses || [];
+    let filteredCourses = coursesWithEnrollment;
     if (search) {
       filteredCourses = filteredCourses.filter(course =>
         course.title.toLowerCase().includes(search.toLowerCase()) ||
