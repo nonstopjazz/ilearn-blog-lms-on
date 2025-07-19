@@ -10,9 +10,17 @@ export async function POST(request) {
   try {
     const { quiz_set_id, started_at, user_id } = await request.json();
     
+    console.log('接收到的參數:', { quiz_set_id, started_at, user_id });
+    
     if (!quiz_set_id || !started_at) {
       return Response.json({ 
         error: '缺少必要欄位' 
+      }, { status: 400 });
+    }
+
+    if (!user_id) {
+      return Response.json({ 
+        error: '需要用戶 ID 才能開始測驗' 
       }, { status: 400 });
     }
 
@@ -21,13 +29,15 @@ export async function POST(request) {
       .from('quiz_attempts')
       .insert({
         quiz_set_id: quiz_set_id,
-        user_id: user_id || null, // 使用傳入的 user_id
+        user_id: user_id,
         started_at: started_at,
         status: 'in_progress'
         // created_at 會自動設置
       })
       .select()
       .single();
+      
+    console.log('創建的嘗試記錄:', attempt);
 
     if (error) {
       console.error('建立測驗嘗試記錄失敗:', error);

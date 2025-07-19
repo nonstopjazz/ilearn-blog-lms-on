@@ -113,7 +113,18 @@ const StudentQuizPage: React.FC = () => {
     try {
       // 🔧 建立測驗嘗試記錄
       const { supabase } = await import('@/lib/supabase');
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('獲取用戶失敗:', userError);
+        throw new Error('請重新登入');
+      }
+      
+      if (!user) {
+        throw new Error('請先登入後再開始測驗');
+      }
+      
+      console.log('開始測驗 - 用戶 ID:', user.id);
       
       const response = await fetch('/api/quiz/attempt', {
         method: 'POST',
@@ -122,7 +133,7 @@ const StudentQuizPage: React.FC = () => {
         },
         body: JSON.stringify({
           quiz_set_id: quizId,
-          user_id: user?.id || null,
+          user_id: user.id,
           started_at: new Date().toISOString()
         }),
       });
@@ -568,7 +579,10 @@ const StudentQuizPage: React.FC = () => {
 
           <div className="space-x-4">
             <button
-              onClick={() => window.location.href = '/quiz'}
+              onClick={() => {
+                // 清除快取並回到測驗列表
+                window.location.href = '/quiz?refresh=' + Date.now();
+              }}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               回到測驗列表

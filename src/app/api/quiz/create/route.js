@@ -212,16 +212,22 @@ export async function GET(request) {
         let remainingAttempts = quiz.max_attempts;
         
         if (userId) {
+          console.log(`查詢用戶 ${userId} 在測驗 ${quiz.id} 的嘗試次數`);
+          
           const { data: attempts, error: attemptsError } = await supabase
             .from('quiz_attempts')
-            .select('id')
+            .select('id, status, completed_at')
             .eq('quiz_set_id', quiz.id)
             .eq('user_id', userId)
             .eq('status', 'completed');
           
-          if (!attemptsError && attempts) {
-            userAttemptCount = attempts.length;
+          if (attemptsError) {
+            console.error(`查詢嘗試次數失敗:`, attemptsError);
+          } else {
+            userAttemptCount = attempts?.length || 0;
             remainingAttempts = quiz.max_attempts - userAttemptCount;
+            console.log(`測驗 ${quiz.title}: 已嘗試 ${userAttemptCount} 次，剩餘 ${remainingAttempts} 次`);
+            console.log(`嘗試記錄:`, attempts);
           }
         }
         
