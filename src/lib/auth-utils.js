@@ -1,10 +1,6 @@
 // src/lib/auth-utils.js
 import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 /**
  * 從請求中獲取當前用戶
@@ -21,6 +17,12 @@ export async function getCurrentUser(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    
+    // 獲取 Supabase 客戶端
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return { user: null, error: 'Supabase 初始化失敗' };
+    }
     
     // 驗證 JWT token 並獲取用戶資訊
     const { data: { user }, error } = await supabase.auth.getUser(token);
@@ -51,7 +53,11 @@ export async function getCurrentUserFromCookies(request) {
       return { user: null, error: null };
     }
 
-    // 創建客戶端用於解析 cookies
+    // 獲取 Supabase 客戶端（注意：這裡使用 anon key）
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return { user: null, error: 'Supabase 環境變數缺失' };
+    }
+    
     const supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

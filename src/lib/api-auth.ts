@@ -2,10 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { isAdmin, getUserRole, hasPermission, Permission } from '@/lib/security-config';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// 延遲初始化 Supabase 客戶端
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing Supabase environment variables');
+    return null;
+  }
+  
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 /**
  * 從請求中獲取並驗證用戶
@@ -20,6 +28,13 @@ export async function authenticateRequest(request: Request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    
+    // 獲取 Supabase 客戶端
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.error('API 認證失敗: Supabase client not available');
+      return { user: null, error: 'Authentication service unavailable' };
+    }
     
     // 驗證 token 並獲取用戶
     const { data: { user }, error } = await supabase.auth.getUser(token);
