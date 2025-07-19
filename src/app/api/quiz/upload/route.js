@@ -1,12 +1,7 @@
 // src/app/api/quiz/upload/route.js
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase-server';
 import AdmZip from 'adm-zip';
 import * as XLSX from 'xlsx';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 // 解析 Excel 檔案
 const parseExcelFile = (buffer) => {
@@ -358,6 +353,7 @@ const getQuestionType = (chineseType) => {
 
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const formData = await request.formData();
     
     const courseId = formData.get('courseId');

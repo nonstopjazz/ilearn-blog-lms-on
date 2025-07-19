@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// 建立 Supabase 客戶端
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 提交課程申請
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     console.log('=== 課程申請 API 開始 ===');
     
     const body = await req.json();
@@ -121,6 +117,7 @@ export async function POST(req: NextRequest) {
 // 查詢申請狀態
 export async function GET(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const courseId = searchParams.get('course_id');
@@ -186,6 +183,7 @@ export async function GET(req: NextRequest) {
 // 更新申請狀態（管理員用）
 export async function PATCH(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await req.json();
     const { request_id, status, admin_note } = body;
 

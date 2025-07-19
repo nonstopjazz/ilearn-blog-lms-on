@@ -1,14 +1,10 @@
 // src/app/api/courses/[courseId]/lessons/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 獲取課程的所有單元和使用者進度
 export async function GET(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { courseId } = params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');

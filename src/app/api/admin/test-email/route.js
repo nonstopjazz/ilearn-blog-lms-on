@@ -2,10 +2,18 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { sendTestEmail } from '@/lib/emailService';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// 延遲初始化 Supabase 客戶端
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing Supabase environment variables');
+    return null;
+  }
+  
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 // 檢查管理員權限
 async function checkAdminPermission(request) {
@@ -16,6 +24,12 @@ async function checkAdminPermission(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return { error: 'Supabase 初始化失敗', status: 500 };
+    }
+    
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {

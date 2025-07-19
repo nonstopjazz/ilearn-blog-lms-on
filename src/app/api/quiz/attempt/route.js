@@ -1,10 +1,5 @@
 // src/app/api/quiz/attempt/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(request) {
   try {
@@ -25,6 +20,7 @@ export async function POST(request) {
     }
 
     // 🔧 使用正確的欄位名稱
+    const supabase = getSupabaseClient();
     const { data: attempt, error } = await supabase
       .from('quiz_attempts')
       .insert({

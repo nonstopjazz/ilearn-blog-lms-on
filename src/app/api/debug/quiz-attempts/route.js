@@ -1,13 +1,9 @@
 // src/app/api/debug/quiz-attempts/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     // 檢查 quiz_attempts 表結構
     const { data: attempts, error } = await supabase
       .from('quiz_attempts')

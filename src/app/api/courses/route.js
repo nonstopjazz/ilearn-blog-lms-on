@@ -1,14 +1,10 @@
 // src/app/api/courses/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 獲取所有課程
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search');
@@ -60,6 +56,7 @@ export async function GET(request) {
 // 建立新課程
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const courseData = await request.json();
     console.log('收到的課程資料:', courseData);
 

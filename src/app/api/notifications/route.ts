@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// 建立 Supabase 客戶端
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 創建通知
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await req.json();
     const { user_id, title, message, type = 'info', action_url, action_text, metadata } = body;
 
@@ -60,6 +56,7 @@ export async function POST(req: NextRequest) {
 // 獲取通知列表
 export async function GET(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -103,6 +100,7 @@ export async function GET(req: NextRequest) {
 // 更新通知狀態
 export async function PATCH(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await req.json();
     const { notification_id, user_id, read, mark_all_read } = body;
 
@@ -172,6 +170,7 @@ export async function PATCH(req: NextRequest) {
 // 刪除通知
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await req.json();
     const { notification_id } = body;
 

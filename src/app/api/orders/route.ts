@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// 建立 Supabase 客戶端
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 創建訂單
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { course_id, course_title, user_id, amount, payment_method, user_info } = body;
 
@@ -107,6 +103,7 @@ export async function POST(request: NextRequest) {
 // 獲取用戶訂單
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
     const orderId = searchParams.get('order_id');
@@ -153,6 +150,7 @@ export async function GET(request: NextRequest) {
 // 更新訂單狀態
 export async function PATCH(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { order_id, status, payment_info } = body;
 

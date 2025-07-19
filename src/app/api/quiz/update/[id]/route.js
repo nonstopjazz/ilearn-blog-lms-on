@@ -1,13 +1,9 @@
 // src/app/api/quiz/update/[id]/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 export async function PUT(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { id } = params;
     
     if (!id) {

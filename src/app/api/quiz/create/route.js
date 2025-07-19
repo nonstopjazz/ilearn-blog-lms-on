@@ -1,11 +1,6 @@
 // src/app/api/quiz/create/route.js
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase-server';
 import { getCurrentUserFromCookies } from '@/lib/auth-utils';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 // 題型轉換
 const getQuestionType = (type) => {
@@ -20,6 +15,7 @@ const getQuestionType = (type) => {
 
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const { title, description, courseId, questions } = await request.json();
     
     // 驗證必要欄位

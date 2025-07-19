@@ -1,13 +1,9 @@
 // src/app/api/quiz/submit/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const { attempt_id, quiz_set_id, answers, score, completed_at } = await request.json();
     
     if (!attempt_id || !quiz_set_id || !answers || score === undefined || !completed_at) {

@@ -1,14 +1,10 @@
 // src/app/api/quiz/results/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 獲取所有測驗成績
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const quizId = searchParams.get('quizId');
     const status = searchParams.get('status'); // 'passed', 'failed', 'all'

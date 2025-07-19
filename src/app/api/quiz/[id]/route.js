@@ -1,14 +1,10 @@
 // src/app/api/quiz/[id]/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 獲取測驗詳細資料
 export async function GET(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { id } = params;
     
     if (!id) {
@@ -116,6 +112,7 @@ export async function GET(request, { params }) {
 // 更新測驗設定
 export async function PUT(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { id } = params;
     
     if (!id) {
@@ -183,6 +180,7 @@ export async function PUT(request, { params }) {
 // 刪除測驗
 export async function DELETE(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { id } = params;
     
     if (!id) {

@@ -1,14 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 // 檢查用戶認證
 async function checkUserAuth(request) {
   try {
+    const supabase = getSupabaseClient();
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return { error: '缺少認證資訊', status: 401 };
@@ -30,6 +26,7 @@ async function checkUserAuth(request) {
 // GET - 獲取用戶的提醒偏好設定
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -117,6 +114,7 @@ export async function GET(request) {
 // POST - 更新用戶提醒偏好
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
@@ -223,6 +221,7 @@ export async function POST(request) {
 // PUT - 批量更新用戶的提醒偏好
 export async function PUT(request) {
   try {
+    const supabase = getSupabaseClient();
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });

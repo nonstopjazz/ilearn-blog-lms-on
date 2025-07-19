@@ -1,14 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 // GET - 獲取用戶特定課程的提醒設定
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -43,6 +39,7 @@ export async function GET(request) {
 // POST - 建立或更新特定課程的提醒設定
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const {
       userId,
@@ -134,6 +131,7 @@ export async function POST(request) {
 // DELETE - 刪除特定課程的提醒設定
 export async function DELETE(request) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');

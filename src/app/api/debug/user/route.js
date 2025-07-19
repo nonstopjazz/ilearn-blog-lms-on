@@ -1,13 +1,9 @@
 // src/app/api/debug/user/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request) {
   try {
+    const supabase = getSupabaseClient();
     // 從 Authorization header 獲取 token
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);

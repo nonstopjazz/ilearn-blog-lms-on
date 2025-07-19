@@ -1,14 +1,10 @@
 // src/app/api/courses/[courseId]/route.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getSupabaseClient } from '@/lib/supabase-server';
 
 // 獲取單一課程
 export async function GET(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { courseId } = params;
 
     const { data: course, error } = await supabase
@@ -49,6 +45,7 @@ export async function GET(request, { params }) {
 // 更新課程
 export async function PUT(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { courseId } = params;
     const updateData = await request.json();
 
@@ -97,6 +94,7 @@ export async function PUT(request, { params }) {
 // 刪除課程
 export async function DELETE(request, { params }) {
   try {
+    const supabase = getSupabaseClient();
     const { courseId } = params;
 
     // 檢查是否有學員已註冊
