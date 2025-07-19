@@ -1,10 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// 延遲初始化 Supabase 客戶端
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing Supabase environment variables');
+    return null;
+  }
+  
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 // 🔧 修復：改進的管理員權限檢查
 async function checkAdminPermission(request) {
@@ -24,6 +32,12 @@ async function checkAdminPermission(request) {
     console.log('Token 開始:', token.substring(0, 50) + '...');
 
     // 🔧 修復：使用客戶端 supabase 來驗證 token
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.log('❌ Supabase 初始化失敗');
+      return { error: 'Supabase 初始化失敗', status: 500 };
+    }
+    
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     console.log('Supabase 用戶查詢結果:');
@@ -94,6 +108,11 @@ export async function GET(request) {
     }
 
     console.log('✅ 權限檢查通過，開始查詢提醒設定...');
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
 
     let query = supabase
       .from('admin_course_reminders')
@@ -181,6 +200,11 @@ export async function POST(request) {
 
     console.log('💾 準備儲存的資料:', reminderData);
 
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
+
     // 檢查是否已存在設定
     const { data: existing, error: checkError } = await supabase
       .from('admin_course_reminders')
@@ -256,6 +280,11 @@ export async function DELETE(request) {
       return NextResponse.json({ error: '缺少必要參數：courseId 和 reminderType' }, { status: 400 });
     }
 
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
+
     const { error } = await supabase
       .from('admin_course_reminders')
       .delete()
@@ -303,6 +332,11 @@ export async function PUT(request) {
 
     const results = [];
     const errors = [];
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
 
     for (const courseId of courseIds) {
       try {
