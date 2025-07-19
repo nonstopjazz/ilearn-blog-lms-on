@@ -1,6 +1,27 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// 延遲初始化 Resend 客戶端
+let resendInstance = null;
+
+function getResendClient() {
+  if (resendInstance) {
+    return resendInstance;
+  }
+  
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('Missing RESEND_API_KEY environment variable');
+    return null;
+  }
+  
+  try {
+    resendInstance = new Resend(apiKey);
+    return resendInstance;
+  } catch (error) {
+    console.error('Failed to initialize Resend:', error);
+    return null;
+  }
+}
 
 // Email 模板
 const emailTemplates = {
@@ -203,6 +224,12 @@ export async function sendReminderEmail({
     // 替換變數
     const subject = replaceVariables(template.subject, variables);
     const html = replaceVariables(template.html, variables);
+
+    // 獲取 Resend 客戶端
+    const resend = getResendClient();
+    if (!resend) {
+      return { success: false, error: 'Email 服務初始化失敗' };
+    }
 
     // 發送 Email
     const { data, error } = await resend.emails.send({
