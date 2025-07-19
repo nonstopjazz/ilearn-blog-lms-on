@@ -22,6 +22,11 @@ export function middleware(request: NextRequest) {
   const ip = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || 'unknown';
   
+  // 排除清除 IP 的路徑
+  if (pathname === '/api/security/clear-ip') {
+    return NextResponse.next();
+  }
+  
   // 檢查是否為可疑 IP
   if (isSuspiciousIP(ip)) {
     logSecurityEvent(ip, 'blocked_request', false, userAgent);

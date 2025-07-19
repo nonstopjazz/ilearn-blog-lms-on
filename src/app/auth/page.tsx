@@ -421,13 +421,6 @@ export default function AuthPage() {
             </p>
           </div>
 
-          {/* 🔧 新增：測試用帳號提示 */}
-          <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-xs text-blue-700">
-              <strong>測試提示：</strong>如果這是開發環境，請確保 Supabase 設定正確。<br/>
-              註冊後需要驗證信箱才能登入。
-            </p>
-          </div>
         </div>
       </div>
     </div>

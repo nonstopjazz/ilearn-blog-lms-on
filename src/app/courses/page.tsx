@@ -39,13 +39,19 @@ export default function CoursesPage() {
       setError(null)
       
       // 🔥 從真實 API 載入課程，只顯示已發布的課程
+      console.log('開始載入課程...')
       const response = await fetch('/api/courses?status=published')
       
+      console.log('API 回應狀態:', response.status)
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error('API 錯誤回應:', errorText)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
       }
       
       const result = await response.json()
+      console.log('API 回應資料:', result)
       
       if (result.success) {
         // 為了兼容性，添加一些前端需要的欄位

@@ -181,8 +181,8 @@ function detectAnomalousActivity(ip: string, action: string, success: boolean): 
     log => log.ip === ip && Date.now() - log.timestamp < 5 * 60 * 1000 // 5分鐘內
   );
   
-  // 檢測快速重複請求
-  if (recentLogs.length > 20) {
+  // 檢測快速重複請求（提高閾值避免誤判）
+  if (recentLogs.length > 100) {
     suspiciousIPs.add(ip);
     console.warn(`檢測到快速重複請求: ${ip}, 5分鐘內 ${recentLogs.length} 次請求`);
   }

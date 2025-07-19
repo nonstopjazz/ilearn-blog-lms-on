@@ -476,16 +476,8 @@ export default function CourseLearnPage() {
     loadCourseData()
   }, [courseId, user])
 
-  // 處理沒有課程單元的情況 - 重導向邏輯
-  useEffect(() => {
-    if (!loading && !lessons.length) {
-      const timer = setTimeout(() => {
-        window.location.href = `/courses/${courseId}`;
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loading, lessons.length, courseId])
+  // 處理沒有課程單元的情況 - 重導向邏輯（移除重複邏輯）
+  // 這個邏輯已移到下方的 render 部分，避免重複執行
 
   // 處理進度更新
   const handleProgressUpdate = async (progress: VideoProgress) => {
@@ -700,10 +692,7 @@ export default function CourseLearnPage() {
   }
 
   if (!lessons.length && !loading) {
-    // 自動重導向到課程詳細頁面
-    setTimeout(() => {
-      window.location.href = `/courses/${courseId}`;
-    }, 3000);
+    // 顯示無課程內容頁面，移除自動重導向避免閃爍
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -714,9 +703,8 @@ export default function CourseLearnPage() {
               <div className="text-6xl mb-4">📚</div>
               <h1 className="text-xl font-bold text-gray-900 mb-4">課程內容準備中</h1>
               <p className="text-gray-600 mb-6">
-                此課程目前尚無學習單元。正在為您重導向至課程詳細頁面...
+                此課程目前尚無學習單元。請點擊下方按鈕返回課程詳細頁面。
               </p>
-              <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
               <div className="space-y-2">
                 <Link 
                   href={`/courses/${courseId}`}
