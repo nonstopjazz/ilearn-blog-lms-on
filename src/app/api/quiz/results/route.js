@@ -5,6 +5,11 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { searchParams } = new URL(request.url);
     const quizId = searchParams.get('quizId');
     const status = searchParams.get('status'); // 'passed', 'failed', 'all'
@@ -83,6 +88,12 @@ function calculateStats(attempts) {
 // 獲取特定測驗嘗試的詳細結果
 export async function POST(request) {
   try {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { attemptId } = await request.json();
 
     if (!attemptId) {

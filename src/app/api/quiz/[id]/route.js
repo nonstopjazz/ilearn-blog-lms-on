@@ -5,6 +5,11 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function GET(request, { params }) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { id } = params;
     
     if (!id) {
@@ -113,6 +118,11 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { id } = params;
     
     if (!id) {
@@ -181,6 +191,11 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { id } = params;
     
     if (!id) {

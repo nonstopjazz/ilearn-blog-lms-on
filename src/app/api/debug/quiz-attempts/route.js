@@ -4,6 +4,11 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     // 檢查 quiz_attempts 表結構
     const { data: attempts, error } = await supabase
       .from('quiz_attempts')

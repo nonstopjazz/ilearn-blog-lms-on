@@ -5,6 +5,12 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     console.log('=== 課程申請 API 開始 ===');
     
     const body = await req.json();
@@ -118,6 +124,12 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const courseId = searchParams.get('course_id');
@@ -184,6 +196,12 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const body = await req.json();
     const { request_id, status, admin_note } = body;
 

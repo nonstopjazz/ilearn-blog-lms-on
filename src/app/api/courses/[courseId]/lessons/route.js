@@ -5,6 +5,11 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function GET(request, { params }) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { courseId } = params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');

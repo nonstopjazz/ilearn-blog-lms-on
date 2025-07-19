@@ -5,6 +5,9 @@ import { NextResponse } from 'next/server';
 async function checkUserAuth(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return { error: 'Supabase 初始化失敗', status: 500 };
+    }
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return { error: '缺少認證資訊', status: 401 };
@@ -27,6 +30,9 @@ async function checkUserAuth(request) {
 export async function GET(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -115,6 +121,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
@@ -222,6 +231,9 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });

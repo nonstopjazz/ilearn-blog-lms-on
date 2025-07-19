@@ -4,6 +4,11 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     // 從 Authorization header 獲取 token
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);

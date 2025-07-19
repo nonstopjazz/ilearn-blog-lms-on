@@ -5,6 +5,9 @@ import { NextResponse } from 'next/server';
 export async function GET(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -40,6 +43,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const body = await request.json();
     const {
       userId,
@@ -132,6 +138,9 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');

@@ -5,6 +5,12 @@ import { getSupabaseClient } from '@/lib/supabase-server';
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const body = await request.json();
     const { course_id, course_title, user_id, amount, payment_method, user_info } = body;
 
@@ -104,6 +110,12 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
     const orderId = searchParams.get('order_id');
@@ -151,6 +163,12 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const body = await request.json();
     const { order_id, status, payment_info } = body;
 

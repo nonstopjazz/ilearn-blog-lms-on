@@ -21,6 +21,11 @@ export async function POST(request) {
 
     // 🔧 使用正確的欄位名稱
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      return Response.json({ 
+        error: 'Supabase 初始化失敗' 
+      }, { status: 500 });
+    }
     const { data: attempt, error } = await supabase
       .from('quiz_attempts')
       .insert({
