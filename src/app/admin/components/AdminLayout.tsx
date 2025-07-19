@@ -18,9 +18,13 @@ import {
   ChevronRight,
   Menu,
   X,
-  ArrowLeft
+  ArrowLeft,
+  LogOut,
+  User
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import AuthMiddleware from '@/lib/auth-middleware';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -62,6 +66,47 @@ const navItems: NavItem[] = [
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // 獲取當前用戶
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getCurrentUser();
+
+    // 監聽認證狀態變化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    // 點擊外部關閉用戶選單
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.user-menu') && userMenuOpen) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('登出失敗:', error);
+    }
+  };
 
   // 生成麵包屑
   const generateBreadcrumbs = () => {
@@ -94,7 +139,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AuthMiddleware requireAuth={true} requireAdmin={true}>
+      <div className="min-h-screen bg-gray-50">
       {/* 頂部導航欄 */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4">
@@ -115,20 +161,59 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </button>
             </div>
 
-            {/* 右側：快速導航 */}
+            {/* 右側：用戶資訊和快速導航 */}
             <div className="flex items-center space-x-4">
-              <Link
-                href="/admin"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                管理員
-              </Link>
               <Link
                 href="/"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
                 返回首頁
               </Link>
+              
+              {/* 用戶選單 */}
+              {user && (
+                <div className="relative user-menu">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="hidden sm:block">{user.email}</span>
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      管理員
+                    </span>
+                  </button>
+                  
+                  {/* 下拉選單 */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                          <div className="font-medium">{user.email}</div>
+                          <div className="text-xs text-gray-500">管理員</div>
+                        </div>
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          管理後台
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            handleSignOut();
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <LogOut className="w-4 h-4 inline mr-2" />
+                          登出
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -247,5 +332,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       )}
     </div>
+    </AuthMiddleware>
   );
 }
