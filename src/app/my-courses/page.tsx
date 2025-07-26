@@ -39,64 +39,6 @@ export default function MyCoursesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 模擬用戶課程資料
-  const userCourses: Course[] = [
-    {
-      id: 'course_001',
-      title: 'React 基礎課程',
-      description: '從零開始學習 React，包含組件、狀態管理、生命週期等核心概念。',
-      category: '前端開發',
-      difficulty: '初級',
-      total_lessons: 4
-    },
-    {
-      id: 'course_002', 
-      title: 'JavaScript 進階',
-      description: '深入學習 JavaScript ES6+ 特性，包含異步程式設計、模組系統等。',
-      category: '程式語言',
-      difficulty: '中級',
-      total_lessons: 2
-    },
-    {
-      id: 'course_013',
-      title: 'React 進階開發',
-      description: '學習 React 的進階概念，包含 Context API、性能優化、測試等。',
-      category: '前端開發',
-      difficulty: '高級',
-      total_lessons: 2
-    }
-  ]
-
-  // 模擬進度資料
-  const userProgress: CourseProgress[] = [
-    {
-      course_id: 'course_001',
-      progress_percent: 75,
-      completed_lessons: 3,
-      total_lessons: 4,
-      last_accessed: '2025-07-14',
-      next_lesson_id: 'lesson_001_04',
-      next_lesson_title: 'State 和生命週期'
-    },
-    {
-      course_id: 'course_002',
-      progress_percent: 50,
-      completed_lessons: 1,
-      total_lessons: 2,
-      last_accessed: '2025-07-13',
-      next_lesson_id: 'lesson_002_02',
-      next_lesson_title: '箭頭函數與解構賦值'
-    },
-    {
-      course_id: 'course_013',
-      progress_percent: 0,
-      completed_lessons: 0,
-      total_lessons: 2,
-      last_accessed: '2025-07-12',
-      next_lesson_id: 'lesson_013_01',
-      next_lesson_title: 'React 進階概念介紹'
-    }
-  ]
 
   // 🔧 修復：Supabase Auth 認證檢查
   useEffect(() => {
@@ -151,9 +93,58 @@ export default function MyCoursesPage() {
 
       try {
         setLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 800))
-        setCourses(userCourses)
-        setProgress(userProgress)
+        const { getSupabase } = await import('@/lib/supabase');
+        const supabase = getSupabase();
+        
+        // 查詢用戶已批准的課程申請
+        const { data: approvedRequests, error: requestError } = await supabase
+          .from('course_requests')
+          .select(`
+            course_id,
+            course_title,
+            approved_at: reviewed_at,
+            courses (
+              id,
+              title,
+              description,
+              category,
+              level,
+              lessons_count,
+              instructor_name
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'approved')
+        
+        if (requestError) {
+          console.error('查詢課程失敗:', requestError)
+          setError('載入課程時發生錯誤')
+          return
+        }
+        
+        // 整理課程資料
+        const userCoursesData = approvedRequests?.map(item => ({
+          id: item.course_id,
+          title: item.courses?.title || item.course_title,
+          description: item.courses?.description || '',
+          category: item.courses?.category || '未分類',
+          difficulty: item.courses?.level === 'beginner' ? '初級' : 
+                      item.courses?.level === 'intermediate' ? '中級' : '高級',
+          total_lessons: item.courses?.lessons_count || 0
+        })) || []
+        
+        setCourses(userCoursesData)
+        
+        // 暫時設定空的進度資料
+        const mockProgress = userCoursesData.map(course => ({
+          course_id: course.id,
+          progress_percent: 0,
+          completed_lessons: 0,
+          total_lessons: course.total_lessons,
+          last_accessed: new Date().toISOString().split('T')[0]
+        }))
+        
+        setProgress(mockProgress)
       } catch (err) {
         console.error('載入課程失敗:', err)
         setError('載入課程時發生錯誤')
