@@ -96,42 +96,57 @@ export default function MyCoursesPage() {
         const { getSupabase } = await import('@/lib/supabase');
         const supabase = getSupabase();
         
-        // 查詢用戶已批准的課程申請
+        // 步驟 1: 查詢用戶已批准的課程申請
         const { data: approvedRequests, error: requestError } = await supabase
           .from('course_requests')
-          .select(`
-            course_id,
-            course_title,
-            approved_at: reviewed_at,
-            courses (
-              id,
-              title,
-              description,
-              category,
-              level,
-              lessons_count,
-              instructor_name
-            )
-          `)
+          .select('course_id, course_title, reviewed_at')
           .eq('user_id', user.id)
           .eq('status', 'approved')
         
         if (requestError) {
-          console.error('查詢課程失敗:', requestError)
+          console.error('查詢課程申請失敗:', requestError)
           setError('載入課程時發生錯誤')
           return
         }
         
+        if (!approvedRequests || approvedRequests.length === 0) {
+          setCourses([])
+          setProgress([])
+          return
+        }
+        
+        // 步驟 2: 獲取課程詳細資訊
+        const courseIds = approvedRequests.map(req => req.course_id)
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select('id, title, description, category, level, lessons_count')
+          .in('id', courseIds)
+        
+        if (coursesError) {
+          console.error('查詢課程詳情失敗:', coursesError)
+        }
+        
+        // 建立課程 ID 到課程資料的映射
+        const coursesMap = new Map()
+        if (coursesData) {
+          coursesData.forEach(course => {
+            coursesMap.set(course.id, course)
+          })
+        }
+        
         // 整理課程資料
-        const userCoursesData = approvedRequests?.map(item => ({
-          id: item.course_id,
-          title: item.courses?.title || item.course_title,
-          description: item.courses?.description || '',
-          category: item.courses?.category || '未分類',
-          difficulty: item.courses?.level === 'beginner' ? '初級' : 
-                      item.courses?.level === 'intermediate' ? '中級' : '高級',
-          total_lessons: item.courses?.lessons_count || 0
-        })) || []
+        const userCoursesData = approvedRequests.map(req => {
+          const courseDetail = coursesMap.get(req.course_id)
+          return {
+            id: req.course_id,
+            title: courseDetail?.title || req.course_title,
+            description: courseDetail?.description || '',
+            category: courseDetail?.category || '未分類',
+            difficulty: courseDetail?.level === 'beginner' ? '初級' : 
+                        courseDetail?.level === 'intermediate' ? '中級' : '高級',
+            total_lessons: courseDetail?.lessons_count || 0
+          }
+        })
         
         setCourses(userCoursesData)
         
