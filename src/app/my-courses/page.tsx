@@ -104,7 +104,7 @@ export default function MyCoursesPage() {
           .eq('status', 'approved')
         
         if (requestError) {
-          console.error('查詢課程申請失敗:', requestError)
+          console.error('[My Courses] 查詢課程申請失敗:', requestError)
           setError('載入課程時發生錯誤')
           return
         }
