@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, Users, DollarSign, Calendar, Save, BarChart3, Award, Clock, ArrowLeft, AlertCircle, Loader2, Plus, Link as LinkIcon, Download, Play, Eye, Edit, Trash2, CheckCircle, GripVertical, Video, FileText, Lock, Unlock, RefreshCw, File, FileImage, Music, Archive, Film } from 'lucide-react';
@@ -548,7 +548,10 @@ const LessonEditor: React.FC<{
 
       if (error) {
         console.error('載入課程單元失敗:', error);
-        setMessage('載入課程單元失敗');
+        // 只在真正需要時才設置錯誤訊息
+        if (!data && lessons.length === 0) {
+          setMessage('載入課程單元失敗');
+        }
         return;
       }
 
@@ -679,19 +682,39 @@ const LessonEditor: React.FC<{
     }
   };
 
-  // 初始載入
+  // 初始載入 - 添加防抖和載入狀態檢查
+  const isLoadingRef = useRef(false);
+  
   useEffect(() => {
-    if (courseId) {
-      loadLessons();
+    if (courseId && !isLoadingRef.current) {
+      isLoadingRef.current = true;
+      loadLessons().finally(() => {
+        isLoadingRef.current = false;
+      });
     }
   }, [courseId]);
 
-  // 清除訊息
+  // 清除訊息 - 使用 useRef 避免重複觸發
+  const messageTimerRef = useRef<NodeJS.Timeout>();
+  
   useEffect(() => {
     if (message) {
-      const timer = setTimeout(() => setMessage(''), 3000);
-      return () => clearTimeout(timer);
+      // 清除之前的計時器
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+      }
+      
+      messageTimerRef.current = setTimeout(() => {
+        setMessage('');
+        messageTimerRef.current = undefined;
+      }, 3000);
     }
+    
+    return () => {
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+      }
+    };
   }, [message]);
 
   // 計算課程統計
@@ -1277,22 +1300,63 @@ const CourseSettingsPage: React.FC = () => {
   const [newOutcome, setNewOutcome] = useState('');
   const [newKeyword, setNewKeyword] = useState('');
 
-  useEffect(() => {
-    if (courseId) {
-      fetchCourseSettings();
+  // 從資料庫載入真實統計資料
+  const fetchCourseStats = React.useCallback(async (): Promise<CourseStats> => {
+    try {
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      
+      // 查詢課程註冊數據
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('course_requests')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'approved');
+      
+      // 查詢課程評分（如果有評分表的話）
+      // 暫時註解掉，因為可能還沒有 reviews 表
+      // const { data: reviews } = await supabase
+      //   .from('course_reviews')
+      //   .select('rating')
+      //   .eq('course_id', courseId);
+      const reviews = null;
+      
+      // 計算統計數據
+      const totalEnrollments = enrollments?.length || 0;
+      const activeStudents = enrollments?.filter(e => e.status === 'approved').length || 0;
+      
+      // 計算平均評分
+      let averageRating = 0;
+      if (reviews && reviews.length > 0) {
+        const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+        averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
+      }
+      
+      // 計算總收入（基於課程價格）
+      const coursePrice = settings?.price || 0;
+      const totalRevenue = totalEnrollments * coursePrice;
+      
+      return {
+        total_enrollments: totalEnrollments,
+        active_students: activeStudents,
+        completion_rate: 0, // 需要追蹤課程完成進度
+        average_rating: averageRating,
+        total_revenue: totalRevenue,
+        refund_requests: 0 // 需要退款請求表
+      };
+    } catch (error) {
+      console.error('載入課程統計失敗:', error);
+      // 返回預設值
+      return {
+        total_enrollments: 0,
+        active_students: 0,
+        completion_rate: 0,
+        average_rating: 0,
+        total_revenue: 0,
+        refund_requests: 0
+      };
     }
-  }, [courseId]);
-
-  const createMockStats = (): CourseStats => {
-    return {
-      total_enrollments: Math.floor(Math.random() * 200) + 50,
-      active_students: Math.floor(Math.random() * 100) + 20,
-      completion_rate: Math.floor(Math.random() * 40) + 60,
-      average_rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
-      total_revenue: Math.floor(Math.random() * 300000) + 100000,
-      refund_requests: Math.floor(Math.random() * 5)
-    };
-  };
+  }, [courseId, settings?.price]);
 
   // 🔧 修正後的 fetchCourseSettings - 從真實資料庫讀取
   const fetchCourseSettings = async () => {
@@ -1349,7 +1413,9 @@ const CourseSettingsPage: React.FC = () => {
         };
 
         setSettings(courseSettings);
-        setStats(createMockStats());
+        // 載入真實統計資料
+        const realStats = await fetchCourseStats();
+        setStats(realStats);
         console.log('✅ 從資料庫載入課程設定成功:', courseData.title);
       } else {
         throw new Error('課程不存在');
@@ -1362,6 +1428,19 @@ const CourseSettingsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (courseId) {
+      fetchCourseSettings();
+    }
+  }, [courseId]);
+
+  // 當設定改變時更新統計資料（例如價格改變會影響總收入）
+  useEffect(() => {
+    if (settings && courseId) {
+      fetchCourseStats().then(setStats);
+    }
+  }, [settings?.price, courseId, fetchCourseStats]);
 
   const handleSaveSettings = async () => {
     if (!settings) return;

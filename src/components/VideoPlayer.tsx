@@ -46,9 +46,11 @@ export default function VideoPlayer({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [videoSource, setVideoSource] = useState<'youtube' | 'bunny' | 'unknown'>('unknown')
+  const [hlsFailed, setHlsFailed] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const hlsInstance = useRef<any>(null)
 
   // 🔧 添加 HLS.js 類型聲明
   declare global {
@@ -151,12 +153,30 @@ export default function VideoPlayer({
         if (window.Hls && window.Hls.isSupported()) {
           console.log('✅ HLS.js 支援確認')
           
+          // 🔧 優化 HLS.js 配置以避免 bufferAppendError
           const hls = new window.Hls({
-            debug: false, // 關閉除錯模式
+            debug: false,
             enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 90
+            lowLatencyMode: false, // 關閉低延遲模式
+            backBufferLength: 30, // 減少後緩衝長度
+            maxBufferLength: 30, // 設定最大緩衝長度
+            maxMaxBufferLength: 600, // 設定最大緩衝上限
+            maxBufferSize: 60 * 1000 * 1000, // 60MB 緩衝大小
+            maxBufferHole: 0.5, // 允許的緩衝空洞
+            // 錯誤恢復設定
+            xhrSetup: function(xhr: XMLHttpRequest, url: string) {
+              xhr.timeout = 30000; // 30秒超時
+            },
+            manifestLoadingTimeOut: 30000,
+            manifestLoadingMaxRetry: 3,
+            levelLoadingTimeOut: 30000,
+            levelLoadingMaxRetry: 3,
+            fragLoadingTimeOut: 30000,
+            fragLoadingMaxRetry: 3
           })
+          
+          // 儲存 HLS 實例
+          hlsInstance.current = hls
           
           hls.loadSource(streamURL)
           hls.attachMedia(video)
@@ -167,25 +187,94 @@ export default function VideoPlayer({
             setError(null)
           })
           
+          // 🔧 增強錯誤處理和恢復機制
           hls.on(window.Hls.Events.ERROR, (event: any, data: any) => {
             console.error('❌ HLS 播放錯誤:', data)
+            
+            // 處理 bufferAppendError
+            if (data.details === 'bufferAppendError') {
+              console.warn('⚠️ Buffer append error detected, attempting recovery...')
+              
+              // 嘗試恢復策略
+              if (!data.fatal) {
+                // 非致命錯誤，嘗試跳過有問題的片段
+                console.log('🔧 嘗試跳過有問題的片段...')
+                return
+              }
+              
+              // 致命錯誤，嘗試重新載入
+              console.log('🔧 嘗試重新載入影片流...')
+              setTimeout(() => {
+                hls.recoverMediaError()
+              }, 1000)
+              return
+            }
             
             if (data.fatal) {
               switch (data.type) {
                 case window.Hls.ErrorTypes.NETWORK_ERROR:
-                  console.error('❌ HLS 網路錯誤')
-                  setError('網路錯誤，無法載入 Bunny.net 影片')
+                  console.error('❌ HLS 網路錯誤，嘗試重新載入...')
+                  // 嘗試恢復網路錯誤
+                  hls.startLoad()
                   break
+                  
                 case window.Hls.ErrorTypes.MEDIA_ERROR:
-                  console.error('❌ HLS 媒體錯誤')
-                  setError('媒體錯誤，影片格式不支援')
+                  console.error('❌ HLS 媒體錯誤，嘗試恢復...')
+                  // 嘗試恢復媒體錯誤
+                  hls.recoverMediaError()
                   break
+                  
                 default:
-                  console.error('❌ HLS 其他錯誤')
-                  setError('HLS 播放錯誤')
+                  console.error('❌ HLS 其他致命錯誤')
+                  setError('影片播放遇到問題，請重新整理頁面')
+                  setLoading(false)
                   break
               }
-              setLoading(false)
+            }
+          })
+          
+          // 🔧 添加媒體錯誤恢復嘗試計數
+          let mediaErrorRecoveryAttempts = 0
+          const maxRecoveryAttempts = 3
+          
+          hls.on(window.Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+              if (mediaErrorRecoveryAttempts < maxRecoveryAttempts) {
+                mediaErrorRecoveryAttempts++
+                console.log(`🔧 媒體錯誤恢復嘗試 ${mediaErrorRecoveryAttempts}/${maxRecoveryAttempts}`)
+                setTimeout(() => {
+                  hls.recoverMediaError()
+                }, 1000 * mediaErrorRecoveryAttempts)
+              } else {
+                console.error('❌ 媒體錯誤恢復失敗，已達最大嘗試次數')
+                console.log('🔧 嘗試備用播放方案...')
+                
+                // 銷毀 HLS 實例
+                if (hlsInstance.current) {
+                  hlsInstance.current.destroy()
+                  hlsInstance.current = null
+                }
+                
+                // 嘗試直接播放 m3u8
+                if (video && streamURL) {
+                  console.log('🔧 嘗試直接設定 video.src 播放 m3u8...')
+                  video.src = streamURL
+                  video.load()
+                  
+                  video.addEventListener('loadeddata', () => {
+                    console.log('✅ 備用方案：直接播放成功')
+                    setLoading(false)
+                    setError(null)
+                  })
+                  
+                  video.addEventListener('error', (e) => {
+                    console.error('❌ 備用方案也失敗:', e)
+                    setError('影片無法播放，可能是格式不相容或網路問題')
+                    setLoading(false)
+                    setHlsFailed(true)
+                  })
+                }
+              }
             }
           })
           
@@ -271,6 +360,17 @@ export default function VideoPlayer({
     }
 
   }, [lesson.id, lesson.video_url])
+
+  // 🔧 清理 HLS 實例
+  useEffect(() => {
+    return () => {
+      if (hlsInstance.current) {
+        console.log('🧹 清理 HLS 實例')
+        hlsInstance.current.destroy()
+        hlsInstance.current = null
+      }
+    }
+  }, [])
 
   // 錯誤狀態
   if (error) {
