@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 // GET - 獲取所有標籤
 export async function GET() {
   try {
     console.log('Tags GET: Starting request')
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     console.log('Tags GET: Supabase client initialized')
     
     const { data: tags, error } = await supabase
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 生成 slug
     const slug = name.toLowerCase()
@@ -136,7 +136,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 生成新的 slug
     const slug = name.toLowerCase()
@@ -204,7 +204,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 先刪除所有文章與此標籤的關聯（已由 CASCADE 自動處理）
     

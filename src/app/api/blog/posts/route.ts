@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 // GET - 獲取文章列表
 export async function GET(request: NextRequest) {
   try {
+    console.log('Posts GET: Starting request')
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -13,7 +14,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || null
     const featured = searchParams.get('featured') || null
     
-    const supabase = getSupabase()
+    console.log('Posts GET: Query params:', { page, limit, status, category, tag, search, featured })
+    
+    const supabase = createSupabaseServerClient()
+    console.log('Posts GET: Supabase server client initialized')
     
     // 計算分頁
     const offset = (page - 1) * limit
@@ -61,16 +65,24 @@ export async function GET(request: NextRequest) {
     const { data: posts, error, count } = await query
     
     if (error) {
-      console.error('Failed to fetch posts:', error)
+      console.error('Posts GET: Database error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to fetch posts',
+          error: `Database error: ${error.message}`,
           posts: []
         },
         { status: 500 }
       )
     }
+    
+    console.log('Posts GET: Fetched posts count:', posts?.length || 0)
     
     // 如果有標籤篩選，需要額外查詢
     let filteredPosts = posts || []
@@ -142,11 +154,15 @@ export async function GET(request: NextRequest) {
 // POST - 創建新文章
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase()
+    console.log('Posts POST: Starting request')
+    const supabase = createSupabaseServerClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log('Posts POST: Auth check:', { hasUser: !!user, authError })
+    
     if (authError || !user) {
+      console.error('Posts POST: Auth failed:', authError)
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

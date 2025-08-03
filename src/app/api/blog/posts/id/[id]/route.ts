@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = params
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 查詢文章詳情
     const { data: post, error } = await supabase
@@ -90,7 +90,7 @@ export async function PUT(
 ) {
   try {
     const { id } = params
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -209,7 +209,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = params
-    const supabase = getSupabase()
+    const supabase = createSupabaseServerClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
