@@ -125,15 +125,9 @@ const BlogAdminEdit: React.FC = () => {
           read_time: post.read_time || 5
         });
         
-        // 載入選中的標籤 - 處理字符串數組格式
+        // 載入選中的標籤 - 現在是完整的標籤對象
         if (post.tags && Array.isArray(post.tags)) {
-          // 如果是字符串數組，轉換為標籤對象
-          const tagObjects = post.tags.map((tagName: string, index: number) => ({
-            id: `temp_${index}`,
-            name: tagName,
-            slug: tagName.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
-          }));
-          setSelectedTags(tagObjects);
+          setSelectedTags(post.tags);
         }
       } else {
         setErrors({ submit: result.error || '載入文章失敗' });
@@ -211,7 +205,7 @@ const BlogAdminEdit: React.FC = () => {
 
       const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && result.data) {
         const newTag = result.data;
         setTags(prev => [...prev, newTag]);
         setSelectedTags(prev => [...prev, newTag]);

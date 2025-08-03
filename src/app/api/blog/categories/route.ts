@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
     const { data: newCategory, error } = await supabase
       .from('blog_categories')
       .insert({
+        id: crypto.randomUUID(), // 手動生成 UUID
         name: name.trim(),
         slug: slug,
         description: description || null,

@@ -178,8 +178,8 @@ const BlogAdminCreate: React.FC = () => {
 
       const result = await response.json();
       
-      if (response.ok) {
-        const newTag = result.tag;
+      if (response.ok && result.data) {
+        const newTag = result.data;
         setAvailableTags(prev => [...prev, newTag]);
         setSelectedTags(prev => [...prev, newTag]);
         setNewTagName('');

@@ -1,59 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { blogData, BlogPost } from '@/lib/blog-data'
+import { getSupabase } from '@/lib/supabase'
 
 // GET - 獲取文章列表
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    
-    // 獲取查詢參數
-    const status = searchParams.get('status')
-    const featured = searchParams.get('featured')
-    const category = searchParams.get('category')
+    const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const status = searchParams.get('status') || null
+    const category = searchParams.get('category') || null
+    const tag = searchParams.get('tag') || null
+    const search = searchParams.get('search') || null
+    const featured = searchParams.get('featured') || null
     
-    // 獲取所有文章
-    let posts = blogData.getAllPosts()
+    const supabase = getSupabase()
     
-    // 按狀態篩選
+    // 計算分頁
+    const offset = (page - 1) * limit
+    
+    // 建立查詢
+    let query = supabase
+      .from('blog_posts')
+      .select(`
+        *,
+        blog_categories (
+          id,
+          name,
+          slug,
+          color
+        ),
+        author:author_id (
+          id,
+          email,
+          user_metadata
+        )
+      `, { count: 'exact' })
+    
+    // 篩選條件
     if (status) {
-      posts = posts.filter(post => post.status === status)
+      query = query.eq('status', status)
     }
     
-    // 按精選狀態篩選
     if (featured === 'true') {
-      posts = posts.filter(post => post.is_featured)
+      query = query.eq('is_featured', true)
     }
     
-    // 按分類篩選
     if (category) {
-      posts = posts.filter(post => 
-        post.blog_categories?.id === category
+      query = query.eq('category_id', category)
+    }
+    
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
+    }
+    
+    // 排序和分頁
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    
+    const { data: posts, error, count } = await query
+    
+    if (error) {
+      console.error('Failed to fetch posts:', error)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to fetch posts',
+          posts: []
+        },
+        { status: 500 }
       )
     }
     
-    // 按發布時間排序（最新的在前）
-    posts.sort((a, b) => {
-      const dateA = new Date(a.published_at || a.created_at)
-      const dateB = new Date(b.published_at || b.created_at)
-      return dateB.getTime() - dateA.getTime()
-    })
+    // 如果有標籤篩選，需要額外查詢
+    let filteredPosts = posts || []
+    if (tag && posts) {
+      const postIds = posts.map(p => p.id)
+      const { data: taggedPosts } = await supabase
+        .from('blog_post_tags')
+        .select('post_id')
+        .eq('tag_id', tag)
+        .in('post_id', postIds)
+      
+      const taggedPostIds = taggedPosts?.map(tp => tp.post_id) || []
+      filteredPosts = posts.filter(p => taggedPostIds.includes(p.id))
+    }
     
-    // 限制數量
-    posts = posts.slice(0, limit)
+    // 獲取每篇文章的標籤
+    for (const post of filteredPosts) {
+      const { data: postTags } = await supabase
+        .from('blog_post_tags')
+        .select(`
+          blog_tags (
+            id,
+            name,
+            slug,
+            color
+          )
+        `)
+        .eq('post_id', post.id)
+      
+      post.tags = postTags?.map(pt => pt.blog_tags).filter(Boolean) || []
+      
+      // 格式化作者資訊
+      if (post.author) {
+        post.users = {
+          name: post.author.user_metadata?.name || post.author.email?.split('@')[0] || 'Unknown',
+          email: post.author.email,
+          avatar_url: post.author.user_metadata?.avatar_url
+        }
+      }
+      delete post.author
+      delete post.author_id
+    }
     
     return NextResponse.json({
       success: true,
-      posts: posts,
-      total: posts.length
+      posts: filteredPosts,
+      total: count || 0,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
     })
     
   } catch (error) {
-    console.error('Blog posts API GET error:', error)
+    console.error('Posts API error:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to fetch posts',
+        error: 'Internal server error',
         posts: []
       },
       { status: 500 }
@@ -64,17 +142,33 @@ export async function GET(request: NextRequest) {
 // POST - 創建新文章
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase()
+    
+    // 檢查用戶權限
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
     const body = await request.json()
-    const { 
-      title, 
-      content, 
-      excerpt, 
+    const {
+      title,
+      slug,
+      content,
+      excerpt,
+      featured_image_url,
       category_id,
-      tags = [],
       status = 'draft',
-      is_featured = false 
+      is_featured = false,
+      seo_title,
+      seo_description,
+      read_time = 5,
+      tags = []
     } = body
-
+    
     // 驗證必填欄位
     if (!title || !content) {
       return NextResponse.json(
@@ -82,68 +176,74 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // 生成 slug
-    const slug = blogData.generateSlug(title)
     
-    // 檢查 slug 是否已存在
-    const existingPost = blogData.getPostBySlug(slug)
-    if (existingPost) {
+    // 生成 slug（如果沒有提供）
+    const finalSlug = slug || title.toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+    
+    // 創建文章
+    const { data: newPost, error: postError } = await supabase
+      .from('blog_posts')
+      .insert({
+        id: crypto.randomUUID(),
+        title,
+        slug: finalSlug,
+        content,
+        excerpt: excerpt || content.replace(/[#*`]/g, '').substring(0, 200) + '...',
+        featured_image_url,
+        category_id,
+        author_id: user.id,
+        status,
+        is_featured,
+        seo_title,
+        seo_description,
+        read_time: read_time || Math.max(1, Math.ceil(content.length / 1000)),
+        published_at: status === 'published' ? new Date().toISOString() : null
+      })
+      .select()
+      .single()
+    
+    if (postError) {
+      if (postError.code === '23505') {
+        return NextResponse.json(
+          { success: false, error: 'A post with this slug already exists' },
+          { status: 409 }
+        )
+      }
+      console.error('Failed to create post:', postError)
       return NextResponse.json(
-        { success: false, error: 'A post with this title already exists' },
-        { status: 409 }
+        { success: false, error: 'Failed to create post' },
+        { status: 500 }
       )
     }
-
-    // 獲取分類資訊
-    let categoryInfo = null
-    if (category_id) {
-      categoryInfo = blogData.getCategoryById(category_id)
-    }
-
-    // 創建新文章
-    const newPost: BlogPost = {
-      id: blogData.generateId(),
-      title: title.trim(),
-      slug: slug,
-      content: content,
-      excerpt: excerpt || content.replace(/[#*`]/g, '').substring(0, 200) + '...',
-      featured_image_url: null,
-      view_count: 0,
-      reading_time: Math.max(1, Math.ceil(content.length / 1000)), // 估算閱讀時間
-      published_at: status === 'published' ? new Date().toISOString() : null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_featured: Boolean(is_featured),
-      status: status as 'draft' | 'published',
-      tags: Array.isArray(tags) ? tags : [],
-      blog_categories: categoryInfo ? {
-        id: categoryInfo.id,
-        name: categoryInfo.name,
-        slug: categoryInfo.slug,
-        color: categoryInfo.color
-      } : undefined,
-      users: {
-        name: 'Admin User' // TODO: 從認證系統獲取實際用戶
+    
+    // 關聯標籤
+    if (tags.length > 0 && newPost) {
+      const tagRelations = tags.map((tagId: string) => ({
+        post_id: newPost.id,
+        tag_id: tagId
+      }))
+      
+      const { error: tagError } = await supabase
+        .from('blog_post_tags')
+        .insert(tagRelations)
+      
+      if (tagError) {
+        console.error('Failed to associate tags:', tagError)
       }
     }
-
-    // 添加到資料存儲
-    const createdPost = blogData.addPost(newPost)
-
+    
     return NextResponse.json({
       success: true,
-      post: createdPost,
+      data: newPost,
       message: 'Post created successfully'
     })
-
+    
   } catch (error) {
-    console.error('Blog posts API POST error:', error)
+    console.error('Create post error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to create post'
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
