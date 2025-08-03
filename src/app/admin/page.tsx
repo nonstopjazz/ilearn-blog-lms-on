@@ -22,7 +22,9 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Tag,
+  Hash
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -245,6 +247,22 @@ export default function AdminDashboardPage() {
       href: '/admin/blog',
       icon: FileText,
       color: 'bg-teal-500',
+      category: '內容管理'
+    },
+    {
+      title: '分類管理',
+      description: '管理 Blog 文章分類',
+      href: '/admin/blog/categories',
+      icon: Tag,
+      color: 'bg-purple-500',
+      category: '內容管理'
+    },
+    {
+      title: '標籤管理',
+      description: '管理 Blog 文章標籤',
+      href: '/admin/blog/tags',
+      icon: Hash,
+      color: 'bg-pink-500',
       category: '內容管理'
     },
 

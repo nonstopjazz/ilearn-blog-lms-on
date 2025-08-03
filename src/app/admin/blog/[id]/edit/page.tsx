@@ -288,6 +288,7 @@ const BlogAdminEdit: React.FC = () => {
 
       if (response.ok) {
         router.push(`/admin/blog`);
+        router.refresh();
       } else {
         setErrors({ submit: result.error || '儲存失敗' });
       }

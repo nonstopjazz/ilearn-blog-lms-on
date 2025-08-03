@@ -1,14 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { blogData, BlogTag } from '@/lib/blog-data'
+import { getSupabase } from '@/lib/supabase'
 
 // GET - 獲取所有標籤
 export async function GET() {
   try {
-    const tags = blogData.getAllTags()
+    const supabase = getSupabase()
+    
+    const { data: tags, error } = await supabase
+      .from('blog_tags')
+      .select('*')
+      .order('name', { ascending: true })
+    
+    if (error) {
+      console.error('Failed to fetch tags:', error)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to fetch tags',
+          tags: []
+        },
+        { status: 500 }
+      )
+    }
     
     return NextResponse.json({
       success: true,
-      tags: tags
+      tags: tags || []
     })
   } catch (error) {
     console.error('Tags API GET error:', error)
@@ -36,33 +53,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 檢查是否已存在同名標籤
-    const existingTags = blogData.getAllTags()
-    const existingTag = existingTags.find(tag => 
-      tag.name.toLowerCase().trim() === name.toLowerCase().trim()
-    )
+    const supabase = getSupabase()
+    
+    // 生成 slug
+    const slug = name.toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+      .replace(/^-+|-+$/g, '')
 
-    if (existingTag) {
+    // 創建新標籤
+    const { data: newTag, error } = await supabase
+      .from('blog_tags')
+      .insert({
+        name: name.trim(),
+        slug: slug,
+        color: color || '#6B7280'
+      })
+      .select()
+      .single()
+
+    if (error) {
+      // 處理唯一性約束錯誤
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { success: false, error: 'Tag with this name already exists' },
+          { status: 409 }
+        )
+      }
+      
+      console.error('Failed to create tag:', error)
       return NextResponse.json(
-        { success: false, error: 'Tag already exists' },
-        { status: 409 }
+        { 
+          success: false, 
+          error: 'Failed to create tag'
+        },
+        { status: 500 }
       )
     }
 
-    // 創建新標籤
-    const newTag: BlogTag = {
-      id: blogData.generateId(),
-      name: name.trim(),
-      slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      color: color || '#6B7280'
-    }
-
-    // 添加到資料存儲
-    const createdTag = blogData.addTag(newTag)
-
     return NextResponse.json({
       success: true,
-      tag: createdTag,
+      data: newTag,
       message: 'Tag created successfully'
     })
 
@@ -72,6 +102,132 @@ export async function POST(request: NextRequest) {
       { 
         success: false, 
         error: 'Failed to create tag'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT - 更新標籤
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, name, color } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Tag ID is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!name || !name.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Tag name is required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = getSupabase()
+    
+    // 生成新的 slug
+    const slug = name.toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+    // 更新標籤
+    const { data: updatedTag, error } = await supabase
+      .from('blog_tags')
+      .update({
+        name: name.trim(),
+        slug: slug,
+        color: color || '#6B7280'
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { success: false, error: 'Tag with this name already exists' },
+          { status: 409 }
+        )
+      }
+      
+      console.error('Failed to update tag:', error)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to update tag'
+        },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updatedTag,
+      message: 'Tag updated successfully'
+    })
+
+  } catch (error) {
+    console.error('Tags API PUT error:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to update tag'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - 刪除標籤
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Tag ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = getSupabase()
+    
+    // 先刪除所有文章與此標籤的關聯（已由 CASCADE 自動處理）
+    
+    // 刪除標籤
+    const { error } = await supabase
+      .from('blog_tags')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Failed to delete tag:', error)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to delete tag'
+        },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Tag deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('Tags API DELETE error:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to delete tag'
       },
       { status: 500 }
     )

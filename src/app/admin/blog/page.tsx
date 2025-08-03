@@ -108,7 +108,7 @@ const BlogAdminList: React.FC = () => {
     if (user) {
       loadPosts();
     }
-  }, [statusFilter, categoryFilter, user]);
+  }, [statusFilter, categoryFilter, user?.id]);
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
