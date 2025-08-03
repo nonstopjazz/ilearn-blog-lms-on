@@ -4,7 +4,9 @@ import { getSupabase } from '@/lib/supabase'
 // GET - 獲取所有分類
 export async function GET() {
   try {
+    console.log('Categories GET: Starting request')
     const supabase = getSupabase()
+    console.log('Categories GET: Supabase client initialized')
     
     const { data: categories, error } = await supabase
       .from('blog_categories')
@@ -12,11 +14,17 @@ export async function GET() {
       .order('name', { ascending: true })
     
     if (error) {
-      console.error('Failed to fetch categories:', error)
+      console.error('Categories GET: Database error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to fetch categories',
+          error: `Database error: ${error.message}`,
           categories: []
         },
         { status: 500 }
@@ -43,8 +51,10 @@ export async function GET() {
 // POST - 創建新分類
 export async function POST(request: NextRequest) {
   try {
+    console.log('Categories POST: Starting request')
     const body = await request.json()
     const { name, description, color } = body
+    console.log('Categories POST: Request body:', { name, description, color })
 
     if (!name || !name.trim()) {
       return NextResponse.json(
@@ -54,6 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabase()
+    console.log('Categories POST: Supabase client initialized')
     
     // 生成 slug
     const slug = name.toLowerCase()

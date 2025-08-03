@@ -4,7 +4,9 @@ import { getSupabase } from '@/lib/supabase'
 // GET - 獲取所有標籤
 export async function GET() {
   try {
+    console.log('Tags GET: Starting request')
     const supabase = getSupabase()
+    console.log('Tags GET: Supabase client initialized')
     
     const { data: tags, error } = await supabase
       .from('blog_tags')
@@ -12,11 +14,17 @@ export async function GET() {
       .order('name', { ascending: true })
     
     if (error) {
-      console.error('Failed to fetch tags:', error)
+      console.error('Tags GET: Database error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to fetch tags',
+          error: `Database error: ${error.message}`,
           tags: []
         },
         { status: 500 }
