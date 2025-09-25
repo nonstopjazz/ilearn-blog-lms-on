@@ -240,6 +240,16 @@ export default function AdminDashboardPage() {
       category: '用戶管理'
     },
 
+    // 學習管理
+    {
+      title: '學習管理',
+      description: '管理學生學習記錄與進度',
+      href: '/admin/learning-management',
+      icon: TrendingUp,
+      color: 'bg-emerald-500',
+      category: '學習管理'
+    },
+
     // 內容管理
     {
       title: 'Blog 管理',
