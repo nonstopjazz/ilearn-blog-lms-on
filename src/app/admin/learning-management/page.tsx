@@ -78,6 +78,16 @@ export default function AdminLearningManagementPage() {
     data: {} as any
   });
   const [isSubmittingRecord, setIsSubmittingRecord] = useState(false);
+  const [studentCourses, setStudentCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+
+  // 編輯學生狀態
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+
+  // 報告生成狀態
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportStudent, setReportStudent] = useState<Student | null>(null);
 
   // 模擬數據載入
   useEffect(() => {
@@ -110,6 +120,43 @@ export default function AdminLearningManagementPage() {
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // 載入學生的課程
+  const loadStudentCourses = async (studentId: string) => {
+    if (!studentId) {
+      setStudentCourses([]);
+      return;
+    }
+
+    setLoadingCourses(true);
+    try {
+      // 從 course_requests 表中獲取該學生已批准的課程
+      const response = await fetch(`/api/course-requests?user_id=${studentId}&status=approved`);
+      const data = await response.json();
+
+      if (data.success) {
+        // 提取課程資訊，去重
+        const coursesMap = new Map();
+        data.requests?.forEach((request: any) => {
+          if (!coursesMap.has(request.course_id)) {
+            coursesMap.set(request.course_id, {
+              id: request.course_id,
+              title: request.course_title
+            });
+          }
+        });
+        setStudentCourses(Array.from(coursesMap.values()));
+      } else {
+        console.error('載入學生課程失敗:', data.error);
+        setStudentCourses([]);
+      }
+    } catch (error) {
+      console.error('載入學生課程時發生錯誤:', error);
+      setStudentCourses([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   // 處理新增記錄
   const handleAddRecord = async () => {
@@ -152,14 +199,80 @@ export default function AdminLearningManagementPage() {
 
   // 編輯學生
   const handleEditStudent = (student: Student) => {
-    // 這裡可以開啟編輯對話框，暫時先顯示提醒
-    alert(`編輯學生 ${student.name} 的功能開發中`);
+    setEditingStudent(student);
+    setIsEditingStudent(true);
   };
 
   // 生成學生報告
-  const handleGenerateReport = (student: Student) => {
-    // 這裡可以生成報告，暫時先顯示提醒
-    alert(`正在為 ${student.name} 生成學習報告...`);
+  const handleGenerateReport = async (student: Student) => {
+    setReportStudent(student);
+    setIsGeneratingReport(true);
+
+    try {
+      // 模擬報告生成延遲
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 這裡可以實作真正的報告生成邏輯
+      const reportData = {
+        studentName: student.name,
+        email: student.email,
+        totalWords: student.total_words,
+        avgAccuracy: student.avg_accuracy,
+        totalExams: student.total_exams,
+        avgExamScore: student.avg_exam_score,
+        assignmentsCompleted: student.assignments_completed,
+        assignmentsTotal: student.assignments_total,
+        completionRate: student.assignments_total > 0
+          ? Math.round((student.assignments_completed / student.assignments_total) * 100)
+          : 0,
+        lastActivity: student.last_activity,
+        generatedAt: new Date().toLocaleString('zh-TW')
+      };
+
+      // 生成簡單的文字報告
+      const reportText = `
+學習報告 - ${reportData.studentName}
+=====================================
+
+基本資訊：
+- 學生姓名：${reportData.studentName}
+- 電子郵件：${reportData.email}
+- 報告生成時間：${reportData.generatedAt}
+
+學習統計：
+- 累積學習單字：${reportData.totalWords} 個
+- 平均正確率：${reportData.avgAccuracy}%
+- 考試次數：${reportData.totalExams} 次
+- 平均考試分數：${reportData.avgExamScore} 分
+- 作業完成情況：${reportData.assignmentsCompleted}/${reportData.assignmentsTotal} (${reportData.completionRate}%)
+- 最後活動時間：${reportData.lastActivity}
+
+學習建議：
+${reportData.avgAccuracy < 70 ? '- 建議增加單字練習時間，提升學習正確率' : '- 單字學習表現良好，可適度增加學習難度'}
+${reportData.completionRate < 80 ? '- 建議督促學生按時完成作業' : '- 作業完成率良好，保持學習動力'}
+${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表現' : '- 考試表現良好，可挑戰更高難度'}
+      `;
+
+      // 創建並下載報告文件
+      const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `學習報告_${reportData.studentName}_${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert(`${student.name} 的學習報告已生成並下載`);
+
+    } catch (error) {
+      console.error('生成報告失敗:', error);
+      alert('生成報告失敗，請稍後再試');
+    } finally {
+      setIsGeneratingReport(false);
+      setReportStudent(null);
+    }
   };
 
   // 統計數據
@@ -216,7 +329,10 @@ export default function AdminLearningManagementPage() {
                   <Label htmlFor="student-select">選擇學生</Label>
                   <Select
                     value={newRecordForm.studentId}
-                    onValueChange={(value) => setNewRecordForm(prev => ({ ...prev, studentId: value }))}
+                    onValueChange={(value) => {
+                      setNewRecordForm(prev => ({ ...prev, studentId: value, data: {} }));
+                      loadStudentCourses(value);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇學生" />
@@ -224,7 +340,7 @@ export default function AdminLearningManagementPage() {
                     <SelectContent>
                       {students.map(student => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.name} ({student.email})
+                          {student.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -251,15 +367,30 @@ export default function AdminLearningManagementPage() {
                 {newRecordForm.recordType === 'vocabulary' && (
                   <>
                     <div>
-                      <Label>課程 ID</Label>
-                      <Input
+                      <Label>選擇課程</Label>
+                      <Select
                         value={newRecordForm.data.course_id || ''}
-                        onChange={(e) => setNewRecordForm(prev => ({
+                        onValueChange={(value) => setNewRecordForm(prev => ({
                           ...prev,
-                          data: { ...prev.data, course_id: e.target.value }
+                          data: { ...prev.data, course_id: value }
                         }))}
-                        placeholder="輸入課程 ID"
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingCourses ? "載入課程中..." : "選擇課程"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {studentCourses.map(course => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {studentCourses.length === 0 && newRecordForm.studentId && !loadingCourses && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          該學生尚未註冊任何課程
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label>學習日期</Label>
@@ -315,15 +446,30 @@ export default function AdminLearningManagementPage() {
                 {newRecordForm.recordType === 'exam' && (
                   <>
                     <div>
-                      <Label>課程 ID</Label>
-                      <Input
+                      <Label>選擇課程</Label>
+                      <Select
                         value={newRecordForm.data.course_id || ''}
-                        onChange={(e) => setNewRecordForm(prev => ({
+                        onValueChange={(value) => setNewRecordForm(prev => ({
                           ...prev,
-                          data: { ...prev.data, course_id: e.target.value }
+                          data: { ...prev.data, course_id: value }
                         }))}
-                        placeholder="輸入課程 ID"
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingCourses ? "載入課程中..." : "選擇課程"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {studentCourses.map(course => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {studentCourses.length === 0 && newRecordForm.studentId && !loadingCourses && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          該學生尚未註冊任何課程
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label>考試名稱</Label>
@@ -618,8 +764,13 @@ export default function AdminLearningManagementPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleGenerateReport(student)}
+                              disabled={isGeneratingReport && reportStudent?.id === student.id}
                             >
-                              <FileText className="h-4 w-4" />
+                              {isGeneratingReport && reportStudent?.id === student.id ? (
+                                <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                              ) : (
+                                <FileText className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
@@ -715,6 +866,73 @@ export default function AdminLearningManagementPage() {
                 關閉
               </Button>
               <Button>生成報告</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* 編輯學生對話框 */}
+      {editingStudent && (
+        <Dialog open={isEditingStudent} onOpenChange={setIsEditingStudent}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>編輯學生資訊</DialogTitle>
+              <DialogDescription>編輯 {editingStudent.name} 的基本資訊</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>學生姓名</Label>
+                <Input
+                  value={editingStudent.name}
+                  onChange={(e) => setEditingStudent(prev => prev ? {...prev, name: e.target.value} : null)}
+                />
+              </div>
+              <div>
+                <Label>電子郵件</Label>
+                <Input
+                  type="email"
+                  value={editingStudent.email}
+                  onChange={(e) => setEditingStudent(prev => prev ? {...prev, email: e.target.value} : null)}
+                />
+              </div>
+              <div>
+                <Label>學生狀態</Label>
+                <Select
+                  value={editingStudent.status}
+                  onValueChange={(value: 'active' | 'inactive') =>
+                    setEditingStudent(prev => prev ? {...prev, status: value} : null)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">活躍</SelectItem>
+                    <SelectItem value="inactive">非活躍</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditingStudent(false);
+                  setEditingStudent(null);
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={() => {
+                  // 這裡可以實作保存學生資訊的 API 調用
+                  alert(`學生 ${editingStudent.name} 的資訊已保存（功能開發中）`);
+                  setIsEditingStudent(false);
+                  setEditingStudent(null);
+                }}
+              >
+                保存
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
