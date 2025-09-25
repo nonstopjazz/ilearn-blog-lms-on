@@ -339,9 +339,9 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="選擇學生">
+                      <div className="text-left">
                         {newRecordForm.studentId ? getStudentName(newRecordForm.studentId) : "選擇學生"}
-                      </SelectValue>
+                      </div>
                     </SelectTrigger>
                     <SelectContent>
                       {students.map(student => (
