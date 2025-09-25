@@ -26,13 +26,40 @@ export default function LearningPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [learningSummary, setLearningSummary] = useState<LearningSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
-  // 模擬學生ID - 實際應用中應從認證系統獲取
-  const studentId = 'current-student-id';
+  // 學生ID從認證用戶獲取
+  const studentId = user?.id || 'demo-student';
 
+  // 檢查用戶認證狀態
   useEffect(() => {
-    fetchLearningSummary();
+    checkUser();
   }, []);
+
+  // 當用戶狀態改變時，重新載入數據
+  useEffect(() => {
+    if (user) {
+      fetchLearningSummary();
+    }
+  }, [user]);
+
+  const checkUser = async () => {
+    try {
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (!user) {
+        // 如果未登入，仍顯示 demo 數據
+        setUser({ id: 'demo-student', email: 'demo@example.com' });
+      }
+    } catch (error) {
+      console.error('檢查用戶認證失敗:', error);
+      // 使用 demo 用戶
+      setUser({ id: 'demo-student', email: 'demo@example.com' });
+    }
+  };
 
   const fetchLearningSummary = async () => {
     try {
@@ -140,7 +167,9 @@ export default function LearningPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">學習管理中心</h1>
-          <p className="text-muted-foreground mt-1">追蹤您的學習進度與成就</p>
+          <p className="text-muted-foreground mt-1">
+            {user?.email ? `歡迎，${user.email}！追蹤您的學習進度與成就` : '追蹤您的學習進度與成就'}
+          </p>
         </div>
         <Button className="gap-2">
           <FileText className="h-4 w-4" />
