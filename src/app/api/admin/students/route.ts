@@ -2,6 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { verifyApiKey } from '@/lib/api-auth';
 
+// 建立學生統計資料的輔助函數
+async function buildStudentStats(supabase: any, studentId: string, name: string, email: string) {
+  // 單字學習統計
+  const { data: vocabStats } = await supabase
+    .from('vocabulary_sessions')
+    .select('words_learned, accuracy_rate, session_date')
+    .eq('student_id', studentId)
+    .order('session_date', { ascending: false });
+
+  // 考試統計
+  const { data: examStats } = await supabase
+    .from('exam_records')
+    .select('percentage_score, exam_date')
+    .eq('student_id', studentId)
+    .order('exam_date', { ascending: false });
+
+  // 作業統計
+  const { data: assignmentStats } = await supabase
+    .from('assignment_submissions')
+    .select('assignment_id, submission_date')
+    .eq('student_id', studentId)
+    .order('submission_date', { ascending: false });
+
+  // 計算統計數據
+  const totalWords = vocabStats?.reduce((sum, v) => sum + (v.words_learned || 0), 0) || 0;
+  const avgAccuracy = vocabStats && vocabStats.length > 0
+    ? vocabStats.reduce((sum, v) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
+    : 0;
+
+  const avgExamScore = examStats && examStats.length > 0
+    ? examStats.reduce((sum, e) => sum + (e.percentage_score || 0), 0) / examStats.length
+    : 0;
+
+  const lastActivity = [
+    ...(vocabStats?.map(v => v.session_date) || []),
+    ...(examStats?.map(e => e.exam_date) || []),
+    ...(assignmentStats?.map(a => a.submission_date?.split('T')[0]) || [])
+  ].sort().pop() || 'N/A';
+
+  return {
+    id: studentId,
+    name: name,
+    email: email,
+    total_words: totalWords,
+    avg_accuracy: parseFloat(avgAccuracy.toFixed(1)),
+    total_exams: examStats?.length || 0,
+    avg_exam_score: parseFloat(avgExamScore.toFixed(1)),
+    assignments_completed: assignmentStats?.length || 0,
+    assignments_total: assignmentStats?.length || 0, // 需要從 assignments 表計算
+    last_activity: lastActivity,
+    status: 'active'
+  };
+}
+
 // GET - 取得所有學生的學習統計
 export async function GET(request: NextRequest) {
   try {
@@ -19,96 +73,81 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // 取得所有學生的基本資訊
-    // 這裡假設你有一個 profiles 或 users 表來存儲學生資訊
-    // 如果沒有，可以從現有的學習記錄中提取唯一的 student_id
+    // 從 Supabase auth.users 取得所有用戶（學生）
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
 
-    // 從單字學習記錄中取得所有學生
-    const { data: vocabularyData } = await supabase
-      .from('vocabulary_sessions')
-      .select('student_id')
-      .order('created_at', { ascending: false });
+    if (authError) {
+      console.error('[Admin Students API] Auth error:', authError);
+      // 如果無法取得 auth users，從學習記錄中提取
 
-    // 從考試記錄中取得學生
-    const { data: examData } = await supabase
-      .from('exam_records')
-      .select('student_id')
-      .order('created_at', { ascending: false });
+      // 從單字學習記錄中取得所有學生
+      const { data: vocabularyData } = await supabase
+        .from('vocabulary_sessions')
+        .select('student_id')
+        .order('created_at', { ascending: false });
 
-    // 從作業提交中取得學生
-    const { data: submissionData } = await supabase
-      .from('assignment_submissions')
-      .select('student_id')
-      .order('created_at', { ascending: false });
+      // 從考試記錄中取得學生
+      const { data: examData } = await supabase
+        .from('exam_records')
+        .select('student_id')
+        .order('created_at', { ascending: false });
 
-    // 合併並去重學生 ID
-    const allStudentIds = new Set([
-      ...(vocabularyData?.map(v => v.student_id) || []),
-      ...(examData?.map(e => e.student_id) || []),
-      ...(submissionData?.map(s => s.student_id) || [])
-    ]);
+      // 從作業提交中取得學生
+      const { data: submissionData } = await supabase
+        .from('assignment_submissions')
+        .select('student_id')
+        .order('created_at', { ascending: false });
+
+      // 合併並去重學生 ID
+      const allStudentIds = new Set([
+        ...(vocabularyData?.map(v => v.student_id) || []),
+        ...(examData?.map(e => e.student_id) || []),
+        ...(submissionData?.map(s => s.student_id) || [])
+      ]);
+
+      const students = [];
+      for (const studentId of Array.from(allStudentIds).slice(offset, offset + limit)) {
+        const student = await buildStudentStats(supabase, studentId, `學生 ${studentId.slice(0, 8)}`, `${studentId.slice(0, 8)}@example.com`);
+        students.push(student);
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: students,
+        pagination: {
+          total: allStudentIds.size,
+          offset,
+          limit
+        }
+      });
+    }
+
+    // 篩選出非 admin 用戶（學生）
+    const studentUsers = authUsers.users.filter(user => {
+      // 假設 admin 用戶有特定的 email 或 metadata
+      return !user.email?.includes('admin') && user.email_confirmed_at;
+    }).slice(offset, offset + limit);
 
     const students = [];
 
-    // 為每個學生計算統計數據
-    for (const studentId of Array.from(allStudentIds).slice(offset, offset + limit)) {
-      // 單字學習統計
-      const { data: vocabStats } = await supabase
-        .from('vocabulary_sessions')
-        .select('words_learned, accuracy_rate, session_date')
-        .eq('student_id', studentId)
-        .order('session_date', { ascending: false });
-
-      // 考試統計
-      const { data: examStats } = await supabase
-        .from('exam_records')
-        .select('percentage_score, exam_date')
-        .eq('student_id', studentId)
-        .order('exam_date', { ascending: false });
-
-      // 作業統計
-      const { data: assignmentStats } = await supabase
-        .from('assignment_submissions')
-        .select('assignment_id, submission_date')
-        .eq('student_id', studentId)
-        .order('submission_date', { ascending: false });
-
-      // 計算統計數據
-      const totalWords = vocabStats?.reduce((sum, v) => sum + (v.words_learned || 0), 0) || 0;
-      const avgAccuracy = vocabStats && vocabStats.length > 0
-        ? vocabStats.reduce((sum, v) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
-        : 0;
-
-      const avgExamScore = examStats && examStats.length > 0
-        ? examStats.reduce((sum, e) => sum + (e.percentage_score || 0), 0) / examStats.length
-        : 0;
-
-      const lastActivity = [
-        ...(vocabStats?.map(v => v.session_date) || []),
-        ...(examStats?.map(e => e.exam_date) || []),
-        ...(assignmentStats?.map(a => a.submission_date?.split('T')[0]) || [])
-      ].sort().pop() || 'N/A';
-
-      students.push({
-        id: studentId,
-        name: `學生 ${studentId.slice(0, 8)}`, // 模擬姓名，實際應從 profiles 表取得
-        email: `${studentId.slice(0, 8)}@example.com`, // 模擬郵件
-        total_words: totalWords,
-        avg_accuracy: parseFloat(avgAccuracy.toFixed(1)),
-        total_exams: examStats?.length || 0,
-        avg_exam_score: parseFloat(avgExamScore.toFixed(1)),
-        assignments_completed: assignmentStats?.length || 0,
-        assignments_total: assignmentStats?.length || 0, // 需要從 assignments 表計算
-        last_activity: lastActivity,
-        status: 'active'
-      });
+    // 為每個真實學生建立統計資料
+    for (const user of studentUsers) {
+      const student = await buildStudentStats(
+        supabase,
+        user.id,
+        user.user_metadata?.name || user.email?.split('@')[0] || '未知用戶',
+        user.email || 'no-email@example.com'
+      );
+      students.push(student);
     }
 
     return NextResponse.json({
       success: true,
       data: students,
       pagination: {
-        total: allStudentIds.size,
+        total: authUsers.users.filter(user =>
+          !user.email?.includes('admin') && user.email_confirmed_at
+        ).length,
         offset,
         limit
       }

@@ -78,51 +78,23 @@ export default function AdminLearningManagementPage() {
 
   const loadStudentsData = async () => {
     setLoading(true);
-    // 模擬 API 調用
-    setTimeout(() => {
-      setStudents([
-        {
-          id: '1',
-          name: '王小明',
-          email: 'xiaoming@example.com',
-          total_words: 450,
-          avg_accuracy: 85.5,
-          total_exams: 5,
-          avg_exam_score: 82.5,
-          assignments_completed: 12,
-          assignments_total: 15,
-          last_activity: '2024-01-20',
-          status: 'active'
-        },
-        {
-          id: '2',
-          name: '李小華',
-          email: 'xiaohua@example.com',
-          total_words: 320,
-          avg_accuracy: 78.2,
-          total_exams: 4,
-          avg_exam_score: 75.8,
-          assignments_completed: 10,
-          assignments_total: 15,
-          last_activity: '2024-01-19',
-          status: 'active'
-        },
-        {
-          id: '3',
-          name: '張小美',
-          email: 'xiaomei@example.com',
-          total_words: 580,
-          avg_accuracy: 92.1,
-          total_exams: 6,
-          avg_exam_score: 89.3,
-          assignments_completed: 15,
-          assignments_total: 15,
-          last_activity: '2024-01-20',
-          status: 'active'
-        }
-      ]);
+    try {
+      const response = await fetch('/api/admin/students');
+      const data = await response.json();
+
+      if (data.success) {
+        setStudents(data.data);
+      } else {
+        console.error('載入學生資料失敗:', data.error);
+        // 如果 API 失敗，顯示空列表而不是假資料
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error('載入學生資料時發生錯誤:', error);
+      setStudents([]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   // 篩選學生
@@ -301,84 +273,100 @@ export default function AdminLearningManagementPage() {
               <CardDescription>查看所有學生的學習進度和表現</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>學生</TableHead>
-                    <TableHead>單字學習</TableHead>
-                    <TableHead>作業完成</TableHead>
-                    <TableHead>考試表現</TableHead>
-                    <TableHead>最後活動</TableHead>
-                    <TableHead>狀態</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {student.email}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{student.total_words} 個</div>
-                          <div className="text-sm text-muted-foreground">
-                            正確率: {student.avg_accuracy}%
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {student.assignments_completed}/{student.assignments_total}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {Math.round((student.assignments_completed / student.assignments_total) * 100)}%
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{student.avg_exam_score} 分</div>
-                          <div className="text-sm text-muted-foreground">
-                            {student.total_exams} 次考試
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {student.last_activity}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>
-                          {student.status === 'active' ? '活躍' : '非活躍'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedStudent(student)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+{filteredStudents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">
+                    {searchTerm ? '找不到符合條件的學生' : '目前沒有學生資料'}
+                  </p>
+                  {!searchTerm && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      學生需要先註冊帳號或有學習記錄才會顯示在這裡
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>學生</TableHead>
+                      <TableHead>單字學習</TableHead>
+                      <TableHead>作業完成</TableHead>
+                      <TableHead>考試表現</TableHead>
+                      <TableHead>最後活動</TableHead>
+                      <TableHead>狀態</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {student.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{student.total_words} 個</div>
+                            <div className="text-sm text-muted-foreground">
+                              正確率: {student.avg_accuracy}%
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">
+                              {student.assignments_completed}/{student.assignments_total}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {student.assignments_total > 0
+                                ? Math.round((student.assignments_completed / student.assignments_total) * 100)
+                                : 0}%
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{student.avg_exam_score || 0} 分</div>
+                            <div className="text-sm text-muted-foreground">
+                              {student.total_exams} 次考試
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {student.last_activity}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>
+                            {student.status === 'active' ? '活躍' : '非活躍'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedStudent(student)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
