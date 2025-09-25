@@ -2,17 +2,17 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Home, 
-  BookOpen, 
-  Users, 
-  Brain, 
-  BarChart3, 
-  Bell, 
-  FileText, 
-  Plus, 
-  Settings, 
-  Upload, 
+import {
+  Home,
+  BookOpen,
+  Users,
+  Brain,
+  BarChart3,
+  Bell,
+  FileText,
+  Plus,
+  Settings,
+  Upload,
   ClipboardList,
   UserCheck,
   ChevronRight,
@@ -20,7 +20,8 @@ import {
   X,
   ArrowLeft,
   LogOut,
-  User
+  User,
+  TrendingUp
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabase';
@@ -55,7 +56,10 @@ const navItems: NavItem[] = [
   
   // 用戶管理
   { title: '申請管理', href: '/admin/requests', icon: UserCheck, category: '用戶管理' },
-  
+
+  // 學習管理
+  { title: '學習管理', href: '/admin/learning-management', icon: TrendingUp, category: '學習管理' },
+
   // 內容管理
   { title: 'Blog 管理', href: '/admin/blog', icon: FileText, category: '內容管理' },
   

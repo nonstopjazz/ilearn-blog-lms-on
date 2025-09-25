@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import AuthMiddleware from '@/lib/auth-middleware';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -152,7 +153,8 @@ export default function AdminLearningManagementPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <AuthMiddleware requireAdmin={true}>
+      <div className="container mx-auto p-6 space-y-6">
       {/* 頁面標題 */}
       <div className="flex justify-between items-center">
         <div>
@@ -469,5 +471,6 @@ export default function AdminLearningManagementPage() {
         </Dialog>
       )}
     </div>
+    </AuthMiddleware>
   );
 }
