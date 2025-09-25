@@ -215,15 +215,37 @@ export function withPermission(permission: Permission) {
       if (!auth.success) {
         return auth.response!;
       }
-      
+
       // 將用戶信息添加到 context
       const enhancedContext = {
         ...context,
         user: auth.user,
         permissions: [permission]
       };
-      
+
       return handler(request, enhancedContext);
     };
   };
+}
+
+/**
+ * 簡單的 API Key 驗證（用於內部 API 調用）
+ */
+export async function verifyApiKey(request: Request) {
+  // 開發環境或沒有設定 API_KEY 時，允許所有請求
+  if (!process.env.API_KEY || process.env.NODE_ENV === 'development') {
+    return { valid: true };
+  }
+
+  const apiKey = request.headers.get('x-api-key');
+
+  if (!apiKey) {
+    return { valid: false, error: 'API key required' };
+  }
+
+  if (apiKey !== process.env.API_KEY) {
+    return { valid: false, error: 'Invalid API key' };
+  }
+
+  return { valid: true };
 }

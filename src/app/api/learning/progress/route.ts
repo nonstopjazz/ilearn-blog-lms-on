@@ -13,13 +13,17 @@ function getWeekNumber(date: Date): number {
 // GET - 取得學習進度統計
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
+    // 驗證 API 金鑰（開發環境下會自動通過）
     const authResult = await verifyApiKey(request);
     if (!authResult.valid) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: 401 }
-      );
+      console.warn('[Progress API] API key validation failed:', authResult.error);
+      // 在開發環境仍然允許請求
+      if (process.env.NODE_ENV !== 'development') {
+        return NextResponse.json(
+          { success: false, error: authResult.error },
+          { status: 401 }
+        );
+      }
     }
 
     const supabase = getSupabase();
