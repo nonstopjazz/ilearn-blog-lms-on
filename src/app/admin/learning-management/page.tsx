@@ -71,6 +71,14 @@ export default function AdminLearningManagementPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isAddingRecord, setIsAddingRecord] = useState(false);
 
+  // 新增記錄表單狀態
+  const [newRecordForm, setNewRecordForm] = useState({
+    studentId: '',
+    recordType: '',
+    data: {} as any
+  });
+  const [isSubmittingRecord, setIsSubmittingRecord] = useState(false);
+
   // 模擬數據載入
   useEffect(() => {
     loadStudentsData();
@@ -102,6 +110,57 @@ export default function AdminLearningManagementPage() {
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // 處理新增記錄
+  const handleAddRecord = async () => {
+    if (!newRecordForm.studentId || !newRecordForm.recordType) {
+      alert('請選擇學生和記錄類型');
+      return;
+    }
+
+    setIsSubmittingRecord(true);
+    try {
+      const response = await fetch('/api/admin/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: newRecordForm.studentId,
+          record_type: newRecordForm.recordType,
+          data: newRecordForm.data
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('記錄新增成功！');
+        setIsAddingRecord(false);
+        setNewRecordForm({ studentId: '', recordType: '', data: {} });
+        loadStudentsData(); // 重新載入學生數據
+      } else {
+        throw new Error(result.error || '新增記錄失敗');
+      }
+    } catch (error) {
+      console.error('新增記錄失敗:', error);
+      alert('新增記錄失敗: ' + error.message);
+    } finally {
+      setIsSubmittingRecord(false);
+    }
+  };
+
+  // 編輯學生
+  const handleEditStudent = (student: Student) => {
+    // 這裡可以開啟編輯對話框，暫時先顯示提醒
+    alert(`編輯學生 ${student.name} 的功能開發中`);
+  };
+
+  // 生成學生報告
+  const handleGenerateReport = (student: Student) => {
+    // 這裡可以生成報告，暫時先顯示提醒
+    alert(`正在為 ${student.name} 生成學習報告...`);
+  };
 
   // 統計數據
   const totalStudents = students.length;
@@ -155,7 +214,10 @@ export default function AdminLearningManagementPage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="student-select">選擇學生</Label>
-                  <Select>
+                  <Select
+                    value={newRecordForm.studentId}
+                    onValueChange={(value) => setNewRecordForm(prev => ({ ...prev, studentId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇學生" />
                     </SelectTrigger>
@@ -170,7 +232,10 @@ export default function AdminLearningManagementPage() {
                 </div>
                 <div>
                   <Label htmlFor="record-type">記錄類型</Label>
-                  <Select>
+                  <Select
+                    value={newRecordForm.recordType}
+                    onValueChange={(value) => setNewRecordForm(prev => ({ ...prev, recordType: value, data: {} }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇記錄類型" />
                     </SelectTrigger>
@@ -178,16 +243,204 @@ export default function AdminLearningManagementPage() {
                       <SelectItem value="vocabulary">單字學習</SelectItem>
                       <SelectItem value="exam">考試成績</SelectItem>
                       <SelectItem value="assignment">作業提交</SelectItem>
-                      <SelectItem value="project">特殊專案</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* 根據記錄類型顯示不同的輸入欄位 */}
+                {newRecordForm.recordType === 'vocabulary' && (
+                  <>
+                    <div>
+                      <Label>課程 ID</Label>
+                      <Input
+                        value={newRecordForm.data.course_id || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, course_id: e.target.value }
+                        }))}
+                        placeholder="輸入課程 ID"
+                      />
+                    </div>
+                    <div>
+                      <Label>學習日期</Label>
+                      <Input
+                        type="date"
+                        value={newRecordForm.data.session_date || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, session_date: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>起始號碼</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.start_number || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, start_number: parseInt(e.target.value) || 0 }
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>結束號碼</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.end_number || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, end_number: parseInt(e.target.value) || 0 }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>正確率 (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={newRecordForm.data.accuracy_rate || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, accuracy_rate: parseFloat(e.target.value) || 0 }
+                        }))}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {newRecordForm.recordType === 'exam' && (
+                  <>
+                    <div>
+                      <Label>課程 ID</Label>
+                      <Input
+                        value={newRecordForm.data.course_id || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, course_id: e.target.value }
+                        }))}
+                        placeholder="輸入課程 ID"
+                      />
+                    </div>
+                    <div>
+                      <Label>考試名稱</Label>
+                      <Input
+                        value={newRecordForm.data.exam_name || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, exam_name: e.target.value }
+                        }))}
+                        placeholder="輸入考試名稱"
+                      />
+                    </div>
+                    <div>
+                      <Label>考試日期</Label>
+                      <Input
+                        type="date"
+                        value={newRecordForm.data.exam_date || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, exam_date: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>得分</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.total_score || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, total_score: parseFloat(e.target.value) || 0 }
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>滿分</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.max_score || 100}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, max_score: parseFloat(e.target.value) || 100 }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {newRecordForm.recordType === 'assignment' && (
+                  <>
+                    <div>
+                      <Label>作業 ID</Label>
+                      <Input
+                        value={newRecordForm.data.assignment_id || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, assignment_id: e.target.value }
+                        }))}
+                        placeholder="輸入作業 ID"
+                      />
+                    </div>
+                    <div>
+                      <Label>提交內容</Label>
+                      <Input
+                        value={newRecordForm.data.content || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, content: e.target.value }
+                        }))}
+                        placeholder="輸入提交內容"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>得分</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.score || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, score: parseFloat(e.target.value) || 0 }
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>滿分</Label>
+                        <Input
+                          type="number"
+                          value={newRecordForm.data.max_score || 100}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, max_score: parseFloat(e.target.value) || 100 }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddingRecord(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingRecord(false);
+                    setNewRecordForm({ studentId: '', recordType: '', data: {} });
+                  }}
+                >
                   取消
                 </Button>
-                <Button>確認新增</Button>
+                <Button
+                  onClick={handleAddRecord}
+                  disabled={isSubmittingRecord || !newRecordForm.studentId || !newRecordForm.recordType}
+                >
+                  {isSubmittingRecord ? '新增中...' : '確認新增'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -354,10 +607,18 @@ export default function AdminLearningManagementPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditStudent(student)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGenerateReport(student)}
+                            >
                               <FileText className="h-4 w-4" />
                             </Button>
                           </div>
