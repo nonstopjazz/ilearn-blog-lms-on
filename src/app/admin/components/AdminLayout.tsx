@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import AuthMiddleware from '@/lib/auth-middleware';
+import { useAuth, AuthLoading, AuthError } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -69,25 +70,13 @@ const navItems: NavItem[] = [
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading, error, isAuthenticated, isAdmin: userIsAdmin, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  // 點擊外部關閉用戶選單
   useEffect(() => {
-    // 獲取當前用戶
-    const getCurrentUser = async () => {
-      const { data: { user } } = await getSupabase().auth.getUser();
-      setUser(user);
-    };
-
-    getCurrentUser();
-
-    // 監聽認證狀態變化
-    const { data: { subscription } } = getSupabase().auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    // 點擊外部關閉用戶選單
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.user-menu') && userMenuOpen) {
@@ -98,19 +87,48 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      subscription.unsubscribe();
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [userMenuOpen]);
 
+  // 檢查權限並處理未認證/無權限的情況
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      router.push('/auth?redirect=' + encodeURIComponent(pathname));
+      return;
+    }
+
+    if (!userIsAdmin) {
+      router.push('/unauthorized');
+      return;
+    }
+  }, [loading, isAuthenticated, userIsAdmin, router, pathname]);
+
   const handleSignOut = async () => {
     try {
-      await getSupabase().auth.signOut();
-      window.location.href = '/';
+      await signOut();
+      router.push('/');
     } catch (error) {
       console.error('登出失敗:', error);
     }
   };
+
+  // 顯示載入畫面
+  if (loading) {
+    return <AuthLoading />;
+  }
+
+  // 顯示錯誤畫面
+  if (error) {
+    return <AuthError error={error} />;
+  }
+
+  // 如果未認證或無權限，返回 null（因為 useEffect 會處理重導向）
+  if (!isAuthenticated || !userIsAdmin) {
+    return null;
+  }
 
   // 生成麵包屑
   const generateBreadcrumbs = () => {
@@ -143,8 +161,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <AuthMiddleware requireAuth={true} requireAdmin={true}>
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* 頂部導航欄 */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4">
@@ -336,6 +353,5 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       )}
     </div>
-    </AuthMiddleware>
   );
 }
