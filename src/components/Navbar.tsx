@@ -70,6 +70,7 @@ export default function Navbar({ user: propUser, onSignOut }: NavbarProps = {}) 
 
   const navItems = [
     { name: '課程', href: '/courses', icon: BookOpen },
+    { name: '學習管理', href: '/learning', icon: Users },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: '測驗', href: '/quiz', icon: Brain }
   ]

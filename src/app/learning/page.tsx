@@ -19,6 +19,7 @@ import {
   Brain
 } from 'lucide-react';
 import type { LearningSummary } from '@/types/learning-management';
+import Navbar from '@/components/Navbar';
 
 export default function LearningPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -119,17 +120,22 @@ export default function LearningPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">載入學習資料中...</p>
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">載入學習資料中...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <>
+      <Navbar />
+      <div className="container mx-auto p-6 space-y-6">
       {/* 頁面標題 */}
       <div className="flex justify-between items-center">
         <div>
@@ -367,5 +373,6 @@ export default function LearningPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }
