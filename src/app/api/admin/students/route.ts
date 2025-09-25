@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase-server';
 import { verifyApiKey } from '@/lib/api-auth';
 
 // 建立學生統計資料的輔助函數
@@ -74,12 +74,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // 從 course_requests 表取得已被批准的學生
+    // 使用與 requests 頁面完全相同的查詢方式
     const { data: approvedRequests, error: requestsError } = await supabase
       .from('course_requests')
       .select('*')
@@ -94,9 +100,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 從批准的申請中提取唯一的學生
+    if (!approvedRequests || approvedRequests.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        pagination: {
+          total: 0,
+          offset,
+          limit
+        }
+      });
+    }
+
+    // 從批准的申請中提取唯一的學生 - 確保使用正確的資料結構
     const uniqueStudents = new Map();
-    approvedRequests?.forEach(request => {
+    approvedRequests.forEach(request => {
       if (!uniqueStudents.has(request.user_id)) {
         uniqueStudents.set(request.user_id, {
           id: request.user_id,
@@ -109,51 +127,6 @@ export async function GET(request: NextRequest) {
 
     // 轉換為陣列並分頁
     const studentsList = Array.from(uniqueStudents.values()).slice(offset, offset + limit);
-
-    if (studentsList.length === 0) {
-      // 如果沒有批准的學生，嘗試從學習記錄中提取
-
-      // 從單字學習記錄中取得所有學生
-      const { data: vocabularyData } = await supabase
-        .from('vocabulary_sessions')
-        .select('student_id')
-        .order('created_at', { ascending: false });
-
-      // 從考試記錄中取得學生
-      const { data: examData } = await supabase
-        .from('exam_records')
-        .select('student_id')
-        .order('created_at', { ascending: false });
-
-      // 從作業提交中取得學生
-      const { data: submissionData } = await supabase
-        .from('assignment_submissions')
-        .select('student_id')
-        .order('created_at', { ascending: false });
-
-      // 合併並去重學生 ID
-      const allStudentIds = new Set([
-        ...(vocabularyData?.map(v => v.student_id) || []),
-        ...(examData?.map(e => e.student_id) || []),
-        ...(submissionData?.map(s => s.student_id) || [])
-      ]);
-
-      const students = [];
-      for (const studentId of Array.from(allStudentIds).slice(offset, offset + limit)) {
-        const student = await buildStudentStats(supabase, studentId, `學生 ${studentId.slice(0, 8)}`, `${studentId.slice(0, 8)}@example.com`);
-        students.push(student);
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: students,
-        pagination: {
-          total: allStudentIds.size,
-          offset,
-          limit
-        }
-      });
-    }
 
     // 為每個被批准的學生建立統計資料
     const students = [];
@@ -198,7 +171,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const supabase = getSupabase();
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'Supabase 初始化失敗' },
+        { status: 500 }
+      );
+    }
 
     const { student_id, record_type, data } = body;
 
