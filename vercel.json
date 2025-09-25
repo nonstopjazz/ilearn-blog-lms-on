@@ -7,6 +7,18 @@
   "functions": {
     "src/app/api/**/*": {
       "maxDuration": 30
+    },
+    "src/app/api/cron/weekly-report/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/learning/weekly-report/route.ts": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/weekly-report",
+      "schedule": "0 20 * * 0"
+    }
+  ]
 }
