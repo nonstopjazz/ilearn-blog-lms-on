@@ -321,7 +321,7 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                 新增記錄
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-background border-2 shadow-lg max-w-2xl">
+            <DialogContent className="bg-white dark:bg-gray-900 border-2 shadow-lg max-w-2xl backdrop-blur-none">
               <DialogHeader>
                 <DialogTitle>新增學習記錄</DialogTitle>
                 <DialogDescription>
@@ -528,6 +528,32 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
 
                 {newRecordForm.recordType === 'assignment' && (
                   <>
+                    <div>
+                      <Label>選擇課程</Label>
+                      <Select
+                        value={newRecordForm.data.course_id || ''}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, course_id: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingCourses ? "載入課程中..." : "選擇課程"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {studentCourses.map(course => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {studentCourses.length === 0 && newRecordForm.studentId && !loadingCourses && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          該學生尚未註冊任何課程
+                        </p>
+                      )}
+                    </div>
                     <div>
                       <Label>作業 ID</Label>
                       <Input
