@@ -120,6 +120,12 @@ export default function AdminLearningManagementPage() {
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 根據學生ID獲取學生名字
+  const getStudentName = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    return student ? student.name : studentId;
+  };
+
   // 載入學生的課程
   const loadStudentCourses = async (studentId: string) => {
     if (!studentId) {
@@ -315,7 +321,7 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                 新增記錄
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-background border-2 shadow-lg max-w-2xl">
               <DialogHeader>
                 <DialogTitle>新增學習記錄</DialogTitle>
                 <DialogDescription>
@@ -333,7 +339,9 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="選擇學生" />
+                      <SelectValue placeholder="選擇學生">
+                        {newRecordForm.studentId ? getStudentName(newRecordForm.studentId) : "選擇學生"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {students.map(student => (
