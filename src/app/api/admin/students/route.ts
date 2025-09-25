@@ -25,6 +25,12 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     .eq('student_id', studentId)
     .order('submission_date', { ascending: false });
 
+  // 取得總作業數
+  const { data: totalAssignments } = await supabase
+    .from('assignments')
+    .select('id')
+    .eq('is_published', true);
+
   // 計算統計數據
   const totalWords = vocabStats?.reduce((sum, v) => sum + (v.words_learned || 0), 0) || 0;
   const avgAccuracy = vocabStats && vocabStats.length > 0
@@ -50,7 +56,7 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     total_exams: examStats?.length || 0,
     avg_exam_score: parseFloat(avgExamScore.toFixed(1)),
     assignments_completed: assignmentStats?.length || 0,
-    assignments_total: assignmentStats?.length || 0, // 需要從 assignments 表計算
+    assignments_total: totalAssignments?.length || 0,
     last_activity: lastActivity,
     status: 'active'
   };
@@ -73,12 +79,39 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // 從 Supabase auth.users 取得所有用戶（學生）
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    // 從 course_requests 表取得已被批准的學生
+    const { data: approvedRequests, error: requestsError } = await supabase
+      .from('course_requests')
+      .select('*')
+      .eq('status', 'approved')
+      .order('reviewed_at', { ascending: false });
 
-    if (authError) {
-      console.error('[Admin Students API] Auth error:', authError);
-      // 如果無法取得 auth users，從學習記錄中提取
+    if (requestsError) {
+      console.error('[Admin Students API] Error fetching course requests:', requestsError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch student data' },
+        { status: 500 }
+      );
+    }
+
+    // 從批准的申請中提取唯一的學生
+    const uniqueStudents = new Map();
+    approvedRequests?.forEach(request => {
+      if (!uniqueStudents.has(request.user_id)) {
+        uniqueStudents.set(request.user_id, {
+          id: request.user_id,
+          name: request.user_info?.name || '未知學生',
+          email: request.user_info?.email || 'no-email@example.com',
+          first_approved_at: request.reviewed_at
+        });
+      }
+    });
+
+    // 轉換為陣列並分頁
+    const studentsList = Array.from(uniqueStudents.values()).slice(offset, offset + limit);
+
+    if (studentsList.length === 0) {
+      // 如果沒有批准的學生，嘗試從學習記錄中提取
 
       // 從單字學習記錄中取得所有學生
       const { data: vocabularyData } = await supabase
@@ -122,21 +155,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 篩選出非 admin 用戶（學生）
-    const studentUsers = authUsers.users.filter(user => {
-      // 假設 admin 用戶有特定的 email 或 metadata
-      return !user.email?.includes('admin') && user.email_confirmed_at;
-    }).slice(offset, offset + limit);
-
+    // 為每個被批准的學生建立統計資料
     const students = [];
-
-    // 為每個真實學生建立統計資料
-    for (const user of studentUsers) {
+    for (const studentInfo of studentsList) {
       const student = await buildStudentStats(
         supabase,
-        user.id,
-        user.user_metadata?.name || user.email?.split('@')[0] || '未知用戶',
-        user.email || 'no-email@example.com'
+        studentInfo.id,
+        studentInfo.name,
+        studentInfo.email
       );
       students.push(student);
     }
@@ -145,9 +171,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: students,
       pagination: {
-        total: authUsers.users.filter(user =>
-          !user.email?.includes('admin') && user.email_confirmed_at
-        ).length,
+        total: uniqueStudents.size,
         offset,
         limit
       }
