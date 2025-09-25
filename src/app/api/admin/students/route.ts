@@ -188,21 +188,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 驗證 student_id 格式（如果不是有效的 UUID，嘗試轉換或生成）
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let validStudentId = student_id;
+
+    if (!uuidRegex.test(student_id)) {
+      // 如果不是有效的 UUID，我們需要查找或創建一個有效的 UUID
+      // 首先檢查是否已經有這個學生的記錄
+      const { data: existingStudent } = await supabase
+        .from('course_requests')
+        .select('user_id')
+        .eq('user_info->name', student_id)
+        .eq('status', 'approved')
+        .single();
+
+      if (existingStudent) {
+        validStudentId = existingStudent.user_id;
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Invalid student ID format. Please provide a valid UUID or existing student name.' },
+          { status: 400 }
+        );
+      }
+    }
+
     let result;
 
     switch (record_type) {
       case 'vocabulary':
+        // 檢查必填欄位
+        if (!data.course_id || !data.session_date || !data.start_number || !data.end_number) {
+          return NextResponse.json(
+            { success: false, error: 'Missing required fields for vocabulary record' },
+            { status: 400 }
+          );
+        }
+
         const { data: vocabResult, error: vocabError } = await supabase
           .from('vocabulary_sessions')
           .insert([{
-            student_id,
+            student_id: validStudentId,
             course_id: data.course_id,
             session_date: data.session_date,
-            start_number: data.start_number,
-            end_number: data.end_number,
-            session_duration: data.session_duration,
-            accuracy_rate: data.accuracy_rate,
-            notes: data.notes
+            start_number: parseInt(data.start_number),
+            end_number: parseInt(data.end_number),
+            session_duration: data.session_duration ? parseInt(data.session_duration) : null,
+            accuracy_rate: data.accuracy_rate ? parseFloat(data.accuracy_rate) : null,
+            notes: data.notes || null
           }])
           .select()
           .single();
@@ -215,7 +247,7 @@ export async function POST(request: NextRequest) {
         const { data: examResult, error: examError } = await supabase
           .from('exam_records')
           .insert([{
-            student_id,
+            student_id: validStudentId,
             course_id: data.course_id,
             exam_type: data.exam_type,
             exam_name: data.exam_name,
@@ -237,7 +269,7 @@ export async function POST(request: NextRequest) {
           .from('assignment_submissions')
           .insert([{
             assignment_id: data.assignment_id,
-            student_id,
+            student_id: validStudentId,
             submission_type: data.submission_type || 'text',
             content: data.content,
             score: data.score,
