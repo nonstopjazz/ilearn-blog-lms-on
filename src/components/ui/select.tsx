@@ -93,5 +93,3 @@ export function SelectItem({ value, children, className = "" }: { value: string;
     </div>
   )
 }
-
-export { SelectTrigger, SelectValue, SelectContent, SelectItem }
