@@ -135,19 +135,21 @@ export default function MyCoursesPage() {
           })
         }
         
-        // 整理課程資料
-        const userCoursesData = approvedRequests.map(req => {
-          const courseDetail = coursesMap.get(req.course_id)
-          return {
-            id: req.course_id,
-            title: courseDetail?.title || req.course_title,
-            description: courseDetail?.description || '',
-            category: courseDetail?.category || '未分類',
-            difficulty: courseDetail?.level === 'beginner' ? '初級' : 
-                        courseDetail?.level === 'intermediate' ? '中級' : '高級',
-            total_lessons: courseDetail?.lessons_count || 0
-          }
-        })
+        // 整理課程資料（只包含已發布的課程）
+        const userCoursesData = approvedRequests
+          .filter(req => coursesMap.has(req.course_id)) // 只保留在 coursesMap 中的課程（已發布的）
+          .map(req => {
+            const courseDetail = coursesMap.get(req.course_id)
+            return {
+              id: req.course_id,
+              title: courseDetail.title,
+              description: courseDetail.description || '',
+              category: courseDetail.category || '未分類',
+              difficulty: courseDetail.level === 'beginner' ? '初級' :
+                          courseDetail.level === 'intermediate' ? '中級' : '高級',
+              total_lessons: courseDetail.lessons_count || 0
+            }
+          })
         
         setCourses(userCoursesData)
         
