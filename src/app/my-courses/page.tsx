@@ -96,12 +96,13 @@ export default function MyCoursesPage() {
         const { getSupabase } = await import('@/lib/supabase');
         const supabase = getSupabase();
         
-        // 步驟 1: 查詢用戶已批准的課程申請
+        // 直接從 course_requests 查詢用戶已批准的課程（不再依賴 courses 表）
         const { data: approvedRequests, error: requestError } = await supabase
           .from('course_requests')
-          .select('course_id, course_title, reviewed_at')
+          .select('*')
           .eq('user_id', user.id)
           .eq('status', 'approved')
+          .order('reviewed_at', { ascending: false })
         
         if (requestError) {
           console.error('[My Courses] 查詢課程申請失敗:', requestError)
@@ -115,74 +116,23 @@ export default function MyCoursesPage() {
           return
         }
         
-        // 步驟 2: 獲取課程詳細資訊
-        const courseIds = approvedRequests.map(req => req.course_id)
-        const { data: coursesData, error: coursesError } = await supabase
-          .from('courses')
-          .select('id, title, description, category, level, lessons_count, status')
-          .in('id', courseIds)
+        // 不再查詢 courses 表，直接使用 course_requests 的資料
         
-        if (coursesError) {
-          console.error('查詢課程詳情失敗:', coursesError)
-        }
-        
-        // 建立課程 ID 到課程資料的映射
-        const coursesMap = new Map()
-        if (coursesData) {
-          coursesData.forEach(course => {
-            coursesMap.set(course.id, course)
-          })
-        }
-        
-        // 整理課程資料（顯示所有已批准的課程，除了明確標記為 draft 的）
-        console.log('=== 課程資料分析 ===')
-        console.log('已批准的課程申請數量:', approvedRequests.length)
-        console.log('courses 表中找到的課程數量:', coursesData ? coursesData.length : 0)
+        // 直接使用 course_requests 的資料建立課程列表
+        console.log('=== 我的課程（使用 course_requests 資料）===')
+        console.log('已批准的課程數量:', approvedRequests.length)
 
-        if (coursesData && coursesData.length > 0) {
-          console.log('courses 表中的課程狀態分布:')
-          coursesData.forEach(course => {
-            console.log(`- ${course.id}: status = ${course.status || 'undefined/null'}`)
-          })
-        }
-
-        const userCoursesData = approvedRequests
-          .map(req => {
-            const courseDetail = coursesMap.get(req.course_id)
-
-            // 如果課程不在 courses 表中，還是顯示（使用 course_requests 的資料）
-            if (!courseDetail) {
-              console.log(`課程 ${req.course_id} 不在 courses 表中，使用 course_requests 資料顯示`)
-              return {
-                id: req.course_id,
-                title: req.course_title,
-                description: '',
-                category: '未分類',
-                difficulty: '初級',
-                total_lessons: 0
-              }
-            }
-
-            // 只過濾明確標記為 draft 的課程
-            // 如果 status 是 undefined、null 或其他值，都顯示
-            if (courseDetail.status === 'draft') {
-              console.log(`課程 ${req.course_id} 狀態為 draft，不顯示`)
-              return null
-            }
-
-            // 顯示課程
-            console.log(`顯示課程 ${req.course_id}，狀態：${courseDetail.status || 'undefined/null'}，標題：${courseDetail.title}`)
-            return {
-              id: req.course_id,
-              title: courseDetail.title || req.course_title,
-              description: courseDetail.description || '',
-              category: courseDetail.category || '未分類',
-              difficulty: courseDetail.level === 'beginner' ? '初級' :
-                          courseDetail.level === 'intermediate' ? '中級' : '高級',
-              total_lessons: courseDetail.lessons_count || 0
-            }
-          })
-          .filter(course => course !== null) // 移除 null 值（draft 課程）
+        const userCoursesData = approvedRequests.map((req, index) => {
+          console.log(`課程 ${index + 1}: ${req.course_id} - ${req.course_title}`)
+          return {
+            id: req.course_id,
+            title: req.course_title,
+            description: req.request_reason || '', // 使用申請原因作為描述
+            category: '線上課程', // 預設分類
+            difficulty: '初級', // 預設難度
+            total_lessons: 0 // 預設課程數，因為沒有實際課程資料
+          }
+        })
 
         console.log('最終顯示的課程數量:', userCoursesData.length)
         console.log('===================')
