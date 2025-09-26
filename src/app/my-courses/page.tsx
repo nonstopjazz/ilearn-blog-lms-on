@@ -115,13 +115,12 @@ export default function MyCoursesPage() {
           return
         }
         
-        // 步驟 2: 獲取課程詳細資訊（只顯示已發布的課程）
+        // 步驟 2: 獲取課程詳細資訊
         const courseIds = approvedRequests.map(req => req.course_id)
         const { data: coursesData, error: coursesError } = await supabase
           .from('courses')
           .select('id, title, description, category, level, lessons_count, status')
           .in('id', courseIds)
-          .eq('status', 'published')
         
         if (coursesError) {
           console.error('查詢課程詳情失敗:', coursesError)
@@ -135,21 +134,25 @@ export default function MyCoursesPage() {
           })
         }
         
-        // 整理課程資料（只包含已發布的課程）
+        // 整理課程資料（顯示所有已核准的課程，但排除草稿）
         const userCoursesData = approvedRequests
-          .filter(req => coursesMap.has(req.course_id)) // 只保留在 coursesMap 中的課程（已發布的）
           .map(req => {
             const courseDetail = coursesMap.get(req.course_id)
+            // 如果有課程詳細資料且狀態為草稿，則跳過
+            if (courseDetail && courseDetail.status === 'draft') {
+              return null
+            }
             return {
               id: req.course_id,
-              title: courseDetail.title,
-              description: courseDetail.description || '',
-              category: courseDetail.category || '未分類',
-              difficulty: courseDetail.level === 'beginner' ? '初級' :
-                          courseDetail.level === 'intermediate' ? '中級' : '高級',
-              total_lessons: courseDetail.lessons_count || 0
+              title: courseDetail?.title || req.course_title,
+              description: courseDetail?.description || '',
+              category: courseDetail?.category || '未分類',
+              difficulty: courseDetail?.level === 'beginner' ? '初級' :
+                          courseDetail?.level === 'intermediate' ? '中級' : '高級',
+              total_lessons: courseDetail?.lessons_count || 0
             }
           })
+          .filter(course => course !== null) // 移除 null 值（草稿課程）
         
         setCourses(userCoursesData)
         
