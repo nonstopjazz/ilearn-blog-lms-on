@@ -134,25 +134,35 @@ export default function MyCoursesPage() {
           })
         }
         
-        // 整理課程資料（顯示所有已核准的課程，但排除草稿）
+        // 整理課程資料（只顯示已批准且已發布的課程）
         const userCoursesData = approvedRequests
           .map(req => {
             const courseDetail = coursesMap.get(req.course_id)
-            // 如果有課程詳細資料且狀態為草稿，則跳過
-            if (courseDetail && courseDetail.status === 'draft') {
+
+            // 如果沒有課程詳細資料（課程可能被刪除），跳過
+            if (!courseDetail) {
+              console.log(`課程 ${req.course_id} 不存在於 courses 表中`)
               return null
             }
+
+            // 如果課程狀態不是 published（包括 draft, archived 等），跳過
+            if (courseDetail.status !== 'published') {
+              console.log(`課程 ${req.course_id} 狀態為 ${courseDetail.status}，不顯示`)
+              return null
+            }
+
+            // 只有已發布的課程才會顯示
             return {
               id: req.course_id,
-              title: courseDetail?.title || req.course_title,
-              description: courseDetail?.description || '',
-              category: courseDetail?.category || '未分類',
-              difficulty: courseDetail?.level === 'beginner' ? '初級' :
-                          courseDetail?.level === 'intermediate' ? '中級' : '高級',
-              total_lessons: courseDetail?.lessons_count || 0
+              title: courseDetail.title,
+              description: courseDetail.description || '',
+              category: courseDetail.category || '未分類',
+              difficulty: courseDetail.level === 'beginner' ? '初級' :
+                          courseDetail.level === 'intermediate' ? '中級' : '高級',
+              total_lessons: courseDetail.lessons_count || 0
             }
           })
-          .filter(course => course !== null) // 移除 null 值（草稿課程）
+          .filter(course => course !== null) // 移除 null 值（非發布的課程）
         
         setCourses(userCoursesData)
         
