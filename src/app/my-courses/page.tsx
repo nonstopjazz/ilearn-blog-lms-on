@@ -134,35 +134,29 @@ export default function MyCoursesPage() {
           })
         }
         
-        // 整理課程資料（顯示所有已批准的課程）
+        // 整理課程資料（只顯示存在於 courses 表且非草稿的課程）
         const userCoursesData = approvedRequests
           .map(req => {
             const courseDetail = coursesMap.get(req.course_id)
 
-            // 如果沒有課程詳細資料，使用 course_requests 的基本資訊
+            // 如果課程不在 courses 表中，不顯示（可能是假資料或已刪除的課程）
             if (!courseDetail) {
-              console.log(`課程 ${req.course_id} 不在 courses 表中，使用申請資料`)
-              return {
-                id: req.course_id,
-                title: req.course_title,
-                description: '',
-                category: '未分類',
-                difficulty: '初級',
-                total_lessons: 0
-              }
+              console.log(`課程 ${req.course_id} 不在 courses 表中，跳過顯示`)
+              return null
             }
 
-            // 檢查 status 欄位（如果存在）
-            // 只過濾明確標記為 draft 或 archived 的課程
-            if (courseDetail.status && (courseDetail.status === 'draft' || courseDetail.status === 'archived')) {
+            // 檢查 status 欄位
+            // 只顯示 status 為 published 或沒有 status 欄位的課程
+            if (courseDetail.status === 'draft' || courseDetail.status === 'archived') {
               console.log(`課程 ${req.course_id} 狀態為 ${courseDetail.status}，不顯示`)
               return null
             }
 
-            // 顯示課程（包括沒有 status 欄位或 status 為 published 的）
+            // 顯示課程（status 為 published 或 null/undefined）
+            console.log(`顯示課程 ${req.course_id}，狀態：${courseDetail.status || '無狀態'}`)
             return {
               id: req.course_id,
-              title: courseDetail.title || req.course_title,
+              title: courseDetail.title,
               description: courseDetail.description || '',
               category: courseDetail.category || '未分類',
               difficulty: courseDetail.level === 'beginner' ? '初級' :
@@ -170,7 +164,7 @@ export default function MyCoursesPage() {
               total_lessons: courseDetail.lessons_count || 0
             }
           })
-          .filter(course => course !== null) // 移除 null 值（草稿和已歸檔的課程）
+          .filter(course => course !== null) // 移除 null 值
         
         setCourses(userCoursesData)
         
