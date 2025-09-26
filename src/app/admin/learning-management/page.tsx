@@ -196,7 +196,22 @@ export default function AdminLearningManagementPage() {
       }
     } catch (error) {
       console.error('新增記錄失敗:', error);
-      alert('新增記錄失敗: ' + error.message);
+
+      // 嘗試從錯誤回應中獲取詳細資訊
+      let errorMessage = error.message;
+      if (result && !result.success) {
+        errorMessage = result.error || error.message;
+
+        // 如果有詳細的錯誤資訊，記錄到 console
+        if (result.details) {
+          console.error('詳細錯誤資訊:', result.details);
+        }
+        if (result.debug_info) {
+          console.error('除錯資訊:', result.debug_info);
+        }
+      }
+
+      alert('新增記錄失敗: ' + errorMessage);
     } finally {
       setIsSubmittingRecord(false);
     }

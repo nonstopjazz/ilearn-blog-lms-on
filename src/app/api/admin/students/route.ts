@@ -244,6 +244,31 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'exam':
+        console.log('[DEBUG] Attempting to create exam record with data:', {
+          student_id: validStudentId,
+          course_id: data.course_id,
+          exam_type: data.exam_type,
+          exam_name: data.exam_name,
+          exam_date: data.exam_date,
+          total_score: data.total_score,
+          max_score: data.max_score || 100,
+          subject: data.subject,
+          teacher_feedback: data.teacher_feedback
+        });
+
+        // 檢查必填欄位
+        if (!data.exam_name || !data.exam_date || !data.total_score) {
+          console.log('[DEBUG] Missing required exam fields:', {
+            exam_name: !!data.exam_name,
+            exam_date: !!data.exam_date,
+            total_score: !!data.total_score
+          });
+          return NextResponse.json(
+            { success: false, error: 'Missing required fields: exam_name, exam_date, total_score' },
+            { status: 400 }
+          );
+        }
+
         const { data: examResult, error: examError } = await supabase
           .from('exam_records')
           .insert([{
@@ -260,7 +285,18 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (examError) throw examError;
+        if (examError) {
+          console.error('[DEBUG] Exam record creation failed:', examError);
+          console.error('[DEBUG] Error details:', {
+            code: examError.code,
+            message: examError.message,
+            details: examError.details,
+            hint: examError.hint
+          });
+          throw examError;
+        }
+
+        console.log('[DEBUG] Exam record created successfully:', examResult);
         result = examResult;
         break;
 
@@ -299,8 +335,43 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Admin Students API] Create error:', error);
+
+    // 提供更詳細的錯誤訊息
+    let errorMessage = 'Internal server error';
+    let errorDetails = {};
+
+    if (error && typeof error === 'object') {
+      if ('message' in error) {
+        errorMessage = error.message;
+      }
+      if ('code' in error) {
+        errorDetails.code = error.code;
+      }
+      if ('details' in error) {
+        errorDetails.details = error.details;
+      }
+      if ('hint' in error) {
+        errorDetails.hint = error.hint;
+      }
+    }
+
+    console.error('[Admin Students API] Detailed error info:', {
+      errorMessage,
+      errorDetails,
+      requestBody: body
+    });
+
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: errorMessage,
+        details: errorDetails,
+        debug_info: process.env.NODE_ENV === 'development' ? {
+          request_body: body,
+          error_type: typeof error,
+          error_keys: error && typeof error === 'object' ? Object.keys(error) : []
+        } : undefined
+      },
       { status: 500 }
     );
   }
