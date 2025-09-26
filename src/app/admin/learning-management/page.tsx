@@ -171,8 +171,16 @@ export default function AdminLearningManagementPage() {
     }
 
     setIsSubmittingRecord(true);
+    let response;
+
     try {
-      const response = await fetch('/api/admin/students', {
+      console.log('[DEBUG] 準備發送請求:', {
+        student_id: newRecordForm.studentId,
+        record_type: newRecordForm.recordType,
+        data: newRecordForm.data
+      });
+
+      response = await fetch('/api/admin/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +192,33 @@ export default function AdminLearningManagementPage() {
         }),
       });
 
-      const result = await response.json();
+      console.log('[DEBUG] API 回應狀態:', response.status);
+      console.log('[DEBUG] API 回應標頭:', response.headers);
+
+      // 檢查回應是否成功
+      if (!response.ok) {
+        console.error('[DEBUG] HTTP 錯誤:', response.status, response.statusText);
+
+        // 嘗試讀取錯誤回應的原始文字
+        const errorText = await response.text();
+        console.error('[DEBUG] 錯誤回應內容:', errorText);
+
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // 獲取回應文字並嘗試解析 JSON
+      const responseText = await response.text();
+      console.log('[DEBUG] 原始回應內容:', responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('[DEBUG] 解析後的 JSON:', result);
+      } catch (jsonError) {
+        console.error('[DEBUG] JSON 解析失敗:', jsonError);
+        console.error('[DEBUG] 回應內容不是有效的 JSON:', responseText);
+        throw new Error('伺服器回應格式錯誤，請檢查伺服器日誌');
+      }
 
       if (result.success) {
         alert('記錄新增成功！');
@@ -192,23 +226,19 @@ export default function AdminLearningManagementPage() {
         setNewRecordForm({ studentId: '', recordType: '', data: {} });
         loadStudentsData(); // 重新載入學生數據
       } else {
+        console.error('[DEBUG] API 回傳失敗:', result);
         throw new Error(result.error || '新增記錄失敗');
       }
     } catch (error) {
-      console.error('新增記錄失敗:', error);
+      console.error('[DEBUG] 整體錯誤:', error);
 
-      // 嘗試從錯誤回應中獲取詳細資訊
       let errorMessage = error.message;
-      if (result && !result.success) {
-        errorMessage = result.error || error.message;
 
-        // 如果有詳細的錯誤資訊，記錄到 console
-        if (result.details) {
-          console.error('詳細錯誤資訊:', result.details);
-        }
-        if (result.debug_info) {
-          console.error('除錯資訊:', result.debug_info);
-        }
+      // 提供更詳細的錯誤訊息
+      if (error.message.includes('Failed to execute \'json\' on \'Response\'')) {
+        errorMessage = '伺服器回應格式錯誤，可能是伺服器內部錯誤';
+      } else if (error.message.includes('HTTP 500')) {
+        errorMessage = '伺服器內部錯誤，請檢查伺服器日誌';
       }
 
       alert('新增記錄失敗: ' + errorMessage);

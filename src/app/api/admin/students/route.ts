@@ -161,23 +161,32 @@ export async function GET(request: NextRequest) {
 
 // POST - 新增學生學習記錄
 export async function POST(request: NextRequest) {
+  console.log('[DEBUG] POST /api/admin/students - 開始處理請求');
+
   try {
     const authResult = await verifyApiKey(request);
     if (!authResult.valid && process.env.NODE_ENV !== 'development') {
+      console.log('[DEBUG] 認證失敗:', authResult.error);
       return NextResponse.json(
         { success: false, error: authResult.error },
         { status: 401 }
       );
     }
 
+    console.log('[DEBUG] 開始解析請求內容');
     const body = await request.json();
+    console.log('[DEBUG] 請求內容:', body);
+
     const supabase = getSupabaseClient();
     if (!supabase) {
+      console.log('[DEBUG] Supabase 初始化失敗');
       return NextResponse.json(
         { success: false, error: 'Supabase 初始化失敗' },
         { status: 500 }
       );
     }
+
+    console.log('[DEBUG] Supabase 初始化成功');
 
     const { student_id, record_type, data } = body;
 
@@ -336,43 +345,51 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Admin Students API] Create error:', error);
 
-    // 提供更詳細的錯誤訊息
-    let errorMessage = 'Internal server error';
-    let errorDetails = {};
+    // 確保錯誤處理總是回傳有效的 JSON
+    try {
+      // 提供更詳細的錯誤訊息
+      let errorMessage = 'Internal server error';
+      let errorDetails = {};
 
-    if (error && typeof error === 'object') {
-      if ('message' in error) {
-        errorMessage = error.message;
+      if (error && typeof error === 'object') {
+        if ('message' in error) {
+          errorMessage = error.message;
+        }
+        if ('code' in error) {
+          errorDetails.code = error.code;
+        }
+        if ('details' in error) {
+          errorDetails.details = error.details;
+        }
+        if ('hint' in error) {
+          errorDetails.hint = error.hint;
+        }
       }
-      if ('code' in error) {
-        errorDetails.code = error.code;
-      }
-      if ('details' in error) {
-        errorDetails.details = error.details;
-      }
-      if ('hint' in error) {
-        errorDetails.hint = error.hint;
-      }
+
+      console.error('[Admin Students API] Detailed error info:', {
+        errorMessage,
+        errorDetails,
+        requestBody: typeof body !== 'undefined' ? body : 'undefined'
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorMessage,
+          details: errorDetails,
+          debug_info: process.env.NODE_ENV === 'development' ? {
+            request_body: typeof body !== 'undefined' ? body : 'undefined',
+            error_type: typeof error,
+            error_keys: error && typeof error === 'object' ? Object.keys(error) : [],
+            stack: error instanceof Error ? error.stack : 'No stack trace'
+          } : undefined
+        },
+        { status: 500 }
+      );
+    } catch (jsonError) {
+      console.error('[Admin Students API] Failed to create error response:', jsonError);
+      // 如果連錯誤回應都無法建立，回傳最基本的文字回應
+      return new Response('Internal Server Error', { status: 500 });
     }
-
-    console.error('[Admin Students API] Detailed error info:', {
-      errorMessage,
-      errorDetails,
-      requestBody: body
-    });
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: errorMessage,
-        details: errorDetails,
-        debug_info: process.env.NODE_ENV === 'development' ? {
-          request_body: body,
-          error_type: typeof error,
-          error_keys: error && typeof error === 'object' ? Object.keys(error) : []
-        } : undefined
-      },
-      { status: 500 }
-    );
   }
 }
