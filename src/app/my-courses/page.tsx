@@ -115,12 +115,13 @@ export default function MyCoursesPage() {
           return
         }
         
-        // 步驟 2: 獲取課程詳細資訊
+        // 步驟 2: 獲取課程詳細資訊（只顯示已發布的課程）
         const courseIds = approvedRequests.map(req => req.course_id)
         const { data: coursesData, error: coursesError } = await supabase
           .from('courses')
-          .select('id, title, description, category, level, lessons_count')
+          .select('id, title, description, category, level, lessons_count, status')
           .in('id', courseIds)
+          .eq('status', 'published')
         
         if (coursesError) {
           console.error('查詢課程詳情失敗:', coursesError)
