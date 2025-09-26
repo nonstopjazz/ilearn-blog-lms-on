@@ -283,12 +283,12 @@ export async function POST(request: NextRequest) {
           .insert([{
             student_id: validStudentId,
             course_id: data.course_id,
-            exam_type: data.exam_type,
+            exam_type: data.exam_type || 'quiz', // 預設為 'quiz' 如果沒有提供
             exam_name: data.exam_name,
             exam_date: data.exam_date,
             total_score: data.total_score,
             max_score: data.max_score || 100,
-            subject: data.subject,
+            subject: data.subject || 'general', // 如果 subject 也可能為 null，加入預設值
             teacher_feedback: data.teacher_feedback
           }])
           .select()

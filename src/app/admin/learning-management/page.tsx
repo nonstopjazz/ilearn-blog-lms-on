@@ -523,6 +523,27 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                       )}
                     </div>
                     <div>
+                      <Label>考試類型</Label>
+                      <Select
+                        value={newRecordForm.data.exam_type || ''}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, exam_type: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="選擇考試類型" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="quiz">小考</SelectItem>
+                          <SelectItem value="midterm">期中考</SelectItem>
+                          <SelectItem value="final">期末考</SelectItem>
+                          <SelectItem value="assignment">作業</SelectItem>
+                          <SelectItem value="test">測驗</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <Label>考試名稱</Label>
                       <Input
                         value={newRecordForm.data.exam_name || ''}
