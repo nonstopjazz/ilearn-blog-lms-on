@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
+import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import {
   ClipboardList,
   Target,
@@ -36,6 +38,11 @@ import Navbar from '@/components/Navbar';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // 共用數據
   const gradeData = [
@@ -152,6 +159,144 @@ const Dashboard = () => {
     if (percentage >= 70) return 'C+';
     if (percentage >= 65) return 'C';
     return 'D';
+  };
+
+  // 模擬學生數據
+  const mockStudents = [
+    { id: '1', name: '王小明', courseId: 'course_001', courseName: '基礎英語' },
+    { id: '2', name: '李小華', courseId: 'course_001', courseName: '基礎英語' },
+    { id: '3', name: '張小美', courseId: 'course_002', courseName: '進階英語' },
+    { id: '4', name: '陳小傑', courseId: 'course_002', courseName: '進階英語' }
+  ];
+
+  // 模擬甘特圖任務數據
+  const mockGanttTasks: GanttTask[] = [
+    {
+      id: '1',
+      title: '基礎單字 Unit 1-5',
+      description: '背誦200個基礎單字',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-01-15',
+      dueDate: '2025-01-25',
+      completedDate: '2025-01-23',
+      status: 'completed',
+      progress: 100,
+      priority: 'high',
+      category: '單字',
+      submissionType: 'text',
+      estimatedHours: 10
+    },
+    {
+      id: '2',
+      title: '文法練習 - 現在式',
+      description: '完成現在式相關練習題',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-01-20',
+      dueDate: '2025-01-30',
+      status: 'in_progress',
+      progress: 65,
+      priority: 'medium',
+      category: '文法',
+      submissionType: 'file',
+      estimatedHours: 8
+    },
+    {
+      id: '3',
+      title: '口說練習 - 自我介紹',
+      description: '錄製3分鐘自我介紹影片',
+      studentId: '2',
+      studentName: '李小華',
+      courseId: 'course_001',
+      startDate: '2025-01-18',
+      dueDate: '2025-01-28',
+      status: 'not_started',
+      progress: 0,
+      priority: 'urgent',
+      category: '口說',
+      submissionType: 'file',
+      estimatedHours: 5
+    },
+    {
+      id: '4',
+      title: '聽力理解 - 短對話',
+      description: '完成10組短對話聽力測驗',
+      studentId: '3',
+      studentName: '張小美',
+      courseId: 'course_002',
+      startDate: '2025-01-16',
+      dueDate: '2025-01-22',
+      completedDate: '2025-01-21',
+      status: 'completed',
+      progress: 100,
+      priority: 'medium',
+      category: '聽力',
+      submissionType: 'quiz',
+      estimatedHours: 6
+    }
+  ];
+
+  // 初始化數據
+  useEffect(() => {
+    setStudents(mockStudents);
+    setGanttTasks(mockGanttTasks);
+    setAssignments(assignments);
+  }, []);
+
+  // 處理新增作業
+  const handleCreateAssignment = async (formData: any) => {
+    setLoading(true);
+    try {
+      // 這裡應該調用 API
+      const response = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 更新甘特圖任務
+        const newTasks = formData.studentIds.map((studentId: string) => {
+          const student = mockStudents.find(s => s.id === studentId);
+          return {
+            id: `new_${Date.now()}_${studentId}`,
+            title: formData.title,
+            description: formData.description,
+            studentId,
+            studentName: student?.name || '',
+            courseId: formData.courseId || student?.courseId || '',
+            startDate: new Date().toISOString().split('T')[0],
+            dueDate: formData.dueDate.split('T')[0],
+            status: 'not_started' as const,
+            progress: 0,
+            priority: formData.priority,
+            category: formData.assignmentType,
+            submissionType: formData.submissionType,
+            estimatedHours: Math.ceil(formData.estimatedDuration / 60)
+          };
+        });
+
+        setGanttTasks(prev => [...prev, ...newTasks]);
+        console.log('作業創建成功');
+      }
+    } catch (error) {
+      console.error('創建作業失敗:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 處理甘特圖任務點擊
+  const handleTaskClick = (task: GanttTask) => {
+    console.log('點擊任務:', task);
+    // 這裡可以打開任務詳情對話框或跳轉到任務頁面
   };
 
   return (
@@ -329,9 +474,9 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">作業管理</h2>
-                <p className="text-muted-foreground">管理和追蹤學習作業進度</p>
+                <p className="text-muted-foreground">甘特圖形式管理學習作業進度</p>
               </div>
-              <Button>
+              <Button onClick={() => setShowAssignmentDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 新增作業
               </Button>
@@ -343,7 +488,7 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">總作業數</p>
-                      <p className="text-2xl font-bold">{assignments.length}</p>
+                      <p className="text-2xl font-bold">{ganttTasks.length}</p>
                     </div>
                     <ClipboardList className="w-8 h-8 text-blue-500" />
                   </div>
@@ -356,7 +501,7 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">已完成</p>
                       <p className="text-2xl font-bold text-green-600">
-                        {assignments.filter(a => a.status === "completed").length}
+                        {ganttTasks.filter(t => t.status === "completed").length}
                       </p>
                     </div>
                     <CheckCircle className="w-8 h-8 text-green-500" />
@@ -370,7 +515,7 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">進行中</p>
                       <p className="text-2xl font-bold text-yellow-600">
-                        {assignments.filter(a => a.status === "in-progress").length}
+                        {ganttTasks.filter(t => t.status === "in_progress").length}
                       </p>
                     </div>
                     <Clock className="w-8 h-8 text-yellow-500" />
@@ -384,7 +529,7 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">平均完成度</p>
                       <p className="text-2xl font-bold">
-                        {Math.round(assignments.reduce((acc, a) => acc + a.progress, 0) / assignments.length)}%
+                        {ganttTasks.length > 0 ? Math.round(ganttTasks.reduce((acc, t) => acc + t.progress, 0) / ganttTasks.length) : 0}%
                       </p>
                     </div>
                     <Target className="w-8 h-8 text-blue-500" />
@@ -393,42 +538,22 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>作業列表</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {assignments.map((assignment) => (
-                    <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-medium">{assignment.title}</h3>
-                          <Badge variant="outline">{assignment.category}</Badge>
-                          <Badge variant={getStatusColor(assignment.status) as any}>
-                            {getStatusText(assignment.status)}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
-                          <span>到期日期: {assignment.dueDate}</span>
-                          <span>完成度: {assignment.progress}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
-                            style={{ width: `${assignment.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex space-x-2 ml-4">
-                        <Button variant="outline" size="sm">編輯</Button>
-                        <Button variant="outline" size="sm">檢視</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* 甘特圖 */}
+            <GanttChart
+              tasks={ganttTasks}
+              viewType="week"
+              onTaskClick={handleTaskClick}
+              className="min-h-[400px]"
+            />
+
+            {/* 新增作業對話框 */}
+            <AssignmentFormDialog
+              open={showAssignmentDialog}
+              onOpenChange={setShowAssignmentDialog}
+              onSubmit={handleCreateAssignment}
+              students={students}
+              loading={loading}
+            />
           </TabsContent>
 
           {/* 成績管理頁籤 */}
