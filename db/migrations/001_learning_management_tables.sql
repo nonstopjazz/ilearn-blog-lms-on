@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS vocabulary_sessions (
     parent_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    FOREIGN KEY (course_id) REFERENCES course_lessons(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course_lessons(course_id) ON DELETE CASCADE,
     CONSTRAINT unique_student_date UNIQUE(student_id, course_id, session_date)
 );
 
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS exam_records (
     attachment_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    FOREIGN KEY (course_id) REFERENCES course_lessons(id) ON DELETE CASCADE
+    FOREIGN KEY (course_id) REFERENCES course_lessons(course_id) ON DELETE CASCADE
 );
 
 -- 建立特殊專案管理表
@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS learning_progress_stats (
     parent_feedback TEXT,
     teacher_notes TEXT,
     generated_at TIMESTAMPTZ DEFAULT NOW(),
-    FOREIGN KEY (course_id) REFERENCES course_lessons(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course_lessons(course_id) ON DELETE CASCADE,
     CONSTRAINT unique_student_week UNIQUE(student_id, course_id, week_number, year)
 );
 

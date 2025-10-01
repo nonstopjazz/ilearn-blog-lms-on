@@ -401,7 +401,20 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                   <Label htmlFor="record-type">記錄類型</Label>
                   <Select
                     value={newRecordForm.recordType}
-                    onValueChange={(value) => setNewRecordForm(prev => ({ ...prev, recordType: value, data: {} }))}
+                    onValueChange={(value) => {
+                      let defaultData = {};
+                      if (value === 'exam') {
+                        defaultData = {
+                          exam_type: '小考', // 預設考試類型
+                          max_score: 100
+                        };
+                      }
+                      setNewRecordForm(prev => ({
+                        ...prev,
+                        recordType: value,
+                        data: defaultData
+                      }));
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="選擇記錄類型" />
@@ -535,11 +548,11 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                           <SelectValue placeholder="選擇考試類型" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="quiz">小考</SelectItem>
-                          <SelectItem value="midterm">期中考</SelectItem>
-                          <SelectItem value="final">期末考</SelectItem>
-                          <SelectItem value="assignment">作業</SelectItem>
-                          <SelectItem value="test">測驗</SelectItem>
+                          <SelectItem value="小考">小考</SelectItem>
+                          <SelectItem value="週考">週考</SelectItem>
+                          <SelectItem value="段考">段考</SelectItem>
+                          <SelectItem value="模擬考">模擬考</SelectItem>
+                          <SelectItem value="補考">補考</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

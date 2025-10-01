@@ -161,32 +161,24 @@ export async function GET(request: NextRequest) {
 
 // POST - 新增學生學習記錄
 export async function POST(request: NextRequest) {
-  console.log('[DEBUG] POST /api/admin/students - 開始處理請求');
-
   try {
     const authResult = await verifyApiKey(request);
     if (!authResult.valid && process.env.NODE_ENV !== 'development') {
-      console.log('[DEBUG] 認證失敗:', authResult.error);
       return NextResponse.json(
         { success: false, error: authResult.error },
         { status: 401 }
       );
     }
 
-    console.log('[DEBUG] 開始解析請求內容');
     const body = await request.json();
-    console.log('[DEBUG] 請求內容:', body);
 
     const supabase = getSupabaseClient();
     if (!supabase) {
-      console.log('[DEBUG] Supabase 初始化失敗');
       return NextResponse.json(
         { success: false, error: 'Supabase 初始化失敗' },
         { status: 500 }
       );
     }
-
-    console.log('[DEBUG] Supabase 初始化成功');
 
     const { student_id, record_type, data } = body;
 
@@ -253,25 +245,8 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'exam':
-        console.log('[DEBUG] Attempting to create exam record with data:', {
-          student_id: validStudentId,
-          course_id: data.course_id,
-          exam_type: data.exam_type,
-          exam_name: data.exam_name,
-          exam_date: data.exam_date,
-          total_score: data.total_score,
-          max_score: data.max_score || 100,
-          subject: data.subject,
-          teacher_feedback: data.teacher_feedback
-        });
-
         // 檢查必填欄位
         if (!data.exam_name || !data.exam_date || !data.total_score) {
-          console.log('[DEBUG] Missing required exam fields:', {
-            exam_name: !!data.exam_name,
-            exam_date: !!data.exam_date,
-            total_score: !!data.total_score
-          });
           return NextResponse.json(
             { success: false, error: 'Missing required fields: exam_name, exam_date, total_score' },
             { status: 400 }
@@ -283,29 +258,18 @@ export async function POST(request: NextRequest) {
           .insert([{
             student_id: validStudentId,
             course_id: data.course_id,
-            exam_type: data.exam_type || 'quiz', // 預設為 'quiz' 如果沒有提供
+            exam_type: data.exam_type || '小考', // 預設為 '小考'
             exam_name: data.exam_name,
             exam_date: data.exam_date,
             total_score: data.total_score,
             max_score: data.max_score || 100,
-            subject: data.subject || 'general', // 如果 subject 也可能為 null，加入預設值
+            subject: data.subject || 'general',
             teacher_feedback: data.teacher_feedback
           }])
           .select()
           .single();
 
-        if (examError) {
-          console.error('[DEBUG] Exam record creation failed:', examError);
-          console.error('[DEBUG] Error details:', {
-            code: examError.code,
-            message: examError.message,
-            details: examError.details,
-            hint: examError.hint
-          });
-          throw examError;
-        }
-
-        console.log('[DEBUG] Exam record created successfully:', examResult);
+        if (examError) throw examError;
         result = examResult;
         break;
 
@@ -344,52 +308,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Admin Students API] Create error:', error);
-
-    // 確保錯誤處理總是回傳有效的 JSON
-    try {
-      // 提供更詳細的錯誤訊息
-      let errorMessage = 'Internal server error';
-      let errorDetails = {};
-
-      if (error && typeof error === 'object') {
-        if ('message' in error) {
-          errorMessage = error.message;
-        }
-        if ('code' in error) {
-          errorDetails.code = error.code;
-        }
-        if ('details' in error) {
-          errorDetails.details = error.details;
-        }
-        if ('hint' in error) {
-          errorDetails.hint = error.hint;
-        }
-      }
-
-      console.error('[Admin Students API] Detailed error info:', {
-        errorMessage,
-        errorDetails,
-        requestBody: typeof body !== 'undefined' ? body : 'undefined'
-      });
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: errorMessage,
-          details: errorDetails,
-          debug_info: process.env.NODE_ENV === 'development' ? {
-            request_body: typeof body !== 'undefined' ? body : 'undefined',
-            error_type: typeof error,
-            error_keys: error && typeof error === 'object' ? Object.keys(error) : [],
-            stack: error instanceof Error ? error.stack : 'No stack trace'
-          } : undefined
-        },
-        { status: 500 }
-      );
-    } catch (jsonError) {
-      console.error('[Admin Students API] Failed to create error response:', jsonError);
-      // 如果連錯誤回應都無法建立，回傳最基本的文字回應
-      return new Response('Internal Server Error', { status: 500 });
-    }
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
