@@ -18,6 +18,19 @@ import {
   FileText,
   Brain
 } from 'lucide-react';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { ChartCard } from '@/components/dashboard/ChartCard';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar
+} from 'recharts';
 import type { LearningSummary } from '@/types/learning-management';
 import Navbar from '@/components/Navbar';
 
@@ -30,6 +43,24 @@ export default function LearningPage() {
 
   // 學生ID從認證用戶獲取
   const studentId = user?.id || 'demo-student';
+
+  // 模擬圖表數據
+  const studyTimeData = [
+    { name: '週一', 時間: 45 },
+    { name: '週二', 時間: 30 },
+    { name: '週三', 時間: 60 },
+    { name: '週四', 時間: 25 },
+    { name: '週五', 時間: 50 },
+    { name: '週六', 時間: 40 },
+    { name: '週日', 時間: 35 },
+  ];
+
+  const examScoreData = [
+    { name: '第1週', 小考: 85, 段考: 88 },
+    { name: '第2週', 小考: 78, 段考: 85 },
+    { name: '第3週', 小考: 92, 段考: 90 },
+    { name: '第4週', 小考: 88, 段考: 92 },
+  ];
 
   // 檢查用戶認證狀態
   useEffect(() => {
@@ -178,71 +209,52 @@ export default function LearningPage() {
       </div>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">本月學習時間</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.floor((learningSummary?.study_time.total_minutes || 0) / 60)}小時
-            </div>
-            <p className="text-xs text-muted-foreground">
-              日均 {learningSummary?.study_time.daily_average || 0} 分鐘
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="本月學習時間"
+          value={`${Math.floor((learningSummary?.study_time.total_minutes || 0) / 60)}小時`}
+          change={{
+            value: 12,
+            label: `日均 ${learningSummary?.study_time.daily_average || 0} 分鐘`
+          }}
+          icon={<Clock className="w-5 h-5" />}
+          gradient="primary"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">作業完成率</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {learningSummary?.assignments.total
-                ? Math.round((learningSummary.assignments.completed / learningSummary.assignments.total) * 100)
-                : 0}%
-            </div>
-            <Progress
-              value={learningSummary?.assignments.total
-                ? (learningSummary.assignments.completed / learningSummary.assignments.total) * 100
-                : 0}
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="作業完成率"
+          value={`${learningSummary?.assignments.total
+            ? Math.round((learningSummary.assignments.completed / learningSummary.assignments.total) * 100)
+            : 0}%`}
+          change={{
+            value: 5,
+            label: "本週提升"
+          }}
+          icon={<CheckCircle2 className="w-5 h-5" />}
+          gradient="success"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">單字學習</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {learningSummary?.vocabulary.total_words || 0} 個
-            </div>
-            <p className="text-xs text-muted-foreground">
-              正確率 {learningSummary?.vocabulary.avg_accuracy?.toFixed(1) || 0}%
-            </p>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="單字學習"
+          value={`${learningSummary?.vocabulary.total_words || 0} 個`}
+          change={{
+            value: 8,
+            label: `正確率 ${learningSummary?.vocabulary.avg_accuracy?.toFixed(1) || 0}%`
+          }}
+          icon={<BookOpen className="w-5 h-5" />}
+          gradient="warning"
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">考試平均分</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {learningSummary?.exams.avg_score?.toFixed(1) || 'N/A'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              共 {learningSummary?.exams.count || 0} 次考試
-            </p>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="考試平均分"
+          value={learningSummary?.exams.avg_score?.toFixed(1) || 'N/A'}
+          change={{
+            value: 3,
+            label: `共 ${learningSummary?.exams.count || 0} 次考試`
+          }}
+          icon={<Trophy className="w-5 h-5" />}
+          gradient="secondary"
+        />
       </div>
 
       {/* 主要內容區 */}
@@ -317,20 +329,86 @@ export default function LearningPage() {
           </div>
 
           {/* 學習趨勢圖表 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>學習趨勢</CardTitle>
-              <CardDescription>過去30天的學習表現</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-center justify-center border-2 border-dashed rounded-lg">
-                <div className="text-center">
-                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">圖表區域 - 將顯示學習趨勢</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCard
+              title="每週學習時間"
+              description="過去7天的學習時間分布"
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={studyTimeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px"
+                    }}
+                  />
+                  <Bar
+                    dataKey="時間"
+                    fill="url(#colorGradient)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <defs>
+                    <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard
+              title="考試成績趨勢"
+              description="小考與段考成績對比"
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={examScoreData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px"
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="小考"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={{ fill: "#10b981", strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="段考"
+                    stroke="#f59e0b"
+                    strokeWidth={3}
+                    dot={{ fill: "#f59e0b", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
         </TabsContent>
 
         <TabsContent value="assignments">
