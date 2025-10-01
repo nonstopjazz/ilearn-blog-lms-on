@@ -93,7 +93,7 @@ const Dashboard = () => {
   ];
 
   // 其他頁籤數據
-  const assignments = [
+  const mockAssignments = [
     { id: 1, title: "基礎單字 Unit 1-5 (200字)", category: "單字", status: "in-progress", dueDate: "2025/01/20", progress: 75 },
     { id: 2, title: "時態練習 - 現在式", category: "文法", status: "completed", dueDate: "2025/01/15", progress: 100 },
     { id: 3, title: "日常對話練習 Ch.1-3", category: "口說", status: "in-progress", dueDate: "2025/01/25", progress: 50 },
@@ -243,7 +243,7 @@ const Dashboard = () => {
   useEffect(() => {
     setStudents(mockStudents);
     setGanttTasks(mockGanttTasks);
-    setAssignments(assignments);
+    setAssignments(mockAssignments);
   }, []);
 
   // 處理新增作業
