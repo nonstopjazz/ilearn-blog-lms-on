@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
+import GanttChartYearly from '@/components/gantt/GanttChartYearly';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import {
   ClipboardList,
@@ -169,73 +170,225 @@ const Dashboard = () => {
     { id: '4', name: '陳小傑', courseId: 'course_002', courseName: '進階英語' }
   ];
 
-  // 模擬甘特圖任務數據
+  // 模擬甘特圖任務數據 - 涵蓋整年度的作業規劃
   const mockGanttTasks: GanttTask[] = [
+    // 第一季度 (Q1: 1-3月)
     {
       id: '1',
-      title: '基礎單字 Unit 1-5',
-      description: '背誦200個基礎單字',
-      studentId: '1',
-      studentName: '王小明',
-      courseId: 'course_001',
-      startDate: '2025-01-15',
-      dueDate: '2025-01-25',
-      completedDate: '2025-01-23',
-      status: 'completed',
-      progress: 100,
-      priority: 'high',
-      category: '單字',
-      submissionType: 'text',
-      estimatedHours: 10
-    },
-    {
-      id: '2',
-      title: '文法練習 - 現在式',
-      description: '完成現在式相關練習題',
+      title: '寒假作業 - 英語日記',
+      description: '每天撰寫100字英語日記',
       studentId: '1',
       studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-01-20',
-      dueDate: '2025-01-30',
+      dueDate: '2025-02-10',
+      completedDate: '2025-02-08',
+      status: 'completed',
+      progress: 100,
+      priority: 'high',
+      category: '寫作',
+      submissionType: 'text',
+      estimatedHours: 20
+    },
+    {
+      id: '2',
+      title: '基礎文法 Unit 1-10',
+      description: '完成基礎文法練習',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-02-15',
+      dueDate: '2025-03-30',
       status: 'in_progress',
       progress: 65,
       priority: 'medium',
       category: '文法',
       submissionType: 'file',
-      estimatedHours: 8
+      estimatedHours: 30
     },
     {
       id: '3',
-      title: '口說練習 - 自我介紹',
-      description: '錄製3分鐘自我介紹影片',
+      title: '英語歌曲學習',
+      description: '學習並錄製5首英語歌曲',
       studentId: '2',
       studentName: '李小華',
       courseId: 'course_001',
-      startDate: '2025-01-18',
-      dueDate: '2025-01-28',
+      startDate: '2025-01-10',
+      dueDate: '2025-02-28',
+      status: 'in_progress',
+      progress: 40,
+      priority: 'low',
+      category: '口說',
+      submissionType: 'file',
+      estimatedHours: 15
+    },
+
+    // 第二季度 (Q2: 4-6月)
+    {
+      id: '4',
+      title: '期中專案 - 英語演講',
+      description: '準備並錄製10分鐘英語演講',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-04-01',
+      dueDate: '2025-05-15',
       status: 'not_started',
       progress: 0,
       priority: 'urgent',
       category: '口說',
       submissionType: 'file',
-      estimatedHours: 5
+      estimatedHours: 25
     },
     {
-      id: '4',
-      title: '聽力理解 - 短對話',
-      description: '完成10組短對話聽力測驗',
+      id: '5',
+      title: '閱讀理解 - 經典文學',
+      description: '閱讀3本英語小說並撰寫心得',
       studentId: '3',
       studentName: '張小美',
       courseId: 'course_002',
-      startDate: '2025-01-16',
-      dueDate: '2025-01-22',
-      completedDate: '2025-01-21',
-      status: 'completed',
-      progress: 100,
+      startDate: '2025-04-10',
+      dueDate: '2025-06-30',
+      status: 'not_started',
+      progress: 0,
+      priority: 'medium',
+      category: '閱讀',
+      submissionType: 'text',
+      estimatedHours: 40
+    },
+    {
+      id: '6',
+      title: '單字挑戰 - 1000字',
+      description: '背誦並測驗1000個進階單字',
+      studentId: '2',
+      studentName: '李小華',
+      courseId: 'course_001',
+      startDate: '2025-03-15',
+      dueDate: '2025-05-30',
+      status: 'not_started',
+      progress: 0,
+      priority: 'high',
+      category: '單字',
+      submissionType: 'quiz',
+      estimatedHours: 50
+    },
+
+    // 第三季度 (Q3: 7-9月)
+    {
+      id: '7',
+      title: '暑期密集班作業',
+      description: '完成暑期密集班所有練習',
+      studentId: '4',
+      studentName: '陳小傑',
+      courseId: 'course_002',
+      startDate: '2025-07-01',
+      dueDate: '2025-08-31',
+      status: 'not_started',
+      progress: 0,
+      priority: 'high',
+      category: '綜合',
+      submissionType: 'file',
+      estimatedHours: 60
+    },
+    {
+      id: '8',
+      title: '聽力訓練 - 新聞英語',
+      description: '每週聽寫一篇新聞報導',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-07-15',
+      dueDate: '2025-09-15',
+      status: 'not_started',
+      progress: 0,
       priority: 'medium',
       category: '聽力',
+      submissionType: 'text',
+      estimatedHours: 20
+    },
+
+    // 第四季度 (Q4: 10-12月)
+    {
+      id: '9',
+      title: '年度總複習',
+      description: '複習全年學習內容',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-10-01',
+      dueDate: '2025-11-30',
+      status: 'not_started',
+      progress: 0,
+      priority: 'urgent',
+      category: '複習',
       submissionType: 'quiz',
-      estimatedHours: 6
+      estimatedHours: 40
+    },
+    {
+      id: '10',
+      title: '期末專題報告',
+      description: '完成年度學習成果報告',
+      studentId: '2',
+      studentName: '李小華',
+      courseId: 'course_001',
+      startDate: '2025-11-01',
+      dueDate: '2025-12-20',
+      status: 'not_started',
+      progress: 0,
+      priority: 'high',
+      category: '專題',
+      submissionType: 'file',
+      estimatedHours: 35
+    },
+    {
+      id: '11',
+      title: '聖誕節特別作業',
+      description: '製作英語聖誕賀卡',
+      studentId: '3',
+      studentName: '張小美',
+      courseId: 'course_002',
+      startDate: '2025-12-10',
+      dueDate: '2025-12-25',
+      status: 'not_started',
+      progress: 0,
+      priority: 'low',
+      category: '創作',
+      submissionType: 'photo',
+      estimatedHours: 10
+    },
+
+    // 跨季度的長期作業
+    {
+      id: '12',
+      title: '英語檢定準備 - TOEFL',
+      description: '全年度TOEFL考試準備',
+      studentId: '4',
+      studentName: '陳小傑',
+      courseId: 'course_002',
+      startDate: '2025-02-01',
+      dueDate: '2025-10-31',
+      status: 'in_progress',
+      progress: 25,
+      priority: 'urgent',
+      category: '檢定',
+      submissionType: 'quiz',
+      estimatedHours: 200
+    },
+    {
+      id: '13',
+      title: '每週單字測驗',
+      description: '每週20個新單字測驗',
+      studentId: '1',
+      studentName: '王小明',
+      courseId: 'course_001',
+      startDate: '2025-01-01',
+      dueDate: '2025-12-31',
+      status: 'in_progress',
+      progress: 10,
+      priority: 'medium',
+      category: '單字',
+      submissionType: 'quiz',
+      estimatedHours: 100
     }
   ];
 
@@ -538,12 +691,12 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* 甘特圖 */}
-            <GanttChart
+            {/* 年度甘特圖 */}
+            <GanttChartYearly
               tasks={ganttTasks}
-              viewType="week"
               onTaskClick={handleTaskClick}
-              className="min-h-[400px]"
+              className="min-h-[500px]"
+              year={2025}
             />
 
             {/* 新增作業對話框 */}
