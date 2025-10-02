@@ -162,23 +162,22 @@ const Dashboard = () => {
     return 'D';
   };
 
-  // 模擬學生數據
-  const mockStudents = [
-    { id: '1', name: '王小明', courseId: 'course_001', courseName: '基礎英語' },
-    { id: '2', name: '李小華', courseId: 'course_001', courseName: '基礎英語' },
-    { id: '3', name: '張小美', courseId: 'course_002', courseName: '進階英語' },
-    { id: '4', name: '陳小傑', courseId: 'course_002', courseName: '進階英語' }
-  ];
+  // 當前學生資訊（實際應該從登入狀態取得）
+  const currentStudent = {
+    id: 'student_001',
+    name: '王小明',
+    courseId: 'course_001',
+    courseName: '基礎英語',
+    grade: '國中二年級'
+  };
 
   // 模擬甘特圖任務數據 - 涵蓋整年度的作業規劃
   const mockGanttTasks: GanttTask[] = [
-    // 第一季度 (Q1: 1-3月)
+    // 第一季度 (Q1: 1-3月) - 共同作業
     {
       id: '1',
       title: '寒假作業 - 英語日記',
       description: '每天撰寫100字英語日記',
-      studentId: '1',
-      studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-01-20',
       dueDate: '2025-02-10',
@@ -188,14 +187,13 @@ const Dashboard = () => {
       priority: 'high',
       category: '寫作',
       submissionType: 'text',
-      estimatedHours: 20
+      estimatedHours: 20,
+      isPersonalized: false
     },
     {
       id: '2',
       title: '基礎文法 Unit 1-10',
       description: '完成基礎文法練習',
-      studentId: '1',
-      studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-02-15',
       dueDate: '2025-03-30',
@@ -204,23 +202,24 @@ const Dashboard = () => {
       priority: 'medium',
       category: '文法',
       submissionType: 'file',
-      estimatedHours: 30
+      estimatedHours: 30,
+      isPersonalized: false
     },
     {
       id: '3',
-      title: '英語歌曲學習',
-      description: '學習並錄製5首英語歌曲',
-      studentId: '2',
-      studentName: '李小華',
+      title: '加強口說練習 - 自我介紹',
+      description: '針對你的發音問題，特別加強練習',
       courseId: 'course_001',
       startDate: '2025-01-10',
       dueDate: '2025-02-28',
       status: 'in_progress',
       progress: 40,
-      priority: 'low',
+      priority: 'urgent',
       category: '口說',
       submissionType: 'file',
-      estimatedHours: 15
+      estimatedHours: 15,
+      isPersonalized: true,
+      assignedBy: '陳老師'
     },
 
     // 第二季度 (Q2: 4-6月)
@@ -228,8 +227,6 @@ const Dashboard = () => {
       id: '4',
       title: '期中專案 - 英語演講',
       description: '準備並錄製10分鐘英語演講',
-      studentId: '1',
-      studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-04-01',
       dueDate: '2025-05-15',
@@ -238,14 +235,13 @@ const Dashboard = () => {
       priority: 'urgent',
       category: '口說',
       submissionType: 'file',
-      estimatedHours: 25
+      estimatedHours: 25,
+      isPersonalized: false
     },
     {
       id: '5',
-      title: '閱讀理解 - 經典文學',
-      description: '閱讀3本英語小說並撰寫心得',
-      studentId: '3',
-      studentName: '張小美',
+      title: '閱讀理解強化 - Harry Potter',
+      description: '根據你的興趣，閱讀Harry Potter第一集',
       courseId: 'course_002',
       startDate: '2025-04-10',
       dueDate: '2025-06-30',
@@ -254,14 +250,14 @@ const Dashboard = () => {
       priority: 'medium',
       category: '閱讀',
       submissionType: 'text',
-      estimatedHours: 40
+      estimatedHours: 40,
+      isPersonalized: true,
+      assignedBy: '李老師'
     },
     {
       id: '6',
       title: '單字挑戰 - 1000字',
       description: '背誦並測驗1000個進階單字',
-      studentId: '2',
-      studentName: '李小華',
       courseId: 'course_001',
       startDate: '2025-03-15',
       dueDate: '2025-05-30',
@@ -270,7 +266,8 @@ const Dashboard = () => {
       priority: 'high',
       category: '單字',
       submissionType: 'quiz',
-      estimatedHours: 50
+      estimatedHours: 50,
+      isPersonalized: false
     },
 
     // 第三季度 (Q3: 7-9月)
@@ -278,8 +275,6 @@ const Dashboard = () => {
       id: '7',
       title: '暑期密集班作業',
       description: '完成暑期密集班所有練習',
-      studentId: '4',
-      studentName: '陳小傑',
       courseId: 'course_002',
       startDate: '2025-07-01',
       dueDate: '2025-08-31',
@@ -288,14 +283,13 @@ const Dashboard = () => {
       priority: 'high',
       category: '綜合',
       submissionType: 'file',
-      estimatedHours: 60
+      estimatedHours: 60,
+      isPersonalized: false
     },
     {
       id: '8',
-      title: '聽力訓練 - 新聞英語',
-      description: '每週聽寫一篇新聞報導',
-      studentId: '1',
-      studentName: '王小明',
+      title: '聽力特訓 - BBC Learning English',
+      description: '針對你的聽力弱點，特別加強BBC教材',
       courseId: 'course_001',
       startDate: '2025-07-15',
       dueDate: '2025-09-15',
@@ -304,7 +298,9 @@ const Dashboard = () => {
       priority: 'medium',
       category: '聽力',
       submissionType: 'text',
-      estimatedHours: 20
+      estimatedHours: 20,
+      isPersonalized: true,
+      assignedBy: '陳老師'
     },
 
     // 第四季度 (Q4: 10-12月)
@@ -312,8 +308,6 @@ const Dashboard = () => {
       id: '9',
       title: '年度總複習',
       description: '複習全年學習內容',
-      studentId: '1',
-      studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-10-01',
       dueDate: '2025-11-30',
@@ -322,7 +316,8 @@ const Dashboard = () => {
       priority: 'urgent',
       category: '複習',
       submissionType: 'quiz',
-      estimatedHours: 40
+      estimatedHours: 40,
+      isPersonalized: false
     },
     {
       id: '10',
@@ -378,8 +373,6 @@ const Dashboard = () => {
       id: '13',
       title: '每週單字測驗',
       description: '每週20個新單字測驗',
-      studentId: '1',
-      studentName: '王小明',
       courseId: 'course_001',
       startDate: '2025-01-01',
       dueDate: '2025-12-31',
@@ -388,13 +381,47 @@ const Dashboard = () => {
       priority: 'medium',
       category: '單字',
       submissionType: 'quiz',
-      estimatedHours: 100
+      estimatedHours: 100,
+      isPersonalized: false
+    },
+    // 個人專屬的額外作業
+    {
+      id: '14',
+      title: '文法弱點加強 - 時態混淆',
+      description: '針對你常錯的現在完成式和過去完成式',
+      courseId: 'course_001',
+      startDate: '2025-03-01',
+      dueDate: '2025-04-15',
+      status: 'not_started',
+      progress: 0,
+      priority: 'high',
+      category: '文法',
+      submissionType: 'quiz',
+      estimatedHours: 20,
+      isPersonalized: true,
+      assignedBy: '陳老師'
+    },
+    {
+      id: '15',
+      title: '發音矯正計畫',
+      description: '特別針對 th 和 r/l 發音問題',
+      courseId: 'course_001',
+      startDate: '2025-05-01',
+      dueDate: '2025-07-31',
+      status: 'not_started',
+      progress: 0,
+      priority: 'medium',
+      category: '口說',
+      submissionType: 'file',
+      estimatedHours: 30,
+      isPersonalized: true,
+      assignedBy: '李老師'
     }
   ];
 
   // 初始化數據
   useEffect(() => {
-    setStudents(mockStudents);
+    setStudents([currentStudent]); // 只有當前學生
     setGanttTasks(mockGanttTasks);
     setAssignments(mockAssignments);
   }, []);
@@ -416,27 +443,24 @@ const Dashboard = () => {
 
       if (result.success) {
         // 更新甘特圖任務
-        const newTasks = formData.studentIds.map((studentId: string) => {
-          const student = mockStudents.find(s => s.id === studentId);
-          return {
-            id: `new_${Date.now()}_${studentId}`,
-            title: formData.title,
-            description: formData.description,
-            studentId,
-            studentName: student?.name || '',
-            courseId: formData.courseId || student?.courseId || '',
-            startDate: new Date().toISOString().split('T')[0],
-            dueDate: formData.dueDate.split('T')[0],
-            status: 'not_started' as const,
-            progress: 0,
-            priority: formData.priority,
-            category: formData.assignmentType,
-            submissionType: formData.submissionType,
-            estimatedHours: Math.ceil(formData.estimatedDuration / 60)
-          };
-        });
+        const newTask: GanttTask = {
+          id: `new_${Date.now()}`,
+          title: formData.title,
+          description: formData.description,
+          courseId: formData.courseId || currentStudent.courseId,
+          startDate: new Date().toISOString().split('T')[0],
+          dueDate: formData.dueDate.split('T')[0],
+          status: 'not_started',
+          progress: 0,
+          priority: formData.priority,
+          category: formData.assignmentType,
+          submissionType: formData.submissionType,
+          estimatedHours: Math.ceil(formData.estimatedDuration / 60),
+          isPersonalized: formData.isPersonalized || false,
+          assignedBy: formData.assignedBy || '系統'
+        };
 
-        setGanttTasks(prev => [...prev, ...newTasks]);
+        setGanttTasks(prev => [...prev, newTask]);
         console.log('作業創建成功');
       }
     } catch (error) {
@@ -694,6 +718,7 @@ const Dashboard = () => {
             {/* 年度甘特圖 */}
             <GanttChartYearly
               tasks={ganttTasks}
+              studentName={currentStudent.name}
               onTaskClick={handleTaskClick}
               className="min-h-[500px]"
               year={2025}

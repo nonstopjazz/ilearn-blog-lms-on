@@ -46,8 +46,6 @@ export interface GanttTask {
   id: string;
   title: string;
   description?: string;
-  studentId: string;
-  studentName: string;
   courseId: string;
   startDate: string;
   dueDate: string;
@@ -58,11 +56,13 @@ export interface GanttTask {
   category: string;
   submissionType?: string;
   estimatedHours?: number;
+  isPersonalized?: boolean; // 是否為個人專屬作業
+  assignedBy?: string; // 分配者（老師名稱）
 }
 
 interface GanttChartYearlyProps {
   tasks: GanttTask[];
-  selectedStudent?: string;
+  studentName?: string; // 學生姓名
   onTaskClick?: (task: GanttTask) => void;
   className?: string;
   year?: number;
@@ -70,7 +70,7 @@ interface GanttChartYearlyProps {
 
 const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
   tasks,
-  selectedStudent,
+  studentName = '學生',
   onTaskClick,
   className,
   year: propYear
@@ -121,17 +121,11 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
 
   // 過濾任務
   const filteredTasks = useMemo(() => {
-    let filtered = tasks;
-
-    if (selectedStudent) {
-      filtered = filtered.filter(task => task.studentId === selectedStudent);
-    }
-
     // 只顯示在當前年度有重疊的任務
     const yearStart = startOfYear(new Date(selectedYear, 0, 1));
     const yearEnd = endOfYear(new Date(selectedYear, 0, 1));
 
-    filtered = filtered.filter(task => {
+    const filtered = tasks.filter(task => {
       const taskStart = parseISO(task.startDate);
       const taskEnd = parseISO(task.dueDate);
       return isWithinInterval(taskStart, { start: yearStart, end: yearEnd }) ||
@@ -139,24 +133,38 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
              (taskStart <= yearStart && taskEnd >= yearEnd);
     });
 
+    // 按開始日期排序
     return filtered.sort((a, b) => {
-      if (a.studentName !== b.studentName) {
-        return a.studentName.localeCompare(b.studentName);
+      const dateCompare = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      // 如果開始日期相同，個人專屬作業優先顯示
+      if (a.isPersonalized !== b.isPersonalized) {
+        return a.isPersonalized ? -1 : 1;
       }
-      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      return 0;
     });
-  }, [tasks, selectedStudent, selectedYear]);
+  }, [tasks, selectedYear]);
 
-  // 按學生分組任務
-  const tasksByStudent = useMemo(() => {
+  // 按類別分組任務（用於更好的視覺呈現）
+  const tasksByCategory = useMemo(() => {
     const grouped = new Map<string, GanttTask[]>();
-    filteredTasks.forEach(task => {
-      const key = `${task.studentId}-${task.studentName}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
+
+    // 先添加個人專屬作業類別
+    const personalizedTasks = filteredTasks.filter(t => t.isPersonalized);
+    if (personalizedTasks.length > 0) {
+      grouped.set('個人專屬作業', personalizedTasks);
+    }
+
+    // 再按原有類別分組共同作業
+    const commonTasks = filteredTasks.filter(t => !t.isPersonalized);
+    commonTasks.forEach(task => {
+      const category = task.category || '其他';
+      if (!grouped.has(category)) {
+        grouped.set(category, []);
       }
-      grouped.get(key)!.push(task);
+      grouped.get(category)!.push(task);
     });
+
     return grouped;
   }, [filteredTasks]);
 
@@ -396,26 +404,38 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
               </div>
             </div>
 
-            {/* 任務行 */}
-            {Array.from(tasksByStudent.entries()).map(([studentKey, studentTasks]) => {
-              const [studentId, studentName] = studentKey.split('-');
+            {/* 任務行 - 按類別分組 */}
+            {Array.from(tasksByCategory.entries()).map(([category, categoryTasks]) => {
+              const isPersonalized = category === '個人專屬作業';
 
               return (
-                <div key={studentKey}>
-                  {/* 學生標題行 */}
+                <div key={category}>
+                  {/* 類別標題行 */}
                   <div className="grid grid-cols-[200px_1fr] border-b bg-muted/30">
                     <div className="p-3 border-r flex items-center space-x-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{studentName}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {studentTasks.length}
+                      {isPersonalized ? (
+                        <User className="w-4 h-4 text-primary" />
+                      ) : (
+                        <BookOpen className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      <span className={cn(
+                        "font-medium text-sm",
+                        isPersonalized && "text-primary"
+                      )}>
+                        {category}
+                      </span>
+                      <Badge
+                        variant={isPersonalized ? "default" : "outline"}
+                        className="text-xs"
+                      >
+                        {categoryTasks.length}
                       </Badge>
                     </div>
                     <div className="relative h-12"></div>
                   </div>
 
                   {/* 任務行 */}
-                  {studentTasks.map((task) => (
+                  {categoryTasks.map((task) => (
                     <div
                       key={task.id}
                       className="grid grid-cols-[200px_1fr] border-b hover:bg-muted/20 transition-colors"
@@ -425,13 +445,20 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                         "p-3 border-r flex flex-col justify-center space-y-1",
                         getPriorityColor(task.priority), "border-l-4"
                       )}>
-                        <div className="text-sm font-medium truncate" title={task.title}>
-                          {task.title}
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm font-medium truncate flex-1" title={task.title}>
+                            {task.title}
+                          </div>
+                          {task.isPersonalized && (
+                            <Badge variant="default" className="text-[9px] px-1 py-0">
+                              專屬
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <Badge variant="outline" className="text-[10px] px-1">
-                            {task.category}
-                          </Badge>
+                          {task.assignedBy && (
+                            <span className="text-[10px]">by {task.assignedBy}</span>
+                          )}
                           {task.status === 'completed' && <CheckCircle className="w-3 h-3 text-green-500" />}
                           {task.status === 'in_progress' && <Clock className="w-3 h-3 text-blue-500" />}
                           {task.status === 'overdue' && <AlertTriangle className="w-3 h-3 text-red-500" />}
