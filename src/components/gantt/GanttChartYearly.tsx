@@ -83,32 +83,30 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
   const [zoomLevel, setZoomLevel] = useState<'quarter' | 'half' | 'full'>('full');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 計算顯示的週數範圍 - 基於實際週數
+  // 計算顯示的週數範圍 - 基於實際年份的週數
   const weekRange = useMemo(() => {
+    // 獲取指定年份的實際週數
     const yearStart = startOfYear(new Date(selectedYear, 0, 1));
     const yearEnd = endOfYear(new Date(selectedYear, 0, 1));
-
-    // 計算這一年實際有多少週
-    const firstWeek = getWeek(yearStart, { locale: zhTW });
-    const lastWeek = getWeek(yearEnd, { locale: zhTW });
-    const totalWeeksInYear = lastWeek >= firstWeek ? lastWeek : lastWeek + 52; // 處理跨年情況
+    const allWeeks = eachWeekOfInterval({ start: yearStart, end: yearEnd }, { locale: zhTW });
+    const totalWeeks = allWeeks.length;
 
     if (zoomLevel === 'quarter') {
       // 顯示當前季度 (約13週)
       const currentWeek = getWeek(new Date(), { locale: zhTW });
-      const quarterStart = Math.max(firstWeek, currentWeek - 6);
-      const quarterEnd = Math.min(totalWeeksInYear, currentWeek + 6);
+      const quarterStart = Math.max(1, currentWeek - 6);
+      const quarterEnd = Math.min(totalWeeks, currentWeek + 6);
       return { start: quarterStart, end: quarterEnd, total: quarterEnd - quarterStart + 1 };
     } else if (zoomLevel === 'half') {
       // 顯示半年
       const currentWeek = getWeek(new Date(), { locale: zhTW });
-      const midPoint = Math.floor((firstWeek + totalWeeksInYear) / 2);
-      const halfStart = currentWeek <= midPoint ? firstWeek : midPoint + 1;
-      const halfEnd = currentWeek <= midPoint ? midPoint : totalWeeksInYear;
+      const halfPoint = Math.floor(totalWeeks / 2);
+      const halfStart = currentWeek <= halfPoint ? 1 : halfPoint + 1;
+      const halfEnd = currentWeek <= halfPoint ? halfPoint : totalWeeks;
       return { start: halfStart, end: halfEnd, total: halfEnd - halfStart + 1 };
     } else {
       // 顯示全年
-      return { start: firstWeek, end: totalWeeksInYear, total: totalWeeksInYear - firstWeek + 1 };
+      return { start: 1, end: totalWeeks, total: totalWeeks };
     }
   }, [selectedYear, zoomLevel]);
 
@@ -195,14 +193,40 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     }
   };
 
-  // 計算任務在甘特圖中的位置和寬度（基於週）- 使用 date-fns 標準方法
+  // 計算任務在甘特圖中的位置和寬度（基於實際週次）
   const getTaskPosition = (task: GanttTask) => {
     const taskStart = parseISO(task.startDate);
     const taskEnd = parseISO(task.dueDate);
 
-    // 使用 date-fns 的標準週數計算
-    const startWeekNum = getWeek(taskStart, { locale: zhTW });
-    const endWeekNum = getWeek(taskEnd, { locale: zhTW });
+    // 獲取年度所有週次
+    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+    const allWeeks = eachWeekOfInterval({
+      start: yearStart,
+      end: endOfYear(new Date(selectedYear, 0, 1))
+    }, { locale: zhTW });
+
+    // 找到任務開始和結束週在年度週列表中的索引
+    const startWeekIndex = allWeeks.findIndex(week => {
+      return isWithinInterval(taskStart, {
+        start: startOfWeek(week, { locale: zhTW }),
+        end: endOfWeek(week, { locale: zhTW })
+      });
+    });
+
+    const endWeekIndex = allWeeks.findIndex(week => {
+      return isWithinInterval(taskEnd, {
+        start: startOfWeek(week, { locale: zhTW }),
+        end: endOfWeek(week, { locale: zhTW })
+      });
+    });
+
+    if (startWeekIndex === -1 || endWeekIndex === -1) {
+      return { left: '0%', width: '0%' };
+    }
+
+    // 轉換為實際週次（從1開始）
+    const startWeekNum = startWeekIndex + 1;
+    const endWeekNum = endWeekIndex + 1;
 
     // 計算相對於顯示範圍的位置
     const relativeStart = startWeekNum - weekRange.start;
@@ -227,23 +251,39 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     return years;
   }, [currentYear]);
 
-  // 獲取月份標記 - 使用 date-fns 標準方法
+  // 獲取月份標記 - 基於實際週次位置
   const getMonthMarkers = useMemo(() => {
     const markers = [];
+    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+    const allWeeks = eachWeekOfInterval({
+      start: yearStart,
+      end: endOfYear(new Date(selectedYear, 0, 1))
+    }, { locale: zhTW });
 
     for (let month = 0; month < 12; month++) {
       const monthStart = new Date(selectedYear, month, 1);
 
-      // 使用 date-fns 的標準週數計算
-      const weekNum = getWeek(monthStart, { locale: zhTW });
-      const position = ((weekNum - weekRange.start) / weekRange.total) * 100;
-
-      if (position >= 0 && position <= 100) {
-        markers.push({
-          month: format(monthStart, 'MMM', { locale: zhTW }),
-          position,
-          weekNum
+      // 找到這個月第一天所在的週在年度週列表中的索引
+      const weekIndex = allWeeks.findIndex(week => {
+        return isWithinInterval(monthStart, {
+          start: startOfWeek(week, { locale: zhTW }),
+          end: endOfWeek(week, { locale: zhTW })
         });
+      });
+
+      if (weekIndex !== -1) {
+        const actualWeekNumber = weekIndex + 1; // 週次從1開始
+
+        // 計算在顯示範圍內的位置
+        if (actualWeekNumber >= weekRange.start && actualWeekNumber <= weekRange.end) {
+          const position = ((actualWeekNumber - weekRange.start) / weekRange.total) * 100;
+
+          markers.push({
+            month: format(monthStart, 'M月', { locale: zhTW }),
+            position,
+            weekNum: actualWeekNumber
+          });
+        }
       }
     }
     return markers;
@@ -371,8 +411,8 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
               <div className="relative">
                 <div className="flex">
                   {weeks.map((week, index) => {
-                    // 使用 date-fns 的標準週數計算
-                    const weekNum = getWeek(week, { locale: zhTW });
+                    // 計算實際週次（在年度中的順序）
+                    const actualWeekNumber = weekRange.start + index;
                     const isCurrentWeek = false; // 移除當前週標記
 
                     return (
@@ -382,13 +422,13 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                           "min-w-[40px] flex-1 p-1 text-xs text-center border-r last:border-r-0",
                           "bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer",
                           isCurrentWeek && "bg-primary/10 text-primary font-semibold",
-                          hoveredWeek === weekNum && "bg-muted"
+                          hoveredWeek === actualWeekNumber && "bg-muted"
                         )}
-                        onMouseEnter={() => setHoveredWeek(weekNum)}
+                        onMouseEnter={() => setHoveredWeek(actualWeekNumber)}
                         onMouseLeave={() => setHoveredWeek(null)}
-                        title={`第 ${weekNum} 週\n${format(startOfWeek(week, { locale: zhTW }), 'MM/dd', { locale: zhTW })} - ${format(endOfWeek(week, { locale: zhTW }), 'MM/dd', { locale: zhTW })}`}
+                        title={`第 ${actualWeekNumber} 週\n${format(startOfWeek(week, { locale: zhTW }), 'MM/dd', { locale: zhTW })} - ${format(endOfWeek(week, { locale: zhTW }), 'MM/dd', { locale: zhTW })}`}
                       >
-                        <div className="font-medium">W{weekNum}</div>
+                        <div className="font-medium">W{actualWeekNumber}</div>
                         {index % 4 === 0 && (
                           <div className="text-[10px] text-muted-foreground">
                             {format(week, 'MM/dd', { locale: zhTW })}
