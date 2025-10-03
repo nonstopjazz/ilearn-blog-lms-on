@@ -359,13 +359,15 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
         <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
           <span>顯示範圍：第 {weekRange.start} - {weekRange.end} 週</span>
           <span>共 {weekRange.total} 週</span>
+          <span>實際週數：{weeks.length}</span>
+          <span>縮放：{zoomLevel}</span>
           <span>任務數：{filteredTasks.length}</span>
         </div>
       </CardHeader>
 
       <CardContent className="p-0">
         <div className="overflow-x-auto" ref={scrollRef}>
-          <div className="min-w-[1200px]">
+          <div className="min-w-[2200px]"> {/* 53週 × 40px = 2120px，加上左側200px */}
             {/* 月份標記 */}
             <div className="grid grid-cols-[200px_1fr] border-b">
               <div className="p-2 bg-muted/50 font-medium text-xs border-r">
@@ -406,7 +408,7 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                       <div
                         key={index}
                         className={cn(
-                          "flex-1 p-1 text-xs text-center border-r last:border-r-0",
+                          "min-w-[40px] flex-1 p-1 text-xs text-center border-r last:border-r-0",
                           "bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer",
                           isCurrentWeek && "bg-primary/10 text-primary font-semibold",
                           hoveredWeek === weekNum && "bg-muted"
