@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
 import GanttChartYearly from '@/components/gantt/GanttChartYearly';
+import FrappeGanttChart from '@/components/gantt/FrappeGanttChart';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import {
   ClipboardList,
@@ -715,8 +716,8 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* 年度甘特圖 */}
-            <GanttChartYearly
+            {/* Frappe 甘特圖 */}
+            <FrappeGanttChart
               tasks={ganttTasks}
               studentName={currentStudent.name}
               onTaskClick={handleTaskClick}
