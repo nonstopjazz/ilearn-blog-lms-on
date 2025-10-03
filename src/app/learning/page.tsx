@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
 import GanttChartYearly from '@/components/gantt/GanttChartYearly';
+import DHtmlxGanttChart from '@/components/gantt/DHtmlxGanttChart';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import {
   ClipboardList,
@@ -715,12 +716,12 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* 年度甘特圖 */}
-            <GanttChartYearly
+            {/* 專業甘特圖 */}
+            <DHtmlxGanttChart
               tasks={ganttTasks}
               studentName={currentStudent.name}
               onTaskClick={handleTaskClick}
-              className="min-h-[500px]"
+              className="min-h-[600px]"
               year={2025}
             />
 
