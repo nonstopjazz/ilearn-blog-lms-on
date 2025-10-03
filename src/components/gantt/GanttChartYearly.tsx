@@ -88,31 +88,34 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     const yearStart = startOfYear(new Date(selectedYear, 0, 1));
     const yearEnd = endOfYear(new Date(selectedYear, 0, 1));
 
+    // 2025年有53週，我們需要支援53週
+    const totalWeeksInYear = 53;
+
     if (zoomLevel === 'quarter') {
       // 顯示當前季度 (約13週)
-      const currentWeek = getWeek(new Date(), { locale: zhTW });
+      const currentWeek = Math.floor((Date.now() - new Date(selectedYear, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
       const quarterStart = Math.max(1, currentWeek - 6);
-      const quarterEnd = Math.min(52, currentWeek + 6);
+      const quarterEnd = Math.min(totalWeeksInYear, currentWeek + 6);
       return { start: quarterStart, end: quarterEnd, total: quarterEnd - quarterStart + 1 };
     } else if (zoomLevel === 'half') {
-      // 顯示半年 (26週)
-      const currentWeek = getWeek(new Date(), { locale: zhTW });
+      // 顯示半年 (約26週)
+      const currentWeek = Math.floor((Date.now() - new Date(selectedYear, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
       const halfStart = currentWeek <= 26 ? 1 : 27;
-      const halfEnd = currentWeek <= 26 ? 26 : 52;
-      return { start: halfStart, end: halfEnd, total: 26 };
+      const halfEnd = currentWeek <= 26 ? 26 : totalWeeksInYear;
+      return { start: halfStart, end: halfEnd, total: halfEnd - halfStart + 1 };
     } else {
-      // 顯示全年 (52週)
-      return { start: 1, end: 52, total: 52 };
+      // 顯示全年 (53週)
+      return { start: 1, end: totalWeeksInYear, total: totalWeeksInYear };
     }
   }, [selectedYear, zoomLevel]);
 
-  // 生成週列表 - 使用最簡單的邏輯
+  // 生成週列表 - 支援53週
   const weeks = useMemo(() => {
     const weeks = [];
     const yearStart = new Date(selectedYear, 0, 1); // 年初第一天
 
-    // 從年初開始，每7天為一週，生成52週
-    for (let i = 0; i < 52; i++) {
+    // 從年初開始，每7天為一週，生成53週
+    for (let i = 0; i < 53; i++) {
       const weekStart = new Date(yearStart);
       weekStart.setDate(yearStart.getDate() + i * 7);
       weeks.push(weekStart);
@@ -232,26 +235,40 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     return years;
   }, [currentYear]);
 
-  // 獲取月份標記 - 使用最簡單的邏輯
+  // 獲取月份標記 - 正確的週數範圍計算
   const getMonthMarkers = useMemo(() => {
     const markers = [];
     const yearStart = new Date(selectedYear, 0, 1);
 
     for (let month = 0; month < 12; month++) {
       const monthStart = new Date(selectedYear, month, 1);
+      const monthEnd = new Date(selectedYear, month + 1, 0); // 該月最後一天
 
-      // 計算該月在第幾週（簡化計算）
-      const daysSinceYearStart = Math.floor((monthStart.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
-      const weekNum = Math.floor(daysSinceYearStart / 7) + 1;
-      const clampedWeekNum = Math.max(1, Math.min(52, weekNum));
+      // 計算該月第一天和最後一天對應的週數
+      const startDayOfYear = Math.floor((monthStart.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+      const endDayOfYear = Math.floor((monthEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
-      const position = ((clampedWeekNum - weekRange.start) / weekRange.total) * 100;
+      const startWeekNum = Math.floor(startDayOfYear / 7) + 1;
+      const endWeekNum = Math.floor(endDayOfYear / 7) + 1;
 
-      if (position >= 0 && position <= 100) {
+      const clampedStartWeek = Math.max(1, Math.min(53, startWeekNum));
+      const clampedEndWeek = Math.max(1, Math.min(53, endWeekNum));
+
+      // 月份標記放在該月第一週的位置
+      const position = ((clampedStartWeek - weekRange.start) / weekRange.total) * 100;
+
+      // 計算該月跨越的寬度
+      const monthWeeks = clampedEndWeek - clampedStartWeek + 1;
+      const width = (monthWeeks / weekRange.total) * 100;
+
+      if (position >= -10 && position <= 110) { // 稍微寬鬆的顯示範圍
         markers.push({
           month: format(monthStart, 'MMM', { locale: zhTW }),
-          position,
-          weekNum: clampedWeekNum
+          position: Math.max(0, position),
+          width: Math.min(width, 100 - Math.max(0, position)),
+          startWeek: clampedStartWeek,
+          endWeek: clampedEndWeek,
+          weekCount: monthWeeks
         });
       }
     }
@@ -358,11 +375,15 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                 {getMonthMarkers.map((marker, index) => (
                   <div
                     key={index}
-                    className="absolute top-0 bottom-0 border-l border-primary/30 flex items-center"
-                    style={{ left: `${marker.position}%` }}
+                    className="absolute top-0 bottom-0 bg-primary/5 border-l border-r border-primary/20 flex items-center justify-center"
+                    style={{
+                      left: `${marker.position}%`,
+                      width: `${marker.width}%`
+                    }}
+                    title={`${marker.month} (第${marker.startWeek}-${marker.endWeek}週，共${marker.weekCount}週)`}
                   >
-                    <span className="text-xs font-medium text-primary ml-1">
-                      {marker.month}
+                    <span className="text-xs font-medium text-primary">
+                      {marker.month} ({marker.weekCount}週)
                     </span>
                   </div>
                 ))}
