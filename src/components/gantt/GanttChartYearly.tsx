@@ -106,14 +106,15 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     }
   }, [selectedYear, zoomLevel]);
 
-  // 生成週列表
+  // 生成週列表 - 使用最簡單的邏輯
   const weeks = useMemo(() => {
     const weeks = [];
-    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+    const yearStart = new Date(selectedYear, 0, 1); // 年初第一天
 
-    // 生成52週（固定）
+    // 從年初開始，每7天為一週，生成52週
     for (let i = 0; i < 52; i++) {
-      const weekStart = addWeeks(startOfWeek(yearStart, { locale: zhTW }), i);
+      const weekStart = new Date(yearStart);
+      weekStart.setDate(yearStart.getDate() + i * 7);
       weeks.push(weekStart);
     }
 
@@ -190,19 +191,19 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     }
   };
 
-  // 計算任務在甘特圖中的位置和寬度（基於週）
+  // 計算任務在甘特圖中的位置和寬度（基於週）- 使用最簡單的邏輯
   const getTaskPosition = (task: GanttTask) => {
     const taskStart = parseISO(task.startDate);
     const taskEnd = parseISO(task.dueDate);
-    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
-    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
+    const yearStart = new Date(selectedYear, 0, 1);
 
-    // 計算開始週和結束週（相對於年初）
-    const taskStartWeek = startOfWeek(taskStart, { locale: zhTW });
-    const taskEndWeek = startOfWeek(taskEnd, { locale: zhTW });
+    // 簡化計算：基於年初天數
+    const startDayOfYear = Math.floor((taskStart.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+    const endDayOfYear = Math.floor((taskEnd.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
 
-    const startWeekNum = Math.floor(differenceInWeeks(taskStartWeek, yearStartWeek)) + 1;
-    const endWeekNum = Math.floor(differenceInWeeks(taskEndWeek, yearStartWeek)) + 1;
+    // 轉換為週數（從第1週開始）
+    const startWeekNum = Math.floor(startDayOfYear / 7) + 1;
+    const endWeekNum = Math.floor(endDayOfYear / 7) + 1;
 
     // 確保週數在 1-52 範圍內
     const clampedStartWeek = Math.max(1, Math.min(52, startWeekNum));
@@ -231,50 +232,34 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     return years;
   }, [currentYear]);
 
-  // 獲取月份標記
+  // 獲取月份標記 - 使用最簡單的邏輯
   const getMonthMarkers = useMemo(() => {
     const markers = [];
-    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
-    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
+    const yearStart = new Date(selectedYear, 0, 1);
 
     for (let month = 0; month < 12; month++) {
       const monthStart = new Date(selectedYear, month, 1);
-      const monthWeekStart = startOfWeek(monthStart, { locale: zhTW });
 
-      // 計算該月相對於年初的週數（1-52）
-      const weekDiff = Math.floor(differenceInWeeks(monthWeekStart, yearStartWeek)) + 1;
-      const weekNum = Math.max(1, Math.min(52, weekDiff));
+      // 計算該月在第幾週（簡化計算）
+      const daysSinceYearStart = Math.floor((monthStart.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+      const weekNum = Math.floor(daysSinceYearStart / 7) + 1;
+      const clampedWeekNum = Math.max(1, Math.min(52, weekNum));
 
-      const position = ((weekNum - weekRange.start) / weekRange.total) * 100;
+      const position = ((clampedWeekNum - weekRange.start) / weekRange.total) * 100;
 
       if (position >= 0 && position <= 100) {
         markers.push({
           month: format(monthStart, 'MMM', { locale: zhTW }),
           position,
-          weekNum
+          weekNum: clampedWeekNum
         });
       }
     }
     return markers;
   }, [selectedYear, weekRange]);
 
-  // 獲取當前週的位置
-  const currentWeekPosition = useMemo(() => {
-    const now = new Date();
-    if (getYear(now) === selectedYear) {
-      const yearStart = startOfYear(new Date(selectedYear, 0, 1));
-      const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
-      const nowWeek = startOfWeek(now, { locale: zhTW });
-
-      // 計算當前週相對於年初的週數（1-52）
-      const weekDiff = Math.floor(differenceInWeeks(nowWeek, yearStartWeek)) + 1;
-      const currentWeek = Math.max(1, Math.min(52, weekDiff));
-
-      const position = ((currentWeek - weekRange.start) / weekRange.total) * 100;
-      return position >= 0 && position <= 100 ? position : null;
-    }
-    return null;
-  }, [selectedYear, weekRange]);
+  // 移除當前週位置計算（不需要紅色標記線）
+  const currentWeekPosition = null;
 
   return (
     <Card className={cn("w-full", className)}>
@@ -392,15 +377,9 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
               <div className="relative">
                 <div className="flex">
                   {weeks.map((week, index) => {
-                    // 使用與月份標記一致的週數計算
-                    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
-                    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
-                    const weekStart = startOfWeek(week, { locale: zhTW });
-                    const weekDiff = Math.floor(differenceInWeeks(weekStart, yearStartWeek)) + 1;
-                    const weekNum = Math.max(1, Math.min(52, weekDiff));
-
-                    const isCurrentWeek = currentWeekPosition !== null &&
-                      Math.abs((((weekNum - weekRange.start) / weekRange.total) * 100) - currentWeekPosition) < 2;
+                    // 簡化週數計算 - 直接使用索引
+                    const weekNum = weekRange.start + index;
+                    const isCurrentWeek = false; // 移除當前週標記
 
                     return (
                       <div
@@ -426,13 +405,7 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                   })}
                 </div>
 
-                {/* 當前週標記線 */}
-                {currentWeekPosition !== null && (
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 opacity-50 pointer-events-none z-10"
-                    style={{ left: `${currentWeekPosition}%` }}
-                  />
-                )}
+                {/* 移除紅色當前週標記線 */}
               </div>
             </div>
 
@@ -531,13 +504,7 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
                           )}
                         </div>
 
-                        {/* 當前週標記線 */}
-                        {currentWeekPosition !== null && (
-                          <div
-                            className="absolute top-0 bottom-0 w-0.5 bg-red-500 opacity-30 pointer-events-none"
-                            style={{ left: `${currentWeekPosition}%` }}
-                          />
-                        )}
+                        {/* 移除紅色當前週標記線 */}
                       </div>
                     </div>
                   ))}
