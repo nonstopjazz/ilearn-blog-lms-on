@@ -108,16 +108,17 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
 
   // 生成週列表
   const weeks = useMemo(() => {
+    const weeks = [];
     const yearStart = startOfYear(new Date(selectedYear, 0, 1));
-    const yearEnd = endOfYear(new Date(selectedYear, 0, 1));
 
-    const allWeeks = eachWeekOfInterval({
-      start: yearStart,
-      end: yearEnd
-    }, { locale: zhTW });
+    // 生成52週（固定）
+    for (let i = 0; i < 52; i++) {
+      const weekStart = addWeeks(startOfWeek(yearStart, { locale: zhTW }), i);
+      weeks.push(weekStart);
+    }
 
     // 根據縮放級別過濾週數
-    return allWeeks.slice(weekRange.start - 1, weekRange.end);
+    return weeks.slice(weekRange.start - 1, weekRange.end);
   }, [selectedYear, weekRange]);
 
   // 過濾任務
@@ -194,17 +195,25 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
     const taskStart = parseISO(task.startDate);
     const taskEnd = parseISO(task.dueDate);
     const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
 
-    // 計算開始週和結束週
-    const startWeekNum = getWeek(taskStart, { locale: zhTW });
-    const endWeekNum = getWeek(taskEnd, { locale: zhTW });
+    // 計算開始週和結束週（相對於年初）
+    const taskStartWeek = startOfWeek(taskStart, { locale: zhTW });
+    const taskEndWeek = startOfWeek(taskEnd, { locale: zhTW });
+
+    const startWeekNum = Math.floor(differenceInWeeks(taskStartWeek, yearStartWeek)) + 1;
+    const endWeekNum = Math.floor(differenceInWeeks(taskEndWeek, yearStartWeek)) + 1;
+
+    // 確保週數在 1-52 範圍內
+    const clampedStartWeek = Math.max(1, Math.min(52, startWeekNum));
+    const clampedEndWeek = Math.max(1, Math.min(52, endWeekNum));
 
     // 計算相對於顯示範圍的位置
-    const relativeStart = startWeekNum - weekRange.start;
+    const relativeStart = clampedStartWeek - weekRange.start;
     const startPosition = Math.max(0, (relativeStart / weekRange.total) * 100);
 
     // 計算寬度（週數）
-    const taskDurationWeeks = endWeekNum - startWeekNum + 1;
+    const taskDurationWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1);
     const width = Math.min(100 - startPosition, (taskDurationWeeks / weekRange.total) * 100);
 
     return {
@@ -225,15 +234,24 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
   // 獲取月份標記
   const getMonthMarkers = useMemo(() => {
     const markers = [];
+    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
+
     for (let month = 0; month < 12; month++) {
       const monthStart = new Date(selectedYear, month, 1);
-      const weekNum = getWeek(monthStart, { locale: zhTW });
+      const monthWeekStart = startOfWeek(monthStart, { locale: zhTW });
+
+      // 計算該月相對於年初的週數（1-52）
+      const weekDiff = Math.floor(differenceInWeeks(monthWeekStart, yearStartWeek)) + 1;
+      const weekNum = Math.max(1, Math.min(52, weekDiff));
+
       const position = ((weekNum - weekRange.start) / weekRange.total) * 100;
 
       if (position >= 0 && position <= 100) {
         markers.push({
           month: format(monthStart, 'MMM', { locale: zhTW }),
-          position
+          position,
+          weekNum
         });
       }
     }
@@ -244,7 +262,14 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
   const currentWeekPosition = useMemo(() => {
     const now = new Date();
     if (getYear(now) === selectedYear) {
-      const currentWeek = getWeek(now, { locale: zhTW });
+      const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+      const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
+      const nowWeek = startOfWeek(now, { locale: zhTW });
+
+      // 計算當前週相對於年初的週數（1-52）
+      const weekDiff = Math.floor(differenceInWeeks(nowWeek, yearStartWeek)) + 1;
+      const currentWeek = Math.max(1, Math.min(52, weekDiff));
+
       const position = ((currentWeek - weekRange.start) / weekRange.total) * 100;
       return position >= 0 && position <= 100 ? position : null;
     }
