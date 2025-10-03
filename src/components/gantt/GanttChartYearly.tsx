@@ -30,7 +30,8 @@ import {
   AlertTriangle,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
