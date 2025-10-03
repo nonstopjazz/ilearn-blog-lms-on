@@ -392,7 +392,13 @@ const GanttChartYearly: React.FC<GanttChartYearlyProps> = ({
               <div className="relative">
                 <div className="flex">
                   {weeks.map((week, index) => {
-                    const weekNum = getWeek(week, { locale: zhTW });
+                    // 使用與月份標記一致的週數計算
+                    const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+                    const yearStartWeek = startOfWeek(yearStart, { locale: zhTW });
+                    const weekStart = startOfWeek(week, { locale: zhTW });
+                    const weekDiff = Math.floor(differenceInWeeks(weekStart, yearStartWeek)) + 1;
+                    const weekNum = Math.max(1, Math.min(52, weekDiff));
+
                     const isCurrentWeek = currentWeekPosition !== null &&
                       Math.abs((((weekNum - weekRange.start) / weekRange.total) * 100) - currentWeekPosition) < 2;
 
