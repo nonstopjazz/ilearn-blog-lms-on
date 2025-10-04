@@ -578,9 +578,12 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                    <Line type="monotone" dataKey="小考" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: "hsl(var(--primary))" }} />
-                    <Line type="monotone" dataKey="段考" stroke="hsl(var(--secondary))" strokeWidth={3} dot={{ fill: "hsl(var(--secondary))" }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                      position={{ y: 0 }}
+                    />
+                    <Line type="monotone" dataKey="小考" stroke="rgb(59, 130, 246)" strokeWidth={3} dot={{ fill: "rgb(59, 130, 246)", r: 5 }} activeDot={{ r: 7 }} />
+                    <Line type="monotone" dataKey="段考" stroke="rgb(168, 85, 247)" strokeWidth={3} dot={{ fill: "rgb(168, 85, 247)", r: 5 }} activeDot={{ r: 7 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -591,8 +594,12 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                    <Bar dataKey="單字數" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                      cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
+                      position={{ y: 0 }}
+                    />
+                    <Bar dataKey="單字數" fill="rgb(34, 197, 94)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
