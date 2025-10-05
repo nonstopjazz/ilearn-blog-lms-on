@@ -24,6 +24,15 @@ export function getSupabase() {
   return supabaseInstance
 }
 
-// 為了向後兼容，導出 supabase 實例（指向單例）
-// 建議使用 getSupabase() 函數以確保類型安全
-export const supabase = getSupabase()
+// 為了向後兼容，提供 getter 函數
+// 強烈建議直接使用 getSupabase() 函數
+// 使用 getter 避免在模組載入時就建立實例
+let _legacySupabaseInstance: SupabaseClient | null = null
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    if (!_legacySupabaseInstance) {
+      _legacySupabaseInstance = getSupabase()
+    }
+    return (_legacySupabaseInstance as any)[prop]
+  }
+})
