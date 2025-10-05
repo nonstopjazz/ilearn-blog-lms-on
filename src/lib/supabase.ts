@@ -24,8 +24,6 @@ export function getSupabase() {
   return supabaseInstance
 }
 
-// 為了向後兼容，導出 supabase 實例
-// 但建議使用 getSupabase() 函數
-export const supabase = typeof window !== 'undefined' && supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null as any
+// 為了向後兼容，導出 supabase 實例（指向單例）
+// 建議使用 getSupabase() 函數以確保類型安全
+export const supabase = getSupabase()
