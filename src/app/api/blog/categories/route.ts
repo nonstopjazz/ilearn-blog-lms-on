@@ -5,6 +5,10 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 export async function GET() {
   try {
     console.log('Categories GET: Starting request')
+    console.log('Categories GET: Environment check:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    })
     const supabase = createSupabaseServerClient()
     console.log('Categories GET: Supabase client initialized')
     
