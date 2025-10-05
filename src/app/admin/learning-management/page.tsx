@@ -88,9 +88,14 @@ export default function AdminLearningManagementPage() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportStudent, setReportStudent] = useState<Student | null>(null);
 
-  // 模擬數據載入
+  // 考試類型狀態
+  const [examTypes, setExamTypes] = useState<any[]>([]);
+  const [loadingExamTypes, setLoadingExamTypes] = useState(false);
+
+  // 載入數據
   useEffect(() => {
     loadStudentsData();
+    loadExamTypes();
   }, []);
 
   const loadStudentsData = async () => {
@@ -111,6 +116,26 @@ export default function AdminLearningManagementPage() {
       setStudents([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadExamTypes = async () => {
+    setLoadingExamTypes(true);
+    try {
+      const response = await fetch('/api/admin/exam-types?active_only=true');
+      const data = await response.json();
+
+      if (data.success) {
+        setExamTypes(data.data || []);
+      } else {
+        console.error('載入考試類型失敗:', data.error);
+        setExamTypes([]);
+      }
+    } catch (error) {
+      console.error('載入考試類型時發生錯誤:', error);
+      setExamTypes([]);
+    } finally {
+      setLoadingExamTypes(false);
     }
   };
 
@@ -543,18 +568,24 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                           ...prev,
                           data: { ...prev.data, exam_type: value }
                         }))}
+                        disabled={loadingExamTypes}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="選擇考試類型" />
+                          <SelectValue placeholder={loadingExamTypes ? "載入中..." : "選擇考試類型"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="小考">小考</SelectItem>
-                          <SelectItem value="週考">週考</SelectItem>
-                          <SelectItem value="段考">段考</SelectItem>
-                          <SelectItem value="模擬考">模擬考</SelectItem>
-                          <SelectItem value="補考">補考</SelectItem>
+                          {examTypes.map(type => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.icon && `${type.icon} `}{type.display_name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
+                      {examTypes.length === 0 && !loadingExamTypes && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          尚未設定考試類型，請先到<a href="/admin/exam-types" className="underline">考試類型管理</a>新增
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label>考試名稱</Label>

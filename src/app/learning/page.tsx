@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
 import GanttChartYearly from '@/components/gantt/GanttChartYearly';
 import DHtmlxGanttChart from '@/components/gantt/DHtmlxGanttChart';
@@ -45,15 +46,60 @@ const Dashboard = () => {
   const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [gradeTimeRange, setGradeTimeRange] = useState('month');
+  const [examTypes, setExamTypes] = useState<any[]>([]);
+  const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
-  // 共用數據
-  const gradeData = [
-    { name: "第1週", 小考: 85, 段考: 88 },
-    { name: "第2週", 小考: 78, 段考: 85 },
-    { name: "第3週", 小考: 92, 段考: 90 },
-    { name: "第4週", 小考: 88, 段考: 92 },
-    { name: "第5週", 小考: 95, 段考: 94 },
+  // 完整的成績數據（模擬一整年的資料）
+  // 注意：這是示範假資料，實際應從 API 取得
+  const allGradeData = [
+    // 1月
+    { name: "第1週", quiz: 85, class_test: 88, vocabulary_test: 90, speaking_eval: 82, month: 1 },
+    { name: "第2週", quiz: 78, class_test: 85, vocabulary_test: 87, speaking_eval: 80, month: 1 },
+    { name: "第3週", quiz: 92, class_test: 90, vocabulary_test: 93, speaking_eval: 88, month: 1 },
+    { name: "第4週", quiz: 88, class_test: 92, vocabulary_test: 89, speaking_eval: 85, month: 1 },
+    // 2月
+    { name: "第5週", quiz: 95, class_test: 94, vocabulary_test: 96, speaking_eval: 90, month: 2 },
+    { name: "第6週", quiz: 90, class_test: 91, vocabulary_test: 92, speaking_eval: 87, month: 2 },
+    { name: "第7週", quiz: 87, class_test: 89, vocabulary_test: 88, speaking_eval: 84, month: 2 },
+    { name: "第8週", quiz: 93, class_test: 95, vocabulary_test: 94, speaking_eval: 91, month: 2 },
+    // 3月
+    { name: "第9週", quiz: 91, class_test: 93, vocabulary_test: 95, speaking_eval: 89, month: 3 },
+    { name: "第10週", quiz: 89, class_test: 90, vocabulary_test: 91, speaking_eval: 86, month: 3 },
+    { name: "第11週", quiz: 94, class_test: 96, vocabulary_test: 97, speaking_eval: 92, month: 3 },
+    { name: "第12週", quiz: 92, class_test: 94, vocabulary_test: 93, speaking_eval: 90, month: 3 },
+    // 4月
+    { name: "第13週", quiz: 88, class_test: 91, vocabulary_test: 90, speaking_eval: 87, month: 4 },
+    { name: "第14週", quiz: 90, class_test: 92, vocabulary_test: 94, speaking_eval: 88, month: 4 },
+    { name: "第15週", quiz: 93, class_test: 95, vocabulary_test: 96, speaking_eval: 91, month: 4 },
+    { name: "第16週", quiz: 91, class_test: 93, vocabulary_test: 92, speaking_eval: 89, month: 4 },
+    // 5月
+    { name: "第17週", quiz: 95, class_test: 97, vocabulary_test: 98, speaking_eval: 93, month: 5 },
+    { name: "第18週", quiz: 92, class_test: 94, vocabulary_test: 95, speaking_eval: 90, month: 5 },
+    { name: "第19週", quiz: 94, class_test: 96, vocabulary_test: 97, speaking_eval: 92, month: 5 },
+    { name: "第20週", quiz: 96, class_test: 98, vocabulary_test: 99, speaking_eval: 94, month: 5 },
   ];
+
+  // 根據時間範圍篩選資料
+  const getFilteredGradeData = () => {
+    const currentWeek = 20; // 假設目前是第20週
+    switch (gradeTimeRange) {
+      case 'week':
+        return allGradeData.slice(-2); // 最近2週
+      case 'month':
+        return allGradeData.slice(-4); // 最近1個月（4週）
+      case 'quarter':
+        return allGradeData.slice(-12); // 最近3個月（12週）
+      case 'semester':
+        return allGradeData.slice(-18); // 最近半年（18週）
+      case 'all':
+        return allGradeData; // 全部資料
+      default:
+        return allGradeData.slice(-4);
+    }
+  };
+
+  const gradeData = getFilteredGradeData();
 
   const vocabularyData = [
     { name: "第1堂課", 單字數: 15 },
@@ -425,7 +471,41 @@ const Dashboard = () => {
     setStudents([currentStudent]); // 只有當前學生
     setGanttTasks(mockGanttTasks);
     setAssignments(mockAssignments);
+    loadExamTypes();
   }, []);
+
+  // 載入考試類型
+  const loadExamTypes = async () => {
+    setLoadingExamTypes(true);
+    try {
+      const response = await fetch('/api/admin/exam-types?active_only=true');
+      const data = await response.json();
+
+      if (data.success) {
+        setExamTypes(data.data || []);
+      } else {
+        console.error('載入考試類型失敗:', data.error);
+        // 如果API失敗，使用預設類型（向後兼容）
+        setExamTypes([
+          { name: 'quiz', display_name: '小考', color: 'rgb(59, 130, 246)' },
+          { name: 'class_test', display_name: '隨堂考', color: 'rgb(168, 85, 247)' },
+          { name: 'vocabulary_test', display_name: '單字測驗', color: 'rgb(34, 197, 94)' },
+          { name: 'speaking_eval', display_name: '口說評量', color: 'rgb(251, 146, 60)' },
+        ]);
+      }
+    } catch (error) {
+      console.error('載入考試類型時發生錯誤:', error);
+      // 使用預設類型（向後兼容）
+      setExamTypes([
+        { name: 'quiz', display_name: '小考', color: 'rgb(59, 130, 246)' },
+        { name: 'class_test', display_name: '隨堂考', color: 'rgb(168, 85, 247)' },
+        { name: 'vocabulary_test', display_name: '單字測驗', color: 'rgb(34, 197, 94)' },
+        { name: 'speaking_eval', display_name: '口說評量', color: 'rgb(251, 146, 60)' },
+      ]);
+    } finally {
+      setLoadingExamTypes(false);
+    }
+  };
 
   // 處理新增作業
   const handleCreateAssignment = async (formData: any) => {
@@ -572,21 +652,59 @@ const Dashboard = () => {
 
             {/* 圖表區域 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="成績趨勢分析" description="小考與段考成績對比">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={gradeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                      position={{ y: 0 }}
-                    />
-                    <Line type="monotone" dataKey="小考" stroke="rgb(59, 130, 246)" strokeWidth={3} dot={{ fill: "rgb(59, 130, 246)", r: 5 }} activeDot={{ r: 7 }} />
-                    <Line type="monotone" dataKey="段考" stroke="rgb(168, 85, 247)" strokeWidth={3} dot={{ fill: "rgb(168, 85, 247)", r: 5 }} activeDot={{ r: 7 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>成績趨勢分析</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">各類考試成績趨勢追蹤</p>
+                    </div>
+                    <Select value={gradeTimeRange} onValueChange={setGradeTimeRange}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="week">最近2週</SelectItem>
+                        <SelectItem value="month">最近1個月</SelectItem>
+                        <SelectItem value="quarter">最近3個月</SelectItem>
+                        <SelectItem value="semester">最近半年</SelectItem>
+                        <SelectItem value="all">全部資料</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingExamTypes ? (
+                    <div className="flex items-center justify-center h-[300px]">
+                      <p className="text-muted-foreground">載入中...</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={gradeData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                          position={{ y: 0 }}
+                        />
+                        {examTypes.map((type, index) => (
+                          <Line
+                            key={type.name}
+                            type="monotone"
+                            dataKey={type.name}
+                            name={type.display_name}
+                            stroke={type.color}
+                            strokeWidth={2.5}
+                            dot={{ fill: type.color, r: 4 }}
+                            activeDot={{ r: 6 }}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
 
               <ChartCard title="單字學習統計" description="各堂課單字學習數量">
                 <ResponsiveContainer width="100%" height={300}>
