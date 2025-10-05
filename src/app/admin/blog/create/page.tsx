@@ -58,6 +58,13 @@ const BlogAdminCreate: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState('');
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingTags, setLoadingTags] = useState(false);
+
+  // 快速新增分類
+  const [showQuickAddCategory, setShowQuickAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
 
   // 錯誤處理
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -107,13 +114,20 @@ const BlogAdminCreate: React.FC = () => {
 
   const loadCategories = async () => {
     try {
+      setLoadingCategories(true);
       const response = await fetch('/api/blog/categories');
       const result = await response.json();
-      if (response.ok) {
-        setCategories(result.categories);
+      if (response.ok && result.success) {
+        setCategories(result.categories || []);
+      } else {
+        console.error('載入分類失敗:', result.error);
+        setErrors(prev => ({ ...prev, categories: '載入分類失敗，請稍後再試' }));
       }
     } catch (error) {
       console.error('載入分類失敗:', error);
+      setErrors(prev => ({ ...prev, categories: '載入分類時發生錯誤' }));
+    } finally {
+      setLoadingCategories(false);
     }
   };
 
@@ -202,6 +216,45 @@ const BlogAdminCreate: React.FC = () => {
 
   const removeTag = (tagId: string) => {
     setSelectedTags(prev => prev.filter(t => t.id !== tagId));
+  };
+
+  const addQuickCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    setAddingCategory(true);
+    try {
+      const response = await fetch('/api/blog/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newCategoryName.trim(),
+          color: '#' + Math.floor(Math.random()*16777215).toString(16) // 隨機顏色
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success && result.data) {
+        const newCategory = result.data;
+        setCategories(prev => [...prev, newCategory]);
+        setFormData(prev => ({ ...prev, category_id: newCategory.id }));
+        setNewCategoryName('');
+        setShowQuickAddCategory(false);
+        // 清除分類錯誤
+        if (errors.category_id) {
+          setErrors(prev => ({ ...prev, category_id: '' }));
+        }
+      } else {
+        alert(result.error || '新增分類失敗');
+      }
+    } catch (error) {
+      console.error('新增分類失敗:', error);
+      alert('新增分類失敗，請稍後再試');
+    } finally {
+      setAddingCategory(false);
+    }
   };
 
   const validateForm = () => {
@@ -438,26 +491,96 @@ const BlogAdminCreate: React.FC = () => {
 
             {/* 分類 */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                分類 *
-              </h3>
-              
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  分類 *
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddCategory(!showQuickAddCategory)}
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  快速新增
+                </button>
+              </div>
+
+              {/* 快速新增分類表單 */}
+              {showQuickAddCategory && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="輸入新分類名稱"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addQuickCategory()}
+                      disabled={addingCategory}
+                    />
+                    <button
+                      type="button"
+                      onClick={addQuickCategory}
+                      disabled={addingCategory || !newCategoryName.trim()}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {addingCategory ? (
+                        <span className="flex items-center">
+                          <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                          新增中
+                        </span>
+                      ) : (
+                        '新增'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowQuickAddCategory(false);
+                        setNewCategoryName('');
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      disabled={addingCategory}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <select
                 value={formData.category_id}
                 onChange={(e) => handleInputChange('category_id', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                   errors.category_id ? 'border-red-300' : 'border-gray-300'
                 }`}
+                disabled={loadingCategories}
               >
-                <option value="">選擇分類</option>
+                <option value="">
+                  {loadingCategories ? '載入中...' : categories.length === 0 ? '暫無分類，請先新增' : '選擇分類'}
+                </option>
                 {categories.map(category => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))}
               </select>
+
               {errors.category_id && (
                 <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
+              )}
+
+              {errors.categories && (
+                <p className="mt-1 text-sm text-red-600">{errors.categories}</p>
+              )}
+
+              {categories.length === 0 && !loadingCategories && !errors.categories && (
+                <p className="mt-2 text-sm text-gray-600">
+                  尚無分類，請使用上方「快速新增」按鈕建立分類，或前往
+                  <a href="/admin/blog/categories" className="text-blue-600 hover:underline ml-1" target="_blank">
+                    分類管理頁面
+                  </a>
+                </p>
               )}
             </div>
 
