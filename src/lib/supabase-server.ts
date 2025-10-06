@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 用於讀取資料的簡單客戶端 (categories, tags, posts GET)
+// Simple client for GET requests (categories, tags, posts)
 export function createSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -26,7 +26,7 @@ export function createSupabaseClient() {
   })
 }
 
-// 使用 Service Role Key 的管理員客戶端 (POST, PUT, DELETE)
+// Admin client with Service Role Key for POST/PUT/DELETE
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
