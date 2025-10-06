@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 export async function GET(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     // 檢查 quiz_attempts 表結構
     const { data: attempts, error } = await supabase

@@ -105,7 +105,7 @@ export async function GET(request) {
 
     console.log('✅ 權限檢查通過，開始查詢提醒設定...');
 
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
 
     let query = supabase
@@ -194,7 +194,7 @@ export async function POST(request) {
 
     console.log('💾 準備儲存的資料:', reminderData);
 
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
 
     // 檢查是否已存在設定
@@ -272,7 +272,7 @@ export async function DELETE(request) {
       return NextResponse.json({ error: '缺少必要參數：courseId 和 reminderType' }, { status: 400 });
     }
 
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
 
     const { error } = await supabase
@@ -323,7 +323,7 @@ export async function PUT(request) {
     const results = [];
     const errors = [];
 
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
 
     for (const courseId of courseIds) {

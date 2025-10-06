@@ -4,10 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 // 提交課程申請
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     console.log('=== 課程申請 API 開始 ===');
     
     const body = await req.json();
@@ -120,10 +117,7 @@ export async function POST(req: NextRequest) {
 // 查詢申請狀態
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const courseId = searchParams.get('course_id');
@@ -189,10 +183,7 @@ export async function GET(req: NextRequest) {
 // 更新申請狀態（管理員用）
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { request_id, status, admin_note } = body;
 

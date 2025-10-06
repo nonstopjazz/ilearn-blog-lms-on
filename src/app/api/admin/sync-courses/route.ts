@@ -13,10 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
 
     console.log('[Sync Courses API] Starting course synchronization...');
 

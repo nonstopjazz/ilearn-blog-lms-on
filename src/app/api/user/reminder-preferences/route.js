@@ -27,7 +27,7 @@ async function checkUserAuth(request) {
 // GET - 獲取用戶的提醒偏好設定
 export async function GET(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -116,7 +116,7 @@ export async function GET(request) {
 // POST - 更新用戶提醒偏好
 export async function POST(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
@@ -224,7 +224,7 @@ export async function POST(request) {
 // PUT - 批量更新用戶的提醒偏好
 export async function PUT(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {

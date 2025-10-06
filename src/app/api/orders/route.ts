@@ -4,10 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 // 創建訂單
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { course_id, course_title, user_id, amount, payment_method, user_info } = body;
 
@@ -106,10 +103,7 @@ export async function POST(request: NextRequest) {
 // 獲取用戶訂單
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
     const orderId = searchParams.get('order_id');
@@ -156,10 +150,7 @@ export async function GET(request: NextRequest) {
 // 更新訂單狀態
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { order_id, status, payment_info } = body;
 

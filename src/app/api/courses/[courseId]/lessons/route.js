@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 // 獲取課程的所有單元和使用者進度
 export async function GET(request, { params }) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { courseId } = params;
     const { searchParams } = new URL(request.url);

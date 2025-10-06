@@ -12,10 +12,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
 
     // 查詢外鍵約束資訊
     const constraintQuery = `

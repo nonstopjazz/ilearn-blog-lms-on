@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 export async function PUT(request, { params }) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { id } = params;
     

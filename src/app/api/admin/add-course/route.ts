@@ -12,10 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
 
     const body = await request.json();
     const { course_id, title } = body;

@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 // 獲取所有測驗成績
 export async function GET(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { searchParams } = new URL(request.url);
     const quizId = searchParams.get('quizId');
@@ -84,7 +84,7 @@ function calculateStats(attempts) {
 // 獲取特定測驗嘗試的詳細結果
 export async function POST(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { attemptId } = await request.json();
 

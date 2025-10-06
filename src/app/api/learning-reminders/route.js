@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 // GET - 獲取用戶特定課程的提醒設定
 export async function GET(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -40,7 +40,7 @@ export async function GET(request) {
 // POST - 建立或更新特定課程的提醒設定
 export async function POST(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const body = await request.json();
     const {
@@ -133,7 +133,7 @@ export async function POST(request) {
 // DELETE - 刪除特定課程的提醒設定
 export async function DELETE(request) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

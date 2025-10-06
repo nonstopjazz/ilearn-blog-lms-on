@@ -20,7 +20,7 @@ export async function POST(request) {
     }
 
     // 🔧 使用正確的欄位名稱
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { data: attempt, error } = await supabase
       .from('quiz_attempts')

@@ -167,10 +167,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const supabase = createSupabaseAdminClient();,
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
 
     const { student_id, record_type, data } = body;
 

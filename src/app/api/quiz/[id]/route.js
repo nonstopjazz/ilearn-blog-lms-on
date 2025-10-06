@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 // 獲取測驗詳細資料
 export async function GET(request, { params }) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { id } = params;
     
@@ -113,7 +113,7 @@ export async function GET(request, { params }) {
 // 更新測驗設定
 export async function PUT(request, { params }) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { id } = params;
     
@@ -182,7 +182,7 @@ export async function PUT(request, { params }) {
 // 刪除測驗
 export async function DELETE(request, { params }) {
   try {
-    const supabase = createSupabaseAdminClient();, { status: 500 });
+    const supabase = createSupabaseAdminClient();
     }
     const { id } = params;
     
