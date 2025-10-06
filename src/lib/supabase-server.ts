@@ -2,14 +2,29 @@ import { createClient } from '@supabase/supabase-js'
 
 let supabaseInstance: any = null
 
-// 簡化版本：直接使用 anon key 建立客戶端，適用於 Edge Runtime
-export function createSupabaseServerClient() {
+// 方案1: 用於讀取資料的簡單客戶端 (categories, tags, posts GET)
+export function createSupabaseClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        persistSession: false, // Edge Runtime 不需要 session persistence
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  )
+}
+
+// 方案2: 使用 Service Role Key 的管理員客戶端 (POST, PUT, DELETE)
+export function createSupabaseAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false
       }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-server'
 
 // GET - 獲取文章列表
 export async function GET(request: NextRequest) {
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
     const tag = searchParams.get('tag') || null
     const search = searchParams.get('search') || null
     const featured = searchParams.get('featured') || null
-    
+
     console.log('Posts GET: Query params:', { page, limit, status, category, tag, search, featured })
-    
-    const supabase = createSupabaseServerClient()
+
+    const supabase = createSupabaseClient()
     console.log('Posts GET: Supabase server client initialized')
     
     // 計算分頁
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       tags = []
     } = body
 
-    const supabase = createSupabaseServerClient()
+    const supabase = createSupabaseAdminClient()
     
     // 驗證必填欄位
     if (!title || !content) {
