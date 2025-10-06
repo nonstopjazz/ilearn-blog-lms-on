@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 // GET - 獲取所有分類
 export async function GET() {
   try {
     console.log('Categories GET: Starting request')
-    console.log('Categories GET: Environment check:', {
-      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    })
-
-    // 直接使用 createClient，避免 cookies() 問題
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = await createSupabaseServerClient()
     console.log('Categories GET: Supabase client initialized')
     
     const { data: categories, error } = await supabase
@@ -72,10 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = await createSupabaseServerClient()
     console.log('Categories POST: Supabase client initialized')
     
     // 生成 slug
@@ -153,10 +141,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = await createSupabaseServerClient()
     
     // 生成新的 slug
     const slug = name.toLowerCase()
@@ -225,10 +210,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = await createSupabaseServerClient()
     
     // 檢查是否有文章使用此分類
     const { data: posts, error: checkError } = await supabase
