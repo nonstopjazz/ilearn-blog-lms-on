@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -41,7 +40,6 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const body = await request.json();
     const {
       userId,
@@ -134,7 +132,6 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');

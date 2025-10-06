@@ -5,7 +5,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search');
@@ -86,7 +85,6 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const courseData = await request.json();
     console.log('收到的課程資料:', courseData);
 
@@ -214,7 +212,6 @@ export async function POST(request) {
 export async function PUT(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { courseId } = params;
     const updateData = await request.json();
 
@@ -265,7 +262,6 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { courseId } = params;
 
     // 檢查是否有學員已註冊

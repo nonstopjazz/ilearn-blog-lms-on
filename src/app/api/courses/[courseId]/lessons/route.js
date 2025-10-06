@@ -5,7 +5,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function GET(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { courseId } = params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');

@@ -106,7 +106,6 @@ export async function GET(request) {
     console.log('✅ 權限檢查通過，開始查詢提醒設定...');
 
     const supabase = createSupabaseAdminClient();
-    }
 
     let query = supabase
       .from('admin_course_reminders')
@@ -195,7 +194,6 @@ export async function POST(request) {
     console.log('💾 準備儲存的資料:', reminderData);
 
     const supabase = createSupabaseAdminClient();
-    }
 
     // 檢查是否已存在設定
     const { data: existing, error: checkError } = await supabase
@@ -273,7 +271,6 @@ export async function DELETE(request) {
     }
 
     const supabase = createSupabaseAdminClient();
-    }
 
     const { error } = await supabase
       .from('admin_course_reminders')
@@ -324,7 +321,6 @@ export async function PUT(request) {
     const errors = [];
 
     const supabase = createSupabaseAdminClient();
-    }
 
     for (const courseId of courseIds) {
       try {

@@ -4,7 +4,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     // 從 Authorization header 獲取 token
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);

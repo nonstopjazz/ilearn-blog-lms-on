@@ -5,7 +5,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const quizId = searchParams.get('quizId');
     const status = searchParams.get('status'); // 'passed', 'failed', 'all'
@@ -85,7 +84,6 @@ function calculateStats(attempts) {
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { attemptId } = await request.json();
 
     if (!attemptId) {

@@ -20,6 +20,12 @@ def fix_file(filepath):
     pattern2 = r'(const supabase = createSupabaseAdminClient\(\);),\s*\{\s*status:\s*500\s*\}\s*\);'
     content = re.sub(pattern2, r'\1', content)
 
+    # Pattern 3: Remove standalone } after createSupabaseAdminClient();
+    # const supabase = createSupabaseAdminClient();
+    #     }
+    pattern3 = r'(const supabase = createSupabaseAdminClient\(\);)\s*\}'
+    content = re.sub(pattern3, r'\1', content, flags=re.MULTILINE)
+
     if content != original:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)

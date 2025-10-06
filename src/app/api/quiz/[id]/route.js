@@ -5,7 +5,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function GET(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { id } = params;
     
     if (!id) {
@@ -114,7 +113,6 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { id } = params;
     
     if (!id) {
@@ -183,7 +181,6 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { id } = params;
     
     if (!id) {

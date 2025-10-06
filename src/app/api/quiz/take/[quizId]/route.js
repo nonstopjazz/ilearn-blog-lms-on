@@ -15,7 +15,6 @@ const getQuestionType = (type) => {
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { title, description, courseId, questions } = await request.json();
     
     // 驗證必要欄位
@@ -174,7 +173,6 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get('courseId');
 

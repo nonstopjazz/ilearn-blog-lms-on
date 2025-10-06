@@ -4,7 +4,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { attempt_id, quiz_set_id, answers, score, completed_at } = await request.json();
     
     if (!attempt_id || !quiz_set_id || !answers || score === undefined || !completed_at) {

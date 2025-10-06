@@ -28,7 +28,6 @@ async function checkUserAuth(request) {
 export async function GET(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
@@ -117,7 +116,6 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
@@ -225,7 +223,6 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const authResult = await checkUserAuth(request);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });

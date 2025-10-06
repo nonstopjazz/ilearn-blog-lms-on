@@ -4,7 +4,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 export async function PUT(request, { params }) {
   try {
     const supabase = createSupabaseAdminClient();
-    }
     const { id } = params;
     
     if (!id) {
