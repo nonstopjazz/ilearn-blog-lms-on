@@ -36,7 +36,9 @@ export async function GET(request: NextRequest) {
         author:author_id (
           id,
           email,
-          user_metadata
+          name,
+          avatar_url,
+          role
         )
       `, { count: 'exact' })
     
@@ -117,9 +119,9 @@ export async function GET(request: NextRequest) {
       // 格式化作者資訊
       if (post.author) {
         post.users = {
-          name: post.author.user_metadata?.name || post.author.email?.split('@')[0] || 'Unknown',
+          name: post.author.name || post.author.email?.split('@')[0] || 'Unknown',
           email: post.author.email,
-          avatar_url: post.author.user_metadata?.avatar_url
+          avatar_url: post.author.avatar_url
         }
       }
       delete post.author
