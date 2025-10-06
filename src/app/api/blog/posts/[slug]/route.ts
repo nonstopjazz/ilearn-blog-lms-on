@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { blogData } from '@/lib/blog-data'
+import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function GET(
   request: NextRequest,
@@ -7,45 +7,85 @@ export async function GET(
 ) {
   try {
     const { slug } = params
-    
-    // 從共享存儲中查找文章
-    const post = blogData.getPostBySlug(slug)
-    
-    if (!post) {
+    const supabase = createSupabaseClient()
+
+    // Query post by slug with relations
+    const { data: post, error } = await supabase
+      .from('blog_posts')
+      .select(`
+        *,
+        blog_categories (
+          id,
+          name,
+          slug,
+          color
+        ),
+        author:author_id (
+          id,
+          email,
+          name,
+          avatar_url,
+          role
+        )
+      `)
+      .eq('slug', slug)
+      .single()
+
+    if (error || !post) {
+      console.error('Post not found:', error)
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Post not found',
-          post: null,
-          debug: {
-            requestedSlug: slug,
-            availablePosts: blogData.getAllPosts().map(p => ({
-              id: p.id,
-              title: p.title,
-              slug: p.slug,
-              status: p.status
-            }))
-          }
+          post: null
         },
         { status: 404 }
       )
     }
 
-    // 增加瀏覽次數
-    const updatedPost = blogData.updatePost(post.id, {
-      view_count: post.view_count + 1
-    })
+    // Get tags for this post
+    const { data: postTags } = await supabase
+      .from('blog_post_tags')
+      .select(`
+        blog_tags (
+          id,
+          name,
+          slug,
+          color
+        )
+      `)
+      .eq('post_id', post.id)
+
+    post.tags = postTags?.map(pt => pt.blog_tags).filter(Boolean) || []
+
+    // Format author info
+    if (post.author) {
+      post.users = {
+        name: post.author.name || post.author.email?.split('@')[0] || 'Unknown',
+        email: post.author.email,
+        avatar_url: post.author.avatar_url
+      }
+    }
+    delete post.author
+    delete post.author_id
+
+    // Update view count
+    const adminClient = createSupabaseAdminClient()
+    await adminClient
+      .from('blog_posts')
+      .update({ view_count: (post.view_count || 0) + 1 })
+      .eq('id', post.id)
 
     return NextResponse.json({
       success: true,
-      post: updatedPost || post
+      post
     })
-    
+
   } catch (error) {
     console.error('Blog post detail API error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch post',
         post: null
       },
@@ -54,7 +94,7 @@ export async function GET(
   }
 }
 
-// PUT - 更新文章
+// PUT - Update post
 export async function PUT(
   request: NextRequest,
   { params }: { params: { slug: string } }
@@ -62,9 +102,15 @@ export async function PUT(
   try {
     const { slug } = params
     const body = await request.json()
-    
-    // 查找文章
-    const existingPost = blogData.getPostBySlug(slug)
+    const supabase = createSupabaseAdminClient()
+
+    // Find post by slug
+    const { data: existingPost } = await supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+
     if (!existingPost) {
       return NextResponse.json(
         { success: false, error: 'Post not found' },
@@ -72,23 +118,59 @@ export async function PUT(
       )
     }
 
-    // 更新文章
-    const updatedPost = blogData.updatePost(existingPost.id, {
-      ...body,
-      updated_at: new Date().toISOString()
-    })
+    const { tags, ...postData } = body
+
+    // Update post
+    const { data: updatedPost, error } = await supabase
+      .from('blog_posts')
+      .update({
+        ...postData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingPost.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Failed to update post:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to update post' },
+        { status: 500 }
+      )
+    }
+
+    // Update tags if provided
+    if (tags && Array.isArray(tags)) {
+      // Delete existing tags
+      await supabase
+        .from('blog_post_tags')
+        .delete()
+        .eq('post_id', existingPost.id)
+
+      // Insert new tags
+      if (tags.length > 0) {
+        const tagRelations = tags.map((tagId: string) => ({
+          post_id: existingPost.id,
+          tag_id: tagId
+        }))
+
+        await supabase
+          .from('blog_post_tags')
+          .insert(tagRelations)
+      }
+    }
 
     return NextResponse.json({
       success: true,
       post: updatedPost,
       message: 'Post updated successfully'
     })
-    
+
   } catch (error) {
     console.error('Blog post detail API PUT error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to update post'
       },
       { status: 500 }
@@ -96,16 +178,22 @@ export async function PUT(
   }
 }
 
-// DELETE - 刪除文章
+// DELETE - Delete post
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
   try {
     const { slug } = params
-    
-    // 查找文章
-    const existingPost = blogData.getPostBySlug(slug)
+    const supabase = createSupabaseAdminClient()
+
+    // Find post by slug
+    const { data: existingPost } = await supabase
+      .from('blog_posts')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+
     if (!existingPost) {
       return NextResponse.json(
         { success: false, error: 'Post not found' },
@@ -113,20 +201,30 @@ export async function DELETE(
       )
     }
 
-    // 刪除文章
-    const deletedPost = blogData.deletePost(existingPost.id)
+    // Delete post (cascade will delete related tags)
+    const { error } = await supabase
+      .from('blog_posts')
+      .delete()
+      .eq('id', existingPost.id)
+
+    if (error) {
+      console.error('Failed to delete post:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete post' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      post: deletedPost,
       message: 'Post deleted successfully'
     })
-    
+
   } catch (error) {
     console.error('Blog post detail API DELETE error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to delete post'
       },
       { status: 500 }
