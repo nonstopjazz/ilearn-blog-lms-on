@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 let supabaseInstance: any = null
 
-// 方案1: 用於讀取資料的簡單客戶端 (categories, tags, posts GET)
+// 用於讀取資料的簡單客戶端 (categories, tags, posts GET)
 export function createSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -28,7 +28,7 @@ export function createSupabaseClient() {
   })
 }
 
-// 方案2: 使用 Service Role Key 的管理員客戶端 (POST, PUT, DELETE)
+// 使用 Service Role Key 的管理員客戶端 (POST, PUT, DELETE)
 export function createSupabaseAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
