@@ -168,7 +168,6 @@ export async function POST(request: NextRequest) {
       is_featured = false,
       seo_title,
       seo_description,
-      read_time = 5,
       tags = []
     } = body
 
@@ -203,7 +202,6 @@ export async function POST(request: NextRequest) {
         is_featured,
         seo_title,
         seo_description,
-        read_time: read_time || Math.max(1, Math.ceil(content.length / 1000)),
         published_at: status === 'published' ? new Date().toISOString() : null
       })
       .select()

@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 創建通知
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { user_id, title, message, type = 'info', action_url, action_text, metadata } = body;
 
@@ -62,13 +56,7 @@ export async function POST(req: NextRequest) {
 // 獲取通知列表
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -112,13 +100,7 @@ export async function GET(req: NextRequest) {
 // 更新通知狀態
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { notification_id, user_id, read, mark_all_read } = body;
 
@@ -188,13 +170,7 @@ export async function PATCH(req: NextRequest) {
 // 刪除通知
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
-        { status: 500 }
-      );
-    }
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { notification_id } = body;
 
