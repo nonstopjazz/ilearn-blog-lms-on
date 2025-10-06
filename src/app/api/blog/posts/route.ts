@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     
     console.log('Posts GET: Query params:', { page, limit, status, category, tag, search, featured })
     
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient()
     console.log('Posts GET: Supabase server client initialized')
     
     // 計算分頁
@@ -155,20 +155,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log('Posts POST: Starting request')
-    const supabase = await createSupabaseServerClient()
-    
-    // 檢查用戶權限
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('Posts POST: Auth check:', { hasUser: !!user, authError })
-    
-    if (authError || !user) {
-      console.error('Posts POST: Auth failed:', authError)
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    
     const body = await request.json()
     const {
       title,
@@ -177,6 +163,7 @@ export async function POST(request: NextRequest) {
       excerpt,
       featured_image_url,
       category_id,
+      author_id, // 從前端傳入
       status = 'draft',
       is_featured = false,
       seo_title,
@@ -184,6 +171,8 @@ export async function POST(request: NextRequest) {
       read_time = 5,
       tags = []
     } = body
+
+    const supabase = createSupabaseServerClient()
     
     // 驗證必填欄位
     if (!title || !content) {
@@ -209,7 +198,7 @@ export async function POST(request: NextRequest) {
         excerpt: excerpt || content.replace(/[#*`]/g, '').substring(0, 200) + '...',
         featured_image_url,
         category_id,
-        author_id: user.id,
+        author_id: author_id || null,
         status,
         is_featured,
         seo_title,

@@ -1,39 +1,20 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 
 let supabaseInstance: any = null
 
-export async function createSupabaseServerClient() {
-  try {
-    const cookieStore = await cookies()
-
-    return createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
+// 簡化版本：直接使用 anon key 建立客戶端，適用於 Edge Runtime
+export function createSupabaseServerClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false, // Edge Runtime 不需要 session persistence
+        autoRefreshToken: false,
+        detectSessionInUrl: false
       }
-    )
-  } catch (error) {
-    console.error('[Supabase Server] Failed to create server client:', error)
-    throw error
-  }
+    }
+  )
 }
 
 /**

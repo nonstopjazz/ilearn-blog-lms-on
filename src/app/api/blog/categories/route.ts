@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 export async function GET() {
   try {
     console.log('Categories GET: Starting request')
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient()
     console.log('Categories GET: Supabase client initialized')
     
     const { data: categories, error } = await supabase
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient()
     console.log('Categories POST: Supabase client initialized')
     
     // 生成 slug
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient()
     
     // 生成新的 slug
     const slug = name.toLowerCase()
@@ -210,7 +210,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseServerClient()
     
     // 檢查是否有文章使用此分類
     const { data: posts, error: checkError } = await supabase
