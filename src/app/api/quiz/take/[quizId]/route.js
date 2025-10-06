@@ -1,5 +1,5 @@
 // src/app/api/quiz/create/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 題型轉換
 const getQuestionType = (type) => {
@@ -14,11 +14,7 @@ const getQuestionType = (type) => {
 
 export async function POST(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { title, description, courseId, questions } = await request.json();
     
@@ -177,11 +173,7 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get('courseId');

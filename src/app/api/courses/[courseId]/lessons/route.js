@@ -1,14 +1,10 @@
 // src/app/api/courses/[courseId]/lessons/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 獲取課程的所有單元和使用者進度
 export async function GET(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { courseId } = params;
     const { searchParams } = new URL(request.url);

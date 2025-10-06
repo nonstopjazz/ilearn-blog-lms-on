@@ -1,5 +1,5 @@
 // src/app/api/quiz/attempt/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 export async function POST(request) {
   try {
@@ -20,11 +20,7 @@ export async function POST(request) {
     }
 
     // 🔧 使用正確的欄位名稱
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { data: attempt, error } = await supabase
       .from('quiz_attempts')

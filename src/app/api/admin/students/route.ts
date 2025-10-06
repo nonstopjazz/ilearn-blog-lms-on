@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { verifyApiKey } from '@/lib/api-auth';
 
 // 建立學生統計資料的輔助函數
@@ -74,10 +74,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }
@@ -172,10 +169,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }

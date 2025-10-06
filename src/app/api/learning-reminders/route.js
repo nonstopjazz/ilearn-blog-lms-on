@@ -1,12 +1,10 @@
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 
 // GET - 獲取用戶特定課程的提醒設定
 export async function GET(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -42,9 +40,7 @@ export async function GET(request) {
 // POST - 建立或更新特定課程的提醒設定
 export async function POST(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const body = await request.json();
     const {
@@ -137,9 +133,7 @@ export async function POST(request) {
 // DELETE - 刪除特定課程的提醒設定
 export async function DELETE(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

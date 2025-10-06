@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // 延遲初始化 Supabase 客戶端
-function getSupabaseClient() {
+function createSupabaseAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Missing Supabase environment variables');
     return null;
@@ -32,10 +32,7 @@ async function checkAdminPermission(request) {
     console.log('Token 開始:', token.substring(0, 50) + '...');
 
     // 🔧 修復：使用客戶端 supabase 來驗證 token
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.log('❌ Supabase 初始化失敗');
-      return { error: 'Supabase 初始化失敗', status: 500 };
+    const supabase = createSupabaseAdminClient();;
     }
     
     const { data: { user }, error } = await supabase.auth.getUser(token);
@@ -109,9 +106,7 @@ export async function GET(request) {
 
     console.log('✅ 權限檢查通過，開始查詢提醒設定...');
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
 
     let query = supabase
@@ -200,9 +195,7 @@ export async function POST(request) {
 
     console.log('💾 準備儲存的資料:', reminderData);
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
 
     // 檢查是否已存在設定
@@ -280,9 +273,7 @@ export async function DELETE(request) {
       return NextResponse.json({ error: '缺少必要參數：courseId 和 reminderType' }, { status: 400 });
     }
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
 
     const { error } = await supabase
@@ -333,9 +324,7 @@ export async function PUT(request) {
     const results = [];
     const errors = [];
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase 初始化失敗' }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
 
     for (const courseId of courseIds) {

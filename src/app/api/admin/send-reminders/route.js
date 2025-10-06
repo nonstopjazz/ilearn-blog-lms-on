@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { sendReminderEmail } from '@/lib/emailService';
 
 // 延遲初始化 Supabase 客戶端
-function getSupabaseClient() {
+function createSupabaseAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Missing Supabase environment variables');
     return null;
@@ -25,9 +25,7 @@ async function checkAdminPermission(request) {
 
     const token = authHeader.replace('Bearer ', '');
     
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return { error: 'Supabase 初始化失敗', status: 500 };
+    const supabase = createSupabaseAdminClient();;
     }
     
     const { data: { user }, error } = await supabase.auth.getUser(token);

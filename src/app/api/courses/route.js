@@ -1,14 +1,10 @@
 // src/app/api/courses/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 獲取所有課程
 export async function GET(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -89,11 +85,7 @@ export async function GET(request) {
 // 建立新課程
 export async function POST(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const courseData = await request.json();
     console.log('收到的課程資料:', courseData);
@@ -221,11 +213,7 @@ export async function POST(request) {
 // 更新課程
 export async function PUT(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { courseId } = params;
     const updateData = await request.json();
@@ -276,11 +264,7 @@ export async function PUT(request, { params }) {
 // 刪除課程
 export async function DELETE(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { courseId } = params;
 

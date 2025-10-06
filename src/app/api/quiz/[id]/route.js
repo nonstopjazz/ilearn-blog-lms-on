@@ -1,14 +1,10 @@
 // src/app/api/quiz/[id]/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 獲取測驗詳細資料
 export async function GET(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { id } = params;
     
@@ -117,11 +113,7 @@ export async function GET(request, { params }) {
 // 更新測驗設定
 export async function PUT(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { id } = params;
     
@@ -190,11 +182,7 @@ export async function PUT(request, { params }) {
 // 刪除測驗
 export async function DELETE(request, { params }) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { id } = params;
     

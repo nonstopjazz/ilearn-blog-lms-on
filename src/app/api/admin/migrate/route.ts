@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { verifyApiKey } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
@@ -13,10 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }

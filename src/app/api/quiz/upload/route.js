@@ -1,5 +1,5 @@
 // src/app/api/quiz/upload/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import AdmZip from 'adm-zip';
 import * as XLSX from 'xlsx';
 
@@ -353,7 +353,7 @@ const getQuestionType = (chineseType) => {
 
 export async function POST(request) {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = createSupabaseAdminClient();
     const formData = await request.formData();
     
     const courseId = formData.get('courseId');

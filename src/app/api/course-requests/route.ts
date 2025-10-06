@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 // 提交課程申請
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }
@@ -123,10 +120,7 @@ export async function POST(req: NextRequest) {
 // 查詢申請狀態
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }
@@ -195,10 +189,7 @@ export async function GET(req: NextRequest) {
 // 更新申請狀態（管理員用）
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Supabase 初始化失敗' },
+    const supabase = createSupabaseAdminClient();,
         { status: 500 }
       );
     }

@@ -1,13 +1,9 @@
 // src/app/api/quiz/submit/route.js
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 export async function POST(request) {
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return Response.json({ 
-        error: 'Supabase 初始化失敗' 
-      }, { status: 500 });
+    const supabase = createSupabaseAdminClient();, { status: 500 });
     }
     const { attempt_id, quiz_set_id, answers, score, completed_at } = await request.json();
     
