@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server';
 // 檢查用戶認證
 async function checkUserAuth(request) {
   try {
-    const supabase = createSupabaseAdminClient();;
-    }
+    const supabase = createSupabaseAdminClient();
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return { error: '缺少認證資訊', status: 401 };

@@ -32,9 +32,8 @@ async function checkAdminPermission(request) {
     console.log('Token 開始:', token.substring(0, 50) + '...');
 
     // 🔧 修復：使用客戶端 supabase 來驗證 token
-    const supabase = createSupabaseAdminClient();;
-    }
-    
+    const supabase = createSupabaseAdminClient();
+
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     console.log('Supabase 用戶查詢結果:');

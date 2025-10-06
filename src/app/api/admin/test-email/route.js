@@ -24,10 +24,9 @@ async function checkAdminPermission(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    const supabase = createSupabaseAdminClient();;
-    }
-    
+
+    const supabase = createSupabaseAdminClient();
+
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
