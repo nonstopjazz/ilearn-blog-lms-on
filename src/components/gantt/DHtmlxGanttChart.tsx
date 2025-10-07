@@ -57,6 +57,7 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
 }) => {
   const ganttContainer = useRef<HTMLDivElement>(null);
   const originalTasks = useRef<GanttTask[]>([]);
+  const isInitialized = useRef(false);
 
   // 轉換任務格式
   const convertTasks = useCallback((originalTasks: GanttTask[]): DHtmlxGanttTask[] => {
@@ -164,21 +165,16 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
 
   }, [year]);
 
-  // 初始化甘特圖
+  // 初始化甘特圖（只初始化一次）
   useEffect(() => {
-    if (ganttContainer.current) {
-      // 儲存原始任務
-      originalTasks.current = tasks;
-
+    if (ganttContainer.current && !isInitialized.current) {
       // 設定配置
       setupGanttConfig();
 
       // 初始化甘特圖
       gantt.init(ganttContainer.current);
 
-      // 轉換並載入任務
-      const dhtmlxTasks = convertTasks(tasks);
-      gantt.parse({ data: dhtmlxTasks });
+      isInitialized.current = true;
 
       // 設定任務點擊事件
       gantt.attachEvent('onTaskClick', function(id: string) {
@@ -188,12 +184,32 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
         }
         return true;
       });
-
-      return () => {
-        gantt.destructor();
-      };
     }
-  }, [tasks, setupGanttConfig, convertTasks, onTaskClick]);
+
+    return () => {
+      if (isInitialized.current) {
+        // 清除數據和事件
+        gantt.clearAll();
+        gantt.detachAllEvents();
+        isInitialized.current = false;
+      }
+    };
+  }, [setupGanttConfig, onTaskClick]);
+
+  // 更新任務數據（當 tasks 變化時）
+  useEffect(() => {
+    if (isInitialized.current) {
+      // 儲存原始任務
+      originalTasks.current = tasks;
+
+      // 清除舊數據
+      gantt.clearAll();
+
+      // 轉換並載入新任務
+      const dhtmlxTasks = convertTasks(tasks);
+      gantt.parse({ data: dhtmlxTasks });
+    }
+  }, [tasks, convertTasks]);
 
   // 統計資訊
   const stats = {
