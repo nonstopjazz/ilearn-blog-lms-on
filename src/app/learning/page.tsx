@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [gradeTimeRange, setGradeTimeRange] = useState('month');
+  const [vocabularyTimeRange, setVocabularyTimeRange] = useState('month');
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
@@ -101,13 +102,56 @@ const Dashboard = () => {
 
   const gradeData = getFilteredGradeData();
 
-  const vocabularyData = [
-    { name: "第1堂課", 單字數: 15 },
-    { name: "第2堂課", 單字數: 20 },
-    { name: "第3堂課", 單字數: 18 },
-    { name: "第4堂課", 單字數: 25 },
-    { name: "第5堂課", 單字數: 22 },
+  // 完整的單字學習數據（模擬一整年的資料）
+  // 模擬「本週教、下週考」的時間差
+  const allVocabularyData = [
+    // 1月 (第1-4週)
+    { name: "第1週", 已教單字: 20, 答對單字: 0, month: 1 },      // 剛教完，還沒考
+    { name: "第2週", 已教單字: 25, 答對單字: 15, month: 1 },     // 上週的20個，答對15個 (75%)
+    { name: "第3週", 已教單字: 18, 答對單字: 20, month: 1 },     // 上週的25個，答對20個 (80%)
+    { name: "第4週", 已教單字: 30, 答對單字: 14, month: 1 },     // 上週的18個，答對14個 (78%)
+    // 2月 (第5-8週)
+    { name: "第5週", 已教單字: 22, 答對單字: 24, month: 2 },     // 上週的30個，答對24個 (80%)
+    { name: "第6週", 已教單字: 28, 答對單字: 18, month: 2 },     // 上週的22個，答對18個 (82%)
+    { name: "第7週", 已教單字: 24, 答對單字: 22, month: 2 },     // 上週的28個，答對22個 (79%)
+    { name: "第8週", 已教單字: 26, 答對單字: 20, month: 2 },     // 上週的24個，答對20個 (83%)
+    // 3月 (第9-12週)
+    { name: "第9週", 已教單字: 32, 答對單字: 21, month: 3 },     // 上週的26個，答對21個 (81%)
+    { name: "第10週", 已教單字: 27, 答對單字: 26, month: 3 },    // 上週的32個，答對26個 (81%)
+    { name: "第11週", 已教單字: 29, 答對單字: 22, month: 3 },    // 上週的27個，答對22個 (81%)
+    { name: "第12週", 已教單字: 31, 答對單字: 24, month: 3 },    // 上週的29個，答對24個 (83%)
+    // 4月 (第13-16週)
+    { name: "第13週", 已教單字: 25, 答對單字: 25, month: 4 },    // 上週的31個，答對25個 (81%)
+    { name: "第14週", 已教單字: 30, 答對單字: 21, month: 4 },    // 上週的25個，答對21個 (84%)
+    { name: "第15週", 已教單字: 28, 答對單字: 25, month: 4 },    // 上週的30個，答對25個 (83%)
+    { name: "第16週", 已教單字: 26, 答對單字: 23, month: 4 },    // 上週的28個，答對23個 (82%)
+    // 5月 (第17-20週)
+    { name: "第17週", 已教單字: 33, 答對單字: 22, month: 5 },    // 上週的26個，答對22個 (85%)
+    { name: "第18週", 已教單字: 29, 答對單字: 28, month: 5 },    // 上週的33個，答對28個 (85%)
+    { name: "第19週", 已教單字: 31, 答對單字: 25, month: 5 },    // 上週的29個，答對25個 (86%)
+    { name: "第20週", 已教單字: 28, 答對單字: 27, month: 5 },    // 上週的31個，答對27個 (87%)
   ];
+
+  // 根據時間範圍篩選單字數據
+  const getFilteredVocabularyData = () => {
+    const currentWeek = 20; // 假設目前是第20週
+    switch (vocabularyTimeRange) {
+      case 'week':
+        return allVocabularyData.slice(-2); // 最近2週
+      case 'month':
+        return allVocabularyData.slice(-4); // 最近1個月（4週）
+      case 'quarter':
+        return allVocabularyData.slice(-12); // 最近3個月（12週）
+      case 'semester':
+        return allVocabularyData.slice(-18); // 最近半年（18週）
+      case 'all':
+        return allVocabularyData; // 全部資料
+      default:
+        return allVocabularyData.slice(-4);
+    }
+  };
+
+  const vocabularyData = getFilteredVocabularyData();
 
   const assignmentsByWeek = [
     {
@@ -706,21 +750,53 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              <ChartCard title="單字學習統計" description="各堂課單字學習數量">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={vocabularyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                      cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
-                      position={{ y: 0 }}
-                    />
-                    <Bar dataKey="單字數" fill="rgb(34, 197, 94)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>單字學習統計</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">教學單字數 vs 答對單字數</p>
+                    </div>
+                    <Select value={vocabularyTimeRange} onValueChange={setVocabularyTimeRange}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="week">最近2週</SelectItem>
+                        <SelectItem value="month">最近1個月</SelectItem>
+                        <SelectItem value="quarter">最近3個月</SelectItem>
+                        <SelectItem value="semester">最近半年</SelectItem>
+                        <SelectItem value="all">全部資料</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={vocabularyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                        cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
+                        position={{ y: 0 }}
+                        formatter={(value: any, name: string, props: any) => {
+                          const data = props.payload;
+                          if (name === '答對單字' && data.答對單字 > 0) {
+                            // 計算答對率（本週答對 / 上週已教）
+                            // 注意：這裡簡化處理，實際應該從上一週的資料計算
+                            return [value, `答對單字`];
+                          }
+                          return [value, name];
+                        }}
+                      />
+                      <Bar dataKey="已教單字" stackId="a" fill="rgb(34, 197, 94)" radius={[0, 0, 0, 0]} name="已教單字" />
+                      <Bar dataKey="答對單字" stackId="a" fill="rgb(59, 130, 246)" radius={[4, 4, 0, 0]} name="答對單字" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
 
             {/* 作業進度追蹤 */}
