@@ -649,7 +649,7 @@ const Dashboard = () => {
           {/* 總覽頁籤 */}
           <TabsContent value="overview" className="space-y-6">
             {/* 統計卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard
                 title="本週作業"
                 value="12"
@@ -670,27 +670,6 @@ const Dashboard = () => {
                 change={{ value: 3, label: "比上月" }}
                 icon={<Target className="w-5 h-5" />}
                 gradient="secondary"
-              />
-              <StatsCard
-                title="學習單字"
-                value="156"
-                change={{ value: 12, label: "本週新增" }}
-                icon={<BookOpen className="w-5 h-5" />}
-                gradient="warning"
-              />
-              <StatsCard
-                title="上課天數"
-                value="20"
-                change={{ value: 0, label: "本月" }}
-                icon={<Calendar className="w-5 h-5" />}
-                gradient="primary"
-              />
-              <StatsCard
-                title="學習進度"
-                value="78%"
-                change={{ value: 2, label: "本週進展" }}
-                icon={<TrendingUp className="w-5 h-5" />}
-                gradient="success"
               />
             </div>
 
@@ -809,38 +788,148 @@ const Dashboard = () => {
                       <span className="text-sm text-muted-foreground">({weekData.dateRange})</span>
                     </div>
                     <div className="space-y-3">
-                      {weekData.assignments.map((assignment, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-card/30 rounded-md border border-border/30">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-foreground">{assignment.name}</h4>
-                              <div className="flex items-center space-x-3">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  assignment.type === 'daily' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'
-                                }`}>
-                                  {assignment.type === 'daily' ? '每日任務' : '上課檢查'}
+                      {weekData.assignments.map((assignment, index) => {
+                        // 計算每週完成天數（模擬數據）
+                        const daysInWeek = 7;
+                        const completedDays = Math.floor((assignment.progress / 100) * daysInWeek);
+                        const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
+
+                        // 計算連續天數（簡化版，實際應從後端獲取）
+                        const streakDays = assignment.type === 'daily' ? completedDays : 0;
+
+                        return assignment.type === 'daily' ? (
+                          // 每日任務樣式
+                          <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-l-4 border-blue-500">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xl">📅</span>
+                                  <h4 className="font-semibold text-foreground">{assignment.name}</h4>
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
+                                    每日任務
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground ml-7">{assignment.description}</p>
+                              </div>
+                              {streakDays > 0 && (
+                                <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                                  <span className="text-lg">🔥</span>
+                                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">連續 {streakDays} 天</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 本週完成狀況 */}
+                            <div className="ml-7 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">本週完成狀況</span>
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                  {completedDays}/{daysInWeek} 天
                                 </span>
-                                <span className="text-sm font-medium text-foreground min-w-[3rem]">
+                              </div>
+
+                              {/* 週一到週日勾選框 */}
+                              <div className="flex gap-2">
+                                {weekDays.map((day, dayIndex) => (
+                                  <div key={dayIndex} className="flex-1 flex flex-col items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">{day}</span>
+                                    <div className={`w-full h-8 rounded flex items-center justify-center font-semibold text-sm transition-all ${
+                                      dayIndex < completedDays
+                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      {dayIndex < completedDays ? '✓' : '○'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* 完成率進度條 */}
+                              <div className="flex items-center gap-3 mt-3">
+                                <div className="flex-1 bg-muted rounded-full h-2.5">
+                                  <div
+                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${assignment.progress}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-foreground min-w-[3rem] text-right">
                                   {assignment.progress}%
                                 </span>
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">{assignment.description}</p>
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-1 bg-muted rounded-full h-2">
-                                <div
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    assignment.progress === 100 ? 'bg-green-500' :
-                                    assignment.progress >= 70 ? 'bg-blue-500' :
-                                    assignment.progress >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${assignment.progress}%` }}
-                                />
+                          </div>
+                        ) : (
+                          // 單次作業樣式
+                          <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border-l-4 border-purple-500">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xl">📝</span>
+                                  <h4 className="font-semibold text-foreground">{assignment.name}</h4>
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500 text-white">
+                                    上課檢查
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground ml-7">{assignment.description}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">下次上課檢查</span>
+                              </div>
+                            </div>
+
+                            {/* 整體進度 */}
+                            <div className="ml-7 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">完成進度</span>
+                                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                                  {assignment.progress}%
+                                </span>
+                              </div>
+
+                              {/* 進度條 */}
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 bg-muted rounded-full h-2.5">
+                                  <div
+                                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                                      assignment.progress === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                      assignment.progress >= 70 ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
+                                      assignment.progress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                      'bg-gradient-to-r from-red-500 to-rose-500'
+                                    }`}
+                                    style={{ width: `${assignment.progress}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* 狀態指示 */}
+                              <div className="flex items-center gap-2 mt-2">
+                                {assignment.progress === 100 ? (
+                                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span className="text-xs font-medium">已完成</span>
+                                  </div>
+                                ) : assignment.progress >= 70 ? (
+                                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                    <TrendingUp className="w-4 h-4" />
+                                    <span className="text-xs font-medium">進度良好</span>
+                                  </div>
+                                ) : assignment.progress >= 40 ? (
+                                  <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span className="text-xs font-medium">需加強</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span className="text-xs font-medium">進度落後</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
