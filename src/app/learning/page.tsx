@@ -48,6 +48,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [gradeTimeRange, setGradeTimeRange] = useState('month');
   const [vocabularyTimeRange, setVocabularyTimeRange] = useState('month');
+  const [assignmentTimeRange, setAssignmentTimeRange] = useState('month');
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
@@ -153,9 +154,19 @@ const Dashboard = () => {
 
   const vocabularyData = getFilteredVocabularyData();
 
-  const assignmentsByWeek = [
+  // 完整的作業數據（模擬多週資料）
+  const allAssignmentsByWeek = [
     {
       week: "第1周",
+      dateRange: "2025/1/6-1/12",
+      assignments: [
+        { name: "每日背誦單字", progress: 75, type: "daily", description: "每天背10個新單字" },
+        { name: "英文日記", progress: 90, type: "daily", description: "每天寫50字英文日記" },
+        { name: "課文朗讀練習", progress: 60, type: "session", description: "下次上課檢查" },
+      ]
+    },
+    {
+      week: "第2周",
       dateRange: "2025/1/13-1/19",
       assignments: [
         { name: "每日背誦單字", progress: 85, type: "daily", description: "每天背10個新單字" },
@@ -164,7 +175,7 @@ const Dashboard = () => {
       ]
     },
     {
-      week: "第2周",
+      week: "第3周",
       dateRange: "2025/1/20-1/26",
       assignments: [
         { name: "每日背誦單字", progress: 90, type: "daily", description: "每天背10個新單字" },
@@ -174,15 +185,52 @@ const Dashboard = () => {
       ]
     },
     {
-      week: "第3周",
+      week: "第4周",
       dateRange: "2025/1/27-2/2",
       assignments: [
         { name: "每日背誦單字", progress: 95, type: "daily", description: "每天背10個新單字" },
         { name: "英文日記", progress: 80, type: "daily", description: "每天寫50字英文日記" },
         { name: "口說練習", progress: 30, type: "session", description: "錄製3分鐘自我介紹" },
       ]
+    },
+    {
+      week: "第5周",
+      dateRange: "2025/2/3-2/9",
+      assignments: [
+        { name: "每日背誦單字", progress: 100, type: "daily", description: "每天背10個新單字" },
+        { name: "聽力練習", progress: 70, type: "daily", description: "每天聽15分鐘英文" },
+        { name: "課文朗讀練習", progress: 85, type: "session", description: "下次上課檢查" },
+      ]
+    },
+    {
+      week: "第6周",
+      dateRange: "2025/2/10-2/16",
+      assignments: [
+        { name: "每日背誦單字", progress: 88, type: "daily", description: "每天背10個新單字" },
+        { name: "英文日記", progress: 95, type: "daily", description: "每天寫50字英文日記" },
+        { name: "作文練習", progress: 65, type: "session", description: "寫一篇150字短文" },
+        { name: "文法練習題", progress: 100, type: "session", description: "完成第4章練習" },
+      ]
     }
   ];
+
+  // 根據時間範圍篩選作業數據
+  const getFilteredAssignments = () => {
+    switch (assignmentTimeRange) {
+      case 'week':
+        return allAssignmentsByWeek.slice(-1); // 最近1週
+      case 'month':
+        return allAssignmentsByWeek.slice(-4); // 最近1個月（4週）
+      case 'quarter':
+        return allAssignmentsByWeek.slice(-12); // 最近3個月（12週）
+      case 'all':
+        return allAssignmentsByWeek; // 全部資料
+      default:
+        return allAssignmentsByWeek.slice(-4);
+    }
+  };
+
+  const assignmentsByWeek = getFilteredAssignments();
 
   // 其他頁籤數據
   const mockAssignments = [
@@ -779,7 +827,27 @@ const Dashboard = () => {
             </div>
 
             {/* 作業進度追蹤 */}
-            <ChartCard title="作業進度追蹤" description="各項作業完成情況一覽">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>作業進度追蹤</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">各項作業完成情況一覽</p>
+                  </div>
+                  <Select value={assignmentTimeRange} onValueChange={setAssignmentTimeRange}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">最近1週</SelectItem>
+                      <SelectItem value="month">最近1個月</SelectItem>
+                      <SelectItem value="quarter">最近3個月</SelectItem>
+                      <SelectItem value="all">全部資料</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
               <div className="space-y-6">
                 {assignmentsByWeek.map((weekData, weekIndex) => (
                   <div key={weekIndex} className="border border-border/50 rounded-lg p-4">
@@ -934,7 +1002,8 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
-            </ChartCard>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* 作業管理頁籤 */}
