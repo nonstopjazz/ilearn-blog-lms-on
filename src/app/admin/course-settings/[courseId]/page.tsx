@@ -5,19 +5,29 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, Users, DollarSign, Calendar, Save, BarChart3, Award, Clock, ArrowLeft, AlertCircle, Loader2, Plus, Link as LinkIcon, Download, Play, Eye, Edit, Trash2, CheckCircle, GripVertical, Video, FileText, Lock, Unlock, RefreshCw, File, FileImage, Music, Archive, Film } from 'lucide-react';
 
-// 🕐 時間格式化函數 - 將分鐘數轉換為 MM:SS 格式顯示
-const formatDuration = (minutes: number): string => {
-  if (minutes < 1) {
-    // 如果少於1分鐘，顯示秒數
-    const seconds = Math.round(minutes * 60);
-    return `0:${seconds.toString().padStart(2, '0')}`;
+// 🕐 時間格式化函數 - 將秒數轉換為 MM:SS 格式顯示
+const formatDuration = (totalSeconds: number): string => {
+  if (!totalSeconds || totalSeconds === 0) {
+    return '0:00';
   }
-  
-  // 如果是整數分鐘，顯示為 MM:00
-  const wholeMinutes = Math.floor(minutes);
-  const remainingSeconds = Math.round((minutes - wholeMinutes) * 60);
-  
-  return `${wholeMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+// 🔢 將秒數轉換為分鐘和秒數（用於編輯表單）
+const secondsToMinutesAndSeconds = (totalSeconds: number): { minutes: number; seconds: number } => {
+  return {
+    minutes: Math.floor(totalSeconds / 60),
+    seconds: totalSeconds % 60
+  };
+};
+
+// 🔢 將分鐘和秒數轉換為總秒數（用於儲存）
+const minutesAndSecondsToTotal = (minutes: number, seconds: number): number => {
+  return (minutes * 60) + seconds;
 };
 
 interface CourseSettings {
@@ -1132,19 +1142,50 @@ const LessonEditor: React.FC<{
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      影片時長（分鐘）
+                      影片時長
                     </label>
-                    <input
-                      type="number"
-                      value={editingLesson.video_duration || ''}
-                      onChange={(e) => setEditingLesson({
-                        ...editingLesson,
-                        video_duration: parseInt(e.target.value) || 0
-                      })}
-                      placeholder="30"
-                      min="0"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">分鐘</label>
+                        <input
+                          type="number"
+                          value={secondsToMinutesAndSeconds(editingLesson.video_duration || 0).minutes}
+                          onChange={(e) => {
+                            const minutes = parseInt(e.target.value) || 0;
+                            const seconds = secondsToMinutesAndSeconds(editingLesson.video_duration || 0).seconds;
+                            setEditingLesson({
+                              ...editingLesson,
+                              video_duration: minutesAndSecondsToTotal(minutes, seconds)
+                            });
+                          }}
+                          placeholder="30"
+                          min="0"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">秒數</label>
+                        <input
+                          type="number"
+                          value={secondsToMinutesAndSeconds(editingLesson.video_duration || 0).seconds}
+                          onChange={(e) => {
+                            const minutes = secondsToMinutesAndSeconds(editingLesson.video_duration || 0).minutes;
+                            const seconds = Math.min(59, parseInt(e.target.value) || 0); // 限制最大 59 秒
+                            setEditingLesson({
+                              ...editingLesson,
+                              video_duration: minutesAndSecondsToTotal(minutes, seconds)
+                            });
+                          }}
+                          placeholder="0"
+                          min="0"
+                          max="59"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      總時長: {formatDuration(editingLesson.video_duration || 0)}
+                    </p>
                   </div>
 
                   <div>
