@@ -104,33 +104,33 @@ const Dashboard = () => {
   const gradeData = getFilteredGradeData();
 
   // 完整的單字學習數據（模擬一整年的資料）
-  // 模擬「本週教、下週考」的時間差
+  // 每週顯示：已教單字、答對單字、答錯單字
   const allVocabularyData = [
     // 1月 (第1-4週)
-    { name: "第1週", 已教單字: 20, 答對單字: 0, month: 1 },      // 剛教完，還沒考
-    { name: "第2週", 已教單字: 25, 答對單字: 15, month: 1 },     // 上週的20個，答對15個 (75%)
-    { name: "第3週", 已教單字: 18, 答對單字: 20, month: 1 },     // 上週的25個，答對20個 (80%)
-    { name: "第4週", 已教單字: 30, 答對單字: 14, month: 1 },     // 上週的18個，答對14個 (78%)
+    { name: "第1週", 已教單字: 20, 答對單字: 15, 答錯單字: 5, month: 1 },      // 教20個，答對15個 (75%)
+    { name: "第2週", 已教單字: 25, 答對單字: 20, 答錯單字: 5, month: 1 },      // 教25個，答對20個 (80%)
+    { name: "第3週", 已教單字: 18, 答對單字: 14, 答錯單字: 4, month: 1 },      // 教18個，答對14個 (78%)
+    { name: "第4週", 已教單字: 30, 答對單字: 24, 答錯單字: 6, month: 1 },      // 教30個，答對24個 (80%)
     // 2月 (第5-8週)
-    { name: "第5週", 已教單字: 22, 答對單字: 24, month: 2 },     // 上週的30個，答對24個 (80%)
-    { name: "第6週", 已教單字: 28, 答對單字: 18, month: 2 },     // 上週的22個，答對18個 (82%)
-    { name: "第7週", 已教單字: 24, 答對單字: 22, month: 2 },     // 上週的28個，答對22個 (79%)
-    { name: "第8週", 已教單字: 26, 答對單字: 20, month: 2 },     // 上週的24個，答對20個 (83%)
+    { name: "第5週", 已教單字: 22, 答對單字: 18, 答錯單字: 4, month: 2 },      // 教22個，答對18個 (82%)
+    { name: "第6週", 已教單字: 28, 答對單字: 22, 答錯單字: 6, month: 2 },      // 教28個，答對22個 (79%)
+    { name: "第7週", 已教單字: 24, 答對單字: 20, 答錯單字: 4, month: 2 },      // 教24個，答對20個 (83%)
+    { name: "第8週", 已教單字: 26, 答對單字: 21, 答錯單字: 5, month: 2 },      // 教26個，答對21個 (81%)
     // 3月 (第9-12週)
-    { name: "第9週", 已教單字: 32, 答對單字: 21, month: 3 },     // 上週的26個，答對21個 (81%)
-    { name: "第10週", 已教單字: 27, 答對單字: 26, month: 3 },    // 上週的32個，答對26個 (81%)
-    { name: "第11週", 已教單字: 29, 答對單字: 22, month: 3 },    // 上週的27個，答對22個 (81%)
-    { name: "第12週", 已教單字: 31, 答對單字: 24, month: 3 },    // 上週的29個，答對24個 (83%)
+    { name: "第9週", 已教單字: 32, 答對單字: 26, 答錯單字: 6, month: 3 },      // 教32個，答對26個 (81%)
+    { name: "第10週", 已教單字: 27, 答對單字: 22, 答錯單字: 5, month: 3 },     // 教27個，答對22個 (81%)
+    { name: "第11週", 已教單字: 29, 答對單字: 24, 答錯單字: 5, month: 3 },     // 教29個，答對24個 (83%)
+    { name: "第12週", 已教單字: 31, 答對單字: 25, 答錯單字: 6, month: 3 },     // 教31個，答對25個 (81%)
     // 4月 (第13-16週)
-    { name: "第13週", 已教單字: 25, 答對單字: 25, month: 4 },    // 上週的31個，答對25個 (81%)
-    { name: "第14週", 已教單字: 30, 答對單字: 21, month: 4 },    // 上週的25個，答對21個 (84%)
-    { name: "第15週", 已教單字: 28, 答對單字: 25, month: 4 },    // 上週的30個，答對25個 (83%)
-    { name: "第16週", 已教單字: 26, 答對單字: 23, month: 4 },    // 上週的28個，答對23個 (82%)
+    { name: "第13週", 已教單字: 25, 答對單字: 21, 答錯單字: 4, month: 4 },     // 教25個，答對21個 (84%)
+    { name: "第14週", 已教單字: 30, 答對單字: 25, 答錯單字: 5, month: 4 },     // 教30個，答對25個 (83%)
+    { name: "第15週", 已教單字: 28, 答對單字: 23, 答錯單字: 5, month: 4 },     // 教28個，答對23個 (82%)
+    { name: "第16週", 已教單字: 26, 答對單字: 22, 答錯單字: 4, month: 4 },     // 教26個，答對22個 (85%)
     // 5月 (第17-20週)
-    { name: "第17週", 已教單字: 33, 答對單字: 22, month: 5 },    // 上週的26個，答對22個 (85%)
-    { name: "第18週", 已教單字: 29, 答對單字: 28, month: 5 },    // 上週的33個，答對28個 (85%)
-    { name: "第19週", 已教單字: 31, 答對單字: 25, month: 5 },    // 上週的29個，答對25個 (86%)
-    { name: "第20週", 已教單字: 28, 答對單字: 27, month: 5 },    // 上週的31個，答對27個 (87%)
+    { name: "第17週", 已教單字: 33, 答對單字: 28, 答錯單字: 5, month: 5 },     // 教33個，答對28個 (85%)
+    { name: "第18週", 已教單字: 29, 答對單字: 25, 答錯單字: 4, month: 5 },     // 教29個，答對25個 (86%)
+    { name: "第19週", 已教單字: 31, 答對單字: 27, 答錯單字: 4, month: 5 },     // 教31個，答對27個 (87%)
+    { name: "第20週", 已教單字: 28, 答對單字: 25, 答錯單字: 3, month: 5 },     // 教28個，答對25個 (89%)
   ];
 
   // 根據時間範圍篩選單字數據
@@ -216,18 +216,25 @@ const Dashboard = () => {
 
   // 根據時間範圍篩選作業數據
   const getFilteredAssignments = () => {
+    let filtered;
     switch (assignmentTimeRange) {
       case 'week':
-        return allAssignmentsByWeek.slice(-1); // 最近1週
+        filtered = allAssignmentsByWeek.slice(-1); // 最近1週
+        break;
       case 'month':
-        return allAssignmentsByWeek.slice(-4); // 最近1個月（4週）
+        filtered = allAssignmentsByWeek.slice(-4); // 最近1個月（4週）
+        break;
       case 'quarter':
-        return allAssignmentsByWeek.slice(-12); // 最近3個月（12週）
+        filtered = allAssignmentsByWeek.slice(-12); // 最近3個月（12週）
+        break;
       case 'all':
-        return allAssignmentsByWeek; // 全部資料
+        filtered = allAssignmentsByWeek; // 全部資料
+        break;
       default:
-        return allAssignmentsByWeek.slice(-4);
+        filtered = allAssignmentsByWeek.slice(-4);
     }
+    // 反轉陣列，讓最新的在最上面
+    return filtered.reverse();
   };
 
   const assignmentsByWeek = getFilteredAssignments();
@@ -808,18 +815,24 @@ const Dashboard = () => {
                         contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
                         cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
                         position={{ y: 0 }}
-                        formatter={(value: any, name: string, props: any) => {
-                          const data = props.payload;
-                          if (name === '答對單字' && data.答對單字 > 0) {
-                            // 計算答對率（本週答對 / 上週已教）
-                            // 注意：這裡簡化處理，實際應該從上一週的資料計算
-                            return [value, `答對單字`];
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", padding: "12px" }}>
+                                <p style={{ fontWeight: 600, marginBottom: "4px" }}>{data.name}</p>
+                                <p style={{ fontSize: "14px", color: "hsl(var(--muted-foreground))" }}>已教單字：{data.已教單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(34, 197, 94)" }}>答對：{data.答對單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(239, 68, 68)" }}>答錯：{data.答錯單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(59, 130, 246)" }}>正確率：{Math.round((data.答對單字 / data.已教單字) * 100)}%</p>
+                              </div>
+                            );
                           }
-                          return [value, name];
+                          return null;
                         }}
                       />
-                      <Bar dataKey="已教單字" stackId="a" fill="rgb(34, 197, 94)" radius={[0, 0, 0, 0]} name="已教單字" />
-                      <Bar dataKey="答對單字" stackId="a" fill="rgb(59, 130, 246)" radius={[4, 4, 0, 0]} name="答對單字" />
+                      <Bar dataKey="答對單字" stackId="a" fill="rgb(34, 197, 94)" radius={[0, 0, 0, 0]} name="答對單字" />
+                      <Bar dataKey="答錯單字" stackId="a" fill="rgb(239, 68, 68)" radius={[4, 4, 0, 0]} name="答錯單字" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>

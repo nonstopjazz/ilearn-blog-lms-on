@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { verifyApiKey } from '@/lib/api-auth';
 
 // 建立學生統計資料的輔助函數
-async function buildStudentStats(supabase: any, studentId: string, name: string, email: string) {
+async function buildStudentStats(supabase: any, studentId: string, name: string, email: string, userInfo: any = {}) {
   // 單字學習統計
   const { data: vocabStats } = await supabase
     .from('vocabulary_sessions')
@@ -51,6 +51,9 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     id: studentId,
     name: name,
     email: email,
+    phone: userInfo.phone || null,
+    parent: userInfo.parent || null,
+    report_settings: userInfo.report_settings || null,
     total_words: totalWords,
     avg_accuracy: parseFloat(avgAccuracy.toFixed(1)),
     total_exams: examStats?.length || 0,
@@ -115,6 +118,7 @@ export async function GET(request: NextRequest) {
           id: request.user_id,
           name: request.user_info?.name || '未知學生',
           email: request.user_info?.email || 'no-email@example.com',
+          user_info: request.user_info || {},
           first_approved_at: request.reviewed_at
         });
       }
@@ -130,7 +134,8 @@ export async function GET(request: NextRequest) {
         supabase,
         studentInfo.id,
         studentInfo.name,
-        studentInfo.email
+        studentInfo.email,
+        studentInfo.user_info
       );
       students.push(student);
     }

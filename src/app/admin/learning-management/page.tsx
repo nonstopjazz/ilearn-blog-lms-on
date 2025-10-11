@@ -45,13 +45,31 @@ import {
   Trash2,
   AlertCircle,
   CheckCircle2,
-  FileText
+  FileText,
+  Mail,
+  Loader2
 } from 'lucide-react';
+import { LearningReport } from '@/components/LearningReport';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Student {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  parent?: {
+    name: string;
+    email: string;
+    phone: string;
+    relationship: string;
+  };
+  report_settings?: {
+    schedule_enabled: boolean;
+    send_day: string;
+    send_time: string;
+    recipients: string[];
+    timezone: string;
+  };
   total_words: number;
   avg_accuracy: number;
   total_exams: number;
@@ -87,6 +105,17 @@ export default function AdminLearningManagementPage() {
   // 報告生成狀態
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportStudent, setReportStudent] = useState<Student | null>(null);
+
+  // 報表預覽狀態
+  const [isViewingReport, setIsViewingReport] = useState(false);
+  const [reportData, setReportData] = useState<any>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  // 寄送報告狀態
+  const [isSendingReport, setIsSendingReport] = useState(false);
+  const [sendReportDialogOpen, setSendReportDialogOpen] = useState(false);
+  const [sendTo, setSendTo] = useState<string[]>([]);
+  const [reportType, setReportType] = useState('all');
 
   // 考試類型狀態
   const [examTypes, setExamTypes] = useState<any[]>([]);
@@ -278,75 +307,69 @@ export default function AdminLearningManagementPage() {
     setIsEditingStudent(true);
   };
 
-  // 生成學生報告
-  const handleGenerateReport = async (student: Student) => {
+  // 查看學生報告
+  const handleViewReport = async (student: Student) => {
+    setLoadingReport(true);
+    setIsViewingReport(true);
     setReportStudent(student);
-    setIsGeneratingReport(true);
 
     try {
-      // 模擬報告生成延遲
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`/api/admin/students/${student.id}/learning-data?range=${reportType}`);
+      const result = await response.json();
 
-      // 這裡可以實作真正的報告生成邏輯
-      const reportData = {
-        studentName: student.name,
-        email: student.email,
-        totalWords: student.total_words,
-        avgAccuracy: student.avg_accuracy,
-        totalExams: student.total_exams,
-        avgExamScore: student.avg_exam_score,
-        assignmentsCompleted: student.assignments_completed,
-        assignmentsTotal: student.assignments_total,
-        completionRate: student.assignments_total > 0
-          ? Math.round((student.assignments_completed / student.assignments_total) * 100)
-          : 0,
-        lastActivity: student.last_activity,
-        generatedAt: new Date().toLocaleString('zh-TW')
-      };
-
-      // 生成簡單的文字報告
-      const reportText = `
-學習報告 - ${reportData.studentName}
-=====================================
-
-基本資訊：
-- 學生姓名：${reportData.studentName}
-- 電子郵件：${reportData.email}
-- 報告生成時間：${reportData.generatedAt}
-
-學習統計：
-- 累積學習單字：${reportData.totalWords} 個
-- 平均正確率：${reportData.avgAccuracy}%
-- 考試次數：${reportData.totalExams} 次
-- 平均考試分數：${reportData.avgExamScore} 分
-- 作業完成情況：${reportData.assignmentsCompleted}/${reportData.assignmentsTotal} (${reportData.completionRate}%)
-- 最後活動時間：${reportData.lastActivity}
-
-學習建議：
-${reportData.avgAccuracy < 70 ? '- 建議增加單字練習時間，提升學習正確率' : '- 單字學習表現良好，可適度增加學習難度'}
-${reportData.completionRate < 80 ? '- 建議督促學生按時完成作業' : '- 作業完成率良好，保持學習動力'}
-${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表現' : '- 考試表現良好，可挑戰更高難度'}
-      `;
-
-      // 創建並下載報告文件
-      const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `學習報告_${reportData.studentName}_${new Date().toISOString().split('T')[0]}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      alert(`${student.name} 的學習報告已生成並下載`);
-
-    } catch (error) {
-      console.error('生成報告失敗:', error);
-      alert('生成報告失敗，請稍後再試');
+      if (result.success) {
+        setReportData(result.data);
+      } else {
+        throw new Error(result.error || '無法載入報告資料');
+      }
+    } catch (error: any) {
+      alert('載入報告失敗: ' + error.message);
+      setIsViewingReport(false);
     } finally {
-      setIsGeneratingReport(false);
-      setReportStudent(null);
+      setLoadingReport(false);
+    }
+  };
+
+  // 寄送報告
+  const handleSendReport = async () => {
+    if (!reportStudent || !reportData) {
+      alert('請先載入報告資料');
+      return;
+    }
+
+    if (sendTo.length === 0) {
+      alert('請選擇至少一個收件人');
+      return;
+    }
+
+    setIsSendingReport(true);
+
+    try {
+      const response = await fetch('/api/admin/send-report-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: reportStudent.id,
+          recipients: sendTo,
+          report_data: reportData,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(result.message);
+        setSendReportDialogOpen(false);
+        setSendTo([]);
+      } else {
+        throw new Error(result.error || '寄送失敗');
+      }
+    } catch (error: any) {
+      alert('寄送報告失敗: ' + error.message);
+    } finally {
+      setIsSendingReport(false);
     }
   };
 
@@ -891,7 +914,8 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSelectedStudent(student)}
+                              onClick={() => handleViewReport(student)}
+                              title="查看報告"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -899,20 +923,20 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                               variant="outline"
                               size="sm"
                               onClick={() => handleEditStudent(student)}
+                              title="編輯學生資料"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleGenerateReport(student)}
-                              disabled={isGeneratingReport && reportStudent?.id === student.id}
+                              onClick={() => {
+                                setReportStudent(student);
+                                setSendReportDialogOpen(true);
+                              }}
+                              title="寄送報告"
                             >
-                              {isGeneratingReport && reportStudent?.id === student.id ? (
-                                <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
-                              )}
+                              <Mail className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -1016,43 +1040,152 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
       {/* 編輯學生對話框 */}
       {editingStudent && (
         <Dialog open={isEditingStudent} onOpenChange={setIsEditingStudent}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>編輯學生資訊</DialogTitle>
-              <DialogDescription>編輯 {editingStudent.name} 的基本資訊</DialogDescription>
+              <DialogDescription>編輯 {editingStudent.name} 的基本資訊及家長聯絡資料</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>學生姓名</Label>
-                <Input
-                  value={editingStudent.name}
-                  onChange={(e) => setEditingStudent(prev => prev ? {...prev, name: e.target.value} : null)}
-                />
+            <div className="space-y-6">
+              {/* 學生基本資訊 */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">學生基本資訊</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>學生姓名</Label>
+                    <Input
+                      value={editingStudent.name}
+                      onChange={(e) => setEditingStudent(prev => prev ? {...prev, name: e.target.value} : null)}
+                    />
+                  </div>
+                  <div>
+                    <Label>學生狀態</Label>
+                    <Select
+                      value={editingStudent.status}
+                      onValueChange={(value: 'active' | 'inactive') =>
+                        setEditingStudent(prev => prev ? {...prev, status: value} : null)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">活躍</SelectItem>
+                        <SelectItem value="inactive">非活躍</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>學生 Email</Label>
+                  <Input
+                    type="email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent(prev => prev ? {...prev, email: e.target.value} : null)}
+                  />
+                </div>
+                <div>
+                  <Label>學生電話（選填）</Label>
+                  <Input
+                    type="tel"
+                    value={editingStudent.phone || ''}
+                    onChange={(e) => setEditingStudent(prev => prev ? {...prev, phone: e.target.value} : null)}
+                    placeholder="例如：0912345678"
+                  />
+                </div>
               </div>
-              <div>
-                <Label>電子郵件</Label>
-                <Input
-                  type="email"
-                  value={editingStudent.email}
-                  onChange={(e) => setEditingStudent(prev => prev ? {...prev, email: e.target.value} : null)}
-                />
-              </div>
-              <div>
-                <Label>學生狀態</Label>
-                <Select
-                  value={editingStudent.status}
-                  onValueChange={(value: 'active' | 'inactive') =>
-                    setEditingStudent(prev => prev ? {...prev, status: value} : null)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">活躍</SelectItem>
-                    <SelectItem value="inactive">非活躍</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              {/* 家長聯絡資訊 */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-sm font-semibold text-gray-700">家長聯絡資訊</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>家長姓名</Label>
+                    <Input
+                      value={editingStudent.parent?.name || ''}
+                      onChange={(e) => setEditingStudent(prev => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          parent: {
+                            name: e.target.value,
+                            email: prev.parent?.email || '',
+                            phone: prev.parent?.phone || '',
+                            relationship: prev.parent?.relationship || '父親'
+                          }
+                        };
+                      })}
+                      placeholder="例如：許爸爸"
+                    />
+                  </div>
+                  <div>
+                    <Label>關係</Label>
+                    <Select
+                      value={editingStudent.parent?.relationship || '父親'}
+                      onValueChange={(value) => setEditingStudent(prev => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          parent: {
+                            name: prev.parent?.name || '',
+                            email: prev.parent?.email || '',
+                            phone: prev.parent?.phone || '',
+                            relationship: value
+                          }
+                        };
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="父親">父親</SelectItem>
+                        <SelectItem value="母親">母親</SelectItem>
+                        <SelectItem value="監護人">監護人</SelectItem>
+                        <SelectItem value="其他">其他</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>家長 Email</Label>
+                  <Input
+                    type="email"
+                    value={editingStudent.parent?.email || ''}
+                    onChange={(e) => setEditingStudent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        parent: {
+                          name: prev.parent?.name || '',
+                          email: e.target.value,
+                          phone: prev.parent?.phone || '',
+                          relationship: prev.parent?.relationship || '父親'
+                        }
+                      };
+                    })}
+                    placeholder="例如：parent@example.com"
+                  />
+                </div>
+                <div>
+                  <Label>家長電話</Label>
+                  <Input
+                    type="tel"
+                    value={editingStudent.parent?.phone || ''}
+                    onChange={(e) => setEditingStudent(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        parent: {
+                          name: prev.parent?.name || '',
+                          email: prev.parent?.email || '',
+                          phone: e.target.value,
+                          relationship: prev.parent?.relationship || '父親'
+                        }
+                      };
+                    })}
+                    placeholder="例如：0987654321"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -1066,11 +1199,36 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
                 取消
               </Button>
               <Button
-                onClick={() => {
-                  // 這裡可以實作保存學生資訊的 API 調用
-                  alert(`學生 ${editingStudent.name} 的資訊已保存（功能開發中）`);
-                  setIsEditingStudent(false);
-                  setEditingStudent(null);
+                onClick={async () => {
+                  try {
+                    // 呼叫 API 更新學生資訊
+                    const response = await fetch(`/api/admin/students/${editingStudent.id}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        name: editingStudent.name,
+                        email: editingStudent.email,
+                        phone: editingStudent.phone,
+                        parent: editingStudent.parent,
+                        status: editingStudent.status
+                      }),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                      alert(`學生 ${editingStudent.name} 的資訊已保存`);
+                      setIsEditingStudent(false);
+                      setEditingStudent(null);
+                      loadStudentsData(); // 重新載入資料
+                    } else {
+                      throw new Error(result.error || '更新失敗');
+                    }
+                  } catch (error: any) {
+                    alert('保存失敗: ' + error.message);
+                  }
                 }}
               >
                 保存
@@ -1079,6 +1237,220 @@ ${reportData.avgExamScore < 75 ? '- 建議加強考試準備，提升考試表�
           </DialogContent>
         </Dialog>
       )}
+
+      {/* 報表預覽對話框 */}
+      <Dialog open={isViewingReport} onOpenChange={setIsViewingReport}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>學習報告 - {reportStudent?.name}</DialogTitle>
+            <DialogDescription>
+              可在此預覽報告內容，或點擊寄送按鈕發送給家長
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* 時間範圍選擇器 */}
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <Label className="text-sm font-medium">時間範圍：</Label>
+            <Select
+              value={reportType}
+              onValueChange={async (value) => {
+                setReportType(value);
+                // 重新載入報告資料
+                if (reportStudent) {
+                  setLoadingReport(true);
+                  try {
+                    const response = await fetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${value}`);
+                    const result = await response.json();
+                    if (result.success) {
+                      setReportData(result.data);
+                    }
+                  } catch (error: any) {
+                    alert('載入報告失敗: ' + error.message);
+                  } finally {
+                    setLoadingReport(false);
+                  }
+                }
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">本週報告</SelectItem>
+                <SelectItem value="monthly">本月報告</SelectItem>
+                <SelectItem value="quarterly">本季報告</SelectItem>
+                <SelectItem value="yearly">本年報告</SelectItem>
+                <SelectItem value="all">全部資料</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loadingReport ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">載入報告中...</span>
+            </div>
+          ) : reportData ? (
+            <LearningReport data={reportData} />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              無法載入報告資料
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsViewingReport(false);
+                setReportData(null);
+              }}
+            >
+              關閉
+            </Button>
+            <Button
+              onClick={() => {
+                setIsViewingReport(false);
+                setSendReportDialogOpen(true);
+              }}
+              disabled={!reportData}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              寄送報告
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 寄送報告對話框 */}
+      <Dialog open={sendReportDialogOpen} onOpenChange={setSendReportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>寄送學習報告</DialogTitle>
+            <DialogDescription>
+              選擇收件人並寄送 {reportStudent?.name} 的學習報告
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* 報告類型選擇 */}
+            <div>
+              <Label>報告類型</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">本週報告</SelectItem>
+                  <SelectItem value="monthly">本月報告</SelectItem>
+                  <SelectItem value="quarterly">本季報告</SelectItem>
+                  <SelectItem value="yearly">本年報告</SelectItem>
+                  <SelectItem value="all">全部資料</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 收件人選擇 */}
+            <div>
+              <Label>收件人</Label>
+              <div className="space-y-2 mt-2">
+                {reportStudent?.parent?.email && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="send-to-parent"
+                      checked={sendTo.includes('parent')}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSendTo([...sendTo, 'parent']);
+                        } else {
+                          setSendTo(sendTo.filter(r => r !== 'parent'));
+                        }
+                      }}
+                    />
+                    <label htmlFor="send-to-parent" className="text-sm cursor-pointer">
+                      寄給家長 ({reportStudent.parent.email})
+                    </label>
+                  </div>
+                )}
+
+                {reportStudent?.email && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="send-to-student"
+                      checked={sendTo.includes('student')}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSendTo([...sendTo, 'student']);
+                        } else {
+                          setSendTo(sendTo.filter(r => r !== 'student'));
+                        }
+                      }}
+                    />
+                    <label htmlFor="send-to-student" className="text-sm cursor-pointer">
+                      寄給學生 ({reportStudent.email})
+                    </label>
+                  </div>
+                )}
+
+                {(!reportStudent?.parent?.email && !reportStudent?.email) && (
+                  <p className="text-sm text-muted-foreground">
+                    尚未設定家長或學生的 Email
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSendReportDialogOpen(false);
+                setSendTo([]);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={async () => {
+                // 先載入報告資料（如果還沒載入）
+                if (!reportData && reportStudent) {
+                  setLoadingReport(true);
+                  try {
+                    const response = await fetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${reportType}`);
+                    const result = await response.json();
+                    if (result.success) {
+                      setReportData(result.data);
+                      await handleSendReport();
+                    } else {
+                      throw new Error(result.error);
+                    }
+                  } catch (error: any) {
+                    alert('載入報告失敗: ' + error.message);
+                  } finally {
+                    setLoadingReport(false);
+                  }
+                } else {
+                  await handleSendReport();
+                }
+              }}
+              disabled={isSendingReport || sendTo.length === 0}
+            >
+              {isSendingReport ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  寄送中...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  立即寄送
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
