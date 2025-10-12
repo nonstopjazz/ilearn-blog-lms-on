@@ -482,24 +482,27 @@ export default function CourseLearnPage() {
   // 這個邏輯已移到下方的 render 部分，避免重複執行
 
   // 處理進度更新
-  const handleProgressUpdate = async (progress: VideoProgress) => {
+  const handleProgressUpdate = async (progress: any) => {
     try {
+      console.log('📤 準備傳送進度資料:', progress)
+
       const response = await fetch('/api/video/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: progress.user_id,
-          lesson_id: progress.lesson_id,
-          current_time: progress.current_time,
-          completed: progress.completed
-        })
+        body: JSON.stringify(progress)
       })
 
       const data = await response.json()
+      console.log('📥 進度更新回應:', data)
+
+      if (!response.ok) {
+        console.error('❌ 進度更新失敗:', data)
+        return
+      }
 
       // 更新本地狀態
-      setLessons(prev => prev.map(lesson => 
-        lesson.id === progress.lesson_id 
+      setLessons(prev => prev.map(lesson =>
+        lesson.id === progress.lesson_id
           ? { ...lesson, user_progress: progress }
           : lesson
       ))

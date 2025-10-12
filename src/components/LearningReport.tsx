@@ -58,7 +58,7 @@ export function LearningReport({ data, showHeader = true }: LearningReportProps)
     .slice(0, 10); // 只顯示最近10筆
 
   return (
-    <div className="bg-white p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="learning-report-container bg-white p-8 space-y-6 max-w-7xl mx-auto">
       {showHeader && (
         <div className="border-b pb-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-900">學習報告</h1>
