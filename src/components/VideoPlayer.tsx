@@ -14,6 +14,7 @@ interface VideoProgress {
 
 interface Lesson {
   id: string
+  course_id: string
   title: string
   description?: string
   content?: string
@@ -51,13 +52,20 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const hlsInstance = useRef<any>(null)
+  const progressSaveInterval = useRef<NodeJS.Timeout | null>(null)
+  const hasRestoredProgress = useRef(false)
 
-  // 🔧 添加 HLS.js 類型聲明
+  // 🔧 添加 HLS.js 和 YouTube 類型聲明
   declare global {
     interface Window {
       Hls: any
+      YT: any
+      onYouTubeIframeAPIReady: () => void
     }
   }
+
+  // YouTube Player 實例
+  const youtubePlayerRef = useRef<any>(null)
 
   // 🔧 檢測影片來源
   const detectVideoSource = (url: string) => {
@@ -67,6 +75,33 @@ export default function VideoPlayer({
       return 'bunny'
     }
     return 'unknown'
+  }
+
+  // 🎯 儲存影片進度
+  const saveProgress = (currentTime: number) => {
+    if (!lesson.video_duration || lesson.video_duration === 0) return
+
+    const progressPercentage = Math.round((currentTime / lesson.video_duration) * 100)
+    const isCompleted = progressPercentage >= 80
+
+    console.log('💾 儲存影片進度:', {
+      currentTime,
+      duration: lesson.video_duration,
+      percentage: progressPercentage
+    })
+
+    onProgressUpdate({
+      user_id: userId,
+      lesson_id: lesson.id,
+      course_id: lesson.course_id,  // 加入 course_id
+      watched_duration: currentTime,  // 使用資料庫實際欄位名稱
+      progress_percent: progressPercentage,  // 使用資料庫實際欄位名稱
+      completed: isCompleted
+    } as any)
+
+    if (isCompleted && !lesson.user_progress?.completed) {
+      onComplete()
+    }
   }
 
   // 🔧 提取 YouTube ID
@@ -85,25 +120,77 @@ export default function VideoPlayer({
     return null
   }
 
-  // 🔧 設定 YouTube 播放器
+  // 🔧 設定 YouTube 播放器（使用 YouTube iframe API 來追蹤進度）
   const setupYouTubePlayer = (youtubeId: string) => {
     console.log('📺 設定 YouTube 播放器, ID:', youtubeId)
-    
-    const embedURL = `https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&origin=${window.location.origin}&rel=0&modestbranding=1&start=0`
-    
-    if (iframeRef.current) {
-      iframeRef.current.src = embedURL
-      iframeRef.current.onload = () => {
-        console.log('✅ YouTube 播放器載入成功')
-        setLoading(false)
-        setError(null)
+
+    // 載入 YouTube iframe API
+    if (!window.YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag)
+
+      window.onYouTubeIframeAPIReady = () => {
+        initYouTubePlayer(youtubeId)
       }
-      iframeRef.current.onerror = () => {
-        console.error('❌ YouTube 播放器載入失敗')
-        setError('YouTube 影片載入失敗')
-        setLoading(false)
-      }
+    } else {
+      initYouTubePlayer(youtubeId)
     }
+  }
+
+  // 初始化 YouTube Player
+  const initYouTubePlayer = (youtubeId: string) => {
+    if (!iframeRef.current) return
+
+    const startTime = lesson.user_progress?.watched_duration || 0
+
+    console.log('🎬 初始化 YouTube Player, 起始時間:', startTime)
+
+    youtubePlayerRef.current = new window.YT.Player(iframeRef.current, {
+      videoId: youtubeId,
+      playerVars: {
+        autoplay: 0,
+        start: Math.floor(startTime),
+        enablejsapi: 1,
+        origin: window.location.origin,
+        rel: 0,
+        modestbranding: 1
+      },
+      events: {
+        onReady: (event: any) => {
+          console.log('✅ YouTube 播放器準備完成')
+          setLoading(false)
+          setError(null)
+          hasRestoredProgress.current = true
+
+          // 設定定時器追蹤播放進度
+          progressSaveInterval.current = setInterval(() => {
+            if (youtubePlayerRef.current && youtubePlayerRef.current.getPlayerState() === 1) { // 1 = playing
+              const currentTime = Math.floor(youtubePlayerRef.current.getCurrentTime())
+              if (currentTime > 0) {
+                saveProgress(currentTime)
+              }
+            }
+          }, 5000) // 每 5 秒儲存一次
+        },
+        onStateChange: (event: any) => {
+          // 0 = ended, 2 = paused
+          if (event.data === 0 || event.data === 2) {
+            const currentTime = Math.floor(youtubePlayerRef.current.getCurrentTime())
+            if (currentTime > 0) {
+              console.log('⏸️ YouTube 影片暫停/結束，儲存進度')
+              saveProgress(currentTime)
+            }
+          }
+        },
+        onError: (event: any) => {
+          console.error('❌ YouTube 播放器錯誤:', event.data)
+          setError('YouTube 影片載入失敗')
+          setLoading(false)
+        }
+      }
+    })
   }
 
   // 🔧 設定 Bunny.net 播放器（添加 HLS.js 支援）
@@ -132,6 +219,14 @@ export default function VideoPlayer({
         console.log('✅ 原生 HLS 影片載入完成')
         setLoading(false)
         setError(null)
+
+        // 恢復之前的播放位置
+        if (!hasRestoredProgress.current && lesson.user_progress?.watched_duration) {
+          const resumeTime = lesson.user_progress.watched_duration
+          console.log('🔄 恢復播放位置:', resumeTime, '秒')
+          video.currentTime = resumeTime
+          hasRestoredProgress.current = true
+        }
       }
       
       video.onerror = (e) => {
@@ -185,6 +280,14 @@ export default function VideoPlayer({
             console.log('✅ HLS manifest 解析完成')
             setLoading(false)
             setError(null)
+
+            // 恢復之前的播放位置
+            if (!hasRestoredProgress.current && lesson.user_progress?.watched_duration) {
+              const resumeTime = lesson.user_progress.watched_duration
+              console.log('🔄 恢復播放位置:', resumeTime, '秒')
+              video.currentTime = resumeTime
+              hasRestoredProgress.current = true
+            }
           })
           
           // 🔧 增強錯誤處理和恢復機制
@@ -361,16 +464,94 @@ export default function VideoPlayer({
 
   }, [lesson.id, lesson.video_url])
 
-  // 🔧 清理 HLS 實例
+  // 🎯 設定影片進度追蹤（僅適用於 Bunny.net 原生 video 元素）
+  useEffect(() => {
+    if (videoSource !== 'bunny' || !videoRef.current) return
+
+    const video = videoRef.current
+
+    // 監聽播放進度更新（每秒觸發多次）
+    const handleTimeUpdate = () => {
+      const currentTime = Math.floor(video.currentTime)
+
+      // 每 5 秒自動儲存一次進度
+      if (currentTime % 5 === 0 && currentTime > 0) {
+        saveProgress(currentTime)
+      }
+    }
+
+    // 監聽播放暫停時儲存進度
+    const handlePause = () => {
+      const currentTime = Math.floor(video.currentTime)
+      if (currentTime > 0) {
+        console.log('⏸️ 影片暫停，儲存進度')
+        saveProgress(currentTime)
+      }
+    }
+
+    // 監聽影片結束
+    const handleEnded = () => {
+      console.log('✅ 影片播放結束')
+      if (lesson.video_duration) {
+        saveProgress(lesson.video_duration)
+      }
+    }
+
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('pause', handlePause)
+    video.addEventListener('ended', handleEnded)
+
+    // 頁面卸載前儲存進度
+    const handleBeforeUnload = () => {
+      const currentTime = Math.floor(video.currentTime)
+      if (currentTime > 0) {
+        console.log('🚪 頁面卸載，儲存進度')
+        saveProgress(currentTime)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('ended', handleEnded)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [videoSource, lesson.id, lesson.video_duration, userId])
+
+  // 🔧 清理資源（HLS、YouTube Player、Progress Interval）
   useEffect(() => {
     return () => {
+      // 清理 HLS 實例
       if (hlsInstance.current) {
         console.log('🧹 清理 HLS 實例')
         hlsInstance.current.destroy()
         hlsInstance.current = null
       }
+
+      // 清理 YouTube Player
+      if (youtubePlayerRef.current) {
+        console.log('🧹 清理 YouTube Player')
+        try {
+          youtubePlayerRef.current.destroy()
+        } catch (e) {
+          console.warn('YouTube Player 清理警告:', e)
+        }
+        youtubePlayerRef.current = null
+      }
+
+      // 清理進度儲存 interval
+      if (progressSaveInterval.current) {
+        console.log('🧹 清理進度儲存計時器')
+        clearInterval(progressSaveInterval.current)
+        progressSaveInterval.current = null
+      }
+
+      // 重置進度恢復標記
+      hasRestoredProgress.current = false
     }
-  }, [])
+  }, [lesson.id])
 
   // 錯誤狀態
   if (error) {
@@ -426,6 +607,11 @@ export default function VideoPlayer({
           controls
           playsInline
           preload="metadata"
+        />
+      ) : videoSource === 'youtube' ? (
+        <div
+          ref={iframeRef as any}
+          className="w-full h-full"
         />
       ) : (
         <iframe

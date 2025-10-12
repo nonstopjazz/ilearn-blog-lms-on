@@ -84,10 +84,10 @@ export async function GET(request, { params }) {
         .from('user_lesson_progress')
         .select(`
           lesson_id,
-          progress_percentage,
+          progress_percent,
           completed,
-          current_time,
-          updated_at
+          watched_duration,
+          created_at
         `)
         .eq('user_id', userId)
         .in('lesson_id', lessonIds);
@@ -110,10 +110,10 @@ export async function GET(request, { params }) {
           user_progress: progress ? {
             user_id: userId,
             lesson_id: lesson.id,
-            progress_percentage: progress.progress_percentage || 0,
+            progress_percentage: progress.progress_percent || 0,
             completed: progress.completed || false,
-            current_time: progress.current_time || 0,
-            updated_at: progress.updated_at
+            watched_duration: progress.watched_duration || 0,
+            created_at: progress.created_at
           } : null
         };
       });

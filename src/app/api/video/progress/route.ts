@@ -1,9 +1,130 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { videoData } from '@/lib/video-data'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
+
+// POST - 更新觀看進度
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createSupabaseAdminClient()
+    const body = await request.json()
+
+    // 接受兩種欄位名稱格式（舊的和新的）
+    const {
+      user_id,
+      lesson_id,
+      course_id,
+      watched_duration,     // 新的資料庫欄位名稱
+      current_time,         // 舊的前端傳來的名稱（向下相容）
+      progress_percent,     // 新的資料庫欄位名稱
+      progress_percentage,  // 舊的前端傳來的名稱（向下相容）
+      completed
+    } = body
+
+    // 使用新欄位名稱，如果沒有則回退到舊名稱
+    const videoPosition = watched_duration ?? current_time
+    const progressValue = progress_percent ?? progress_percentage
+
+    if (!user_id || !lesson_id || !course_id || videoPosition === undefined) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User ID, lesson ID, course ID, and video position are required'
+        },
+        { status: 400 }
+      )
+    }
+
+    console.log('📹 更新影片進度:', {
+      user_id,
+      lesson_id,
+      course_id,
+      watched_duration: videoPosition,
+      progress_percent: progressValue,
+      completed
+    })
+
+    // 先查詢是否已存在記錄
+    const { data: existing } = await supabase
+      .from('user_lesson_progress')
+      .select('id')
+      .eq('user_id', user_id)
+      .eq('lesson_id', lesson_id)
+      .single()
+
+    let data, error
+
+    if (existing) {
+      // 更新現有記錄
+      const result = await supabase
+        .from('user_lesson_progress')
+        .update({
+          course_id,
+          watched_duration: videoPosition,
+          progress_percent: progressValue || 0,
+          completed: completed || false,
+          completed_at: completed ? new Date().toISOString() : null
+        })
+        .eq('user_id', user_id)
+        .eq('lesson_id', lesson_id)
+        .select()
+        .single()
+
+      data = result.data
+      error = result.error
+    } else {
+      // 插入新記錄
+      const result = await supabase
+        .from('user_lesson_progress')
+        .insert({
+          user_id,
+          lesson_id,
+          course_id,
+          watched_duration: videoPosition,
+          progress_percent: progressValue || 0,
+          completed: completed || false,
+          completed_at: completed ? new Date().toISOString() : null
+        })
+        .select()
+        .single()
+
+      data = result.data
+      error = result.error
+    }
+
+    if (error) {
+      console.error('❌ 更新進度失敗:', error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to update progress: ' + error.message
+        },
+        { status: 500 }
+      )
+    }
+
+    console.log('✅ 進度更新成功:', data)
+
+    return NextResponse.json({
+      success: true,
+      progress: data,
+      message: 'Progress updated successfully'
+    })
+
+  } catch (error: any) {
+    console.error('💥 Video progress API error:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to update progress: ' + error.message
+      },
+      { status: 500 }
+    )
+  }
+}
 
 // GET - 獲取用戶的觀看進度
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseAdminClient()
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('user_id')
     const lessonId = searchParams.get('lesson_id')
@@ -17,106 +138,52 @@ export async function GET(request: NextRequest) {
 
     if (lessonId) {
       // 獲取特定單元的進度
-      const progress = videoData.getUserProgress(userId, lessonId)
-      
+      const { data, error } = await supabase
+        .from('user_lesson_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('lesson_id', lessonId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        console.error('❌ 獲取進度失敗:', error)
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 500 }
+        )
+      }
+
       return NextResponse.json({
         success: true,
-        progress: progress
+        progress: data
       })
     } else {
       // 獲取用戶所有的觀看進度
-      const allProgress = videoData.getAllUserProgress(userId)
-      
+      const { data, error } = await supabase
+        .from('user_lesson_progress')
+        .select('*')
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('❌ 獲取進度列表失敗:', error)
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 500 }
+        )
+      }
+
       return NextResponse.json({
         success: true,
-        progress_list: allProgress
+        progress_list: data
       })
     }
 
-  } catch (error) {
-    console.error('Video progress API GET error:', error)
+  } catch (error: any) {
+    console.error('💥 Video progress API GET error:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch progress'
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// POST - 更新觀看進度
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { user_id, lesson_id, current_time, completed } = body
-
-    if (!user_id || !lesson_id || current_time === undefined) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'User ID, lesson ID, and current time are required' 
-        },
-        { status: 400 }
-      )
-    }
-
-    // 更新進度
-    const updatedProgress = videoData.updateProgress(user_id, lesson_id, {
-      current_time: current_time,
-      completed: completed
-    })
-
-    return NextResponse.json({
-      success: true,
-      progress: updatedProgress,
-      message: 'Progress updated successfully'
-    })
-
-  } catch (error) {
-    console.error('Video progress API POST error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update progress'
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// PUT - 批量更新進度（用於課程完成等）
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { user_id, lesson_progresses } = body
-
-    if (!user_id || !Array.isArray(lesson_progresses)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'User ID and lesson progresses array are required' 
-        },
-        { status: 400 }
-      )
-    }
-
-    const updatedProgresses = lesson_progresses.map(progressData => {
-      return videoData.updateProgress(user_id, progressData.lesson_id, progressData)
-    })
-
-    return NextResponse.json({
-      success: true,
-      progresses: updatedProgresses,
-      message: 'Progresses updated successfully'
-    })
-
-  } catch (error) {
-    console.error('Video progress API PUT error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to batch update progress'
+        error: 'Failed to fetch progress: ' + error.message
       },
       { status: 500 }
     )
