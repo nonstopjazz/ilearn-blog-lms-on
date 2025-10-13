@@ -812,26 +812,39 @@ const Dashboard = () => {
                       <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                        cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.98)",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "12px",
+                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                          backdropFilter: "blur(8px)"
+                        }}
+                        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                         position={{ y: 0 }}
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div style={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", padding: "12px" }}>
-                                <p style={{ fontWeight: 600, marginBottom: "4px" }}>{data.name}</p>
-                                <p style={{ fontSize: "14px", color: "hsl(var(--muted-foreground))" }}>已教單字：{data.已教單字} 個</p>
-                                <p style={{ fontSize: "14px", color: "rgb(34, 197, 94)" }}>答對：{data.答對單字} 個</p>
-                                <p style={{ fontSize: "14px", color: "rgb(239, 68, 68)" }}>答錯：{data.答錯單字} 個</p>
-                                <p style={{ fontSize: "14px", color: "rgb(59, 130, 246)" }}>正確率：{Math.round((data.答對單字 / data.已教單字) * 100)}%</p>
+                              <div style={{
+                                backgroundColor: "rgba(255, 255, 255, 0.98)",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "12px",
+                                padding: "14px 16px",
+                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                                backdropFilter: "blur(8px)"
+                              }}>
+                                <p style={{ fontWeight: 600, marginBottom: "8px", color: "#1f2937", fontSize: "15px" }}>{data.name}</p>
+                                <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>已教單字：{data.已教單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(59, 130, 246)", marginBottom: "4px", fontWeight: 500 }}>答對：{data.答對單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(239, 68, 68)", marginBottom: "4px", fontWeight: 500 }}>答錯：{data.答錯單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(16, 185, 129)", fontWeight: 600 }}>正確率：{Math.round((data.答對單字 / data.已教單字) * 100)}%</p>
                               </div>
                             );
                           }
                           return null;
                         }}
                       />
-                      <Bar dataKey="答對單字" stackId="a" fill="rgb(34, 197, 94)" radius={[0, 0, 0, 0]} name="答對單字" />
+                      <Bar dataKey="答對單字" stackId="a" fill="rgb(59, 130, 246)" radius={[0, 0, 0, 0]} name="答對單字" />
                       <Bar dataKey="答錯單字" stackId="a" fill="rgb(239, 68, 68)" radius={[4, 4, 0, 0]} name="答錯單字" />
                     </BarChart>
                   </ResponsiveContainer>
