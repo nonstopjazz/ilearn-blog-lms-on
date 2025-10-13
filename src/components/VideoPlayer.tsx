@@ -449,20 +449,57 @@ export default function VideoPlayer({
           setLoading(false)
         }
         break
-        
+
       case 'bunny':
         // 延遲一點再設定，確保 DOM 渲染完成
         setTimeout(() => {
           setupBunnyPlayer()
         }, 100)
         break
-        
+
       default:
         setError(`不支援的影片來源: ${lesson.video_url}`)
         setLoading(false)
     }
 
   }, [lesson.id, lesson.video_url])
+
+  // 🔧 新增：Page Visibility API - 防止切換分頁時重新載入
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('📴 頁面切換到背景（隱藏）')
+        // 頁面隱藏時儲存當前進度
+        if (videoRef.current && videoSource === 'bunny') {
+          const currentTime = Math.floor(videoRef.current.currentTime)
+          if (currentTime > 0) {
+            console.log('💾 背景儲存進度:', currentTime)
+            saveProgress(currentTime)
+          }
+        } else if (youtubePlayerRef.current && videoSource === 'youtube') {
+          try {
+            const currentTime = Math.floor(youtubePlayerRef.current.getCurrentTime())
+            if (currentTime > 0) {
+              console.log('💾 背景儲存 YouTube 進度:', currentTime)
+              saveProgress(currentTime)
+            }
+          } catch (e) {
+            console.warn('無法獲取 YouTube 播放時間:', e)
+          }
+        }
+      } else {
+        console.log('👀 頁面回到前景（可見）')
+        // 頁面重新可見時不需要做任何事，讓影片繼續播放
+      }
+    }
+
+    // 監聽頁面可見性變化
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [videoSource, lesson.id, lesson.video_duration, userId])
 
   // 🎯 設定影片進度追蹤（僅適用於 Bunny.net 原生 video 元素）
   useEffect(() => {

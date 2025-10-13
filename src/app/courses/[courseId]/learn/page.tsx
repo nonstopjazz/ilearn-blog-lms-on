@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -316,10 +316,19 @@ export default function CourseLearnPage() {
     }
   }
 
+  // 🔧 新增：使用 ref 來追蹤是否已載入資料，防止重複載入
+  const hasLoadedData = useRef(false)
+
   // 載入課程資料
   useEffect(() => {
     const loadCourseData = async () => {
       if (!user || !courseId) return
+
+      // 防止重複載入
+      if (hasLoadedData.current) {
+        console.log('⏭️ 課程資料已載入，跳過重複載入')
+        return
+      }
 
       try {
         setLoading(true)
@@ -467,7 +476,10 @@ export default function CourseLearnPage() {
           setLessons(backupLessons)
           setCurrentLesson(backupLessons[0] || null)
         }
-        
+
+        // 標記已載入
+        hasLoadedData.current = true
+
       } catch (error) {
         console.error('💥 載入課程資料失敗:', error)
       } finally {
@@ -533,6 +545,13 @@ export default function CourseLearnPage() {
   // 切換課程
   const switchToLesson = (lesson: LessonWithProgress) => {
     console.log('切換到課程:', lesson.title, '附件數量:', lesson.attachments?.length)
+
+    // 🔧 優化：避免切換到相同課程時重新渲染
+    if (currentLesson?.id === lesson.id) {
+      console.log('⏭️ 已經在當前課程，跳過切換')
+      return
+    }
+
     setCurrentLesson(lesson)
   }
 
