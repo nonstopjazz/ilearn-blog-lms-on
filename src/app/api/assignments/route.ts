@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     let query = `
       SELECT
         a.*,
-        s.first_name || ' ' || s.last_name as student_name,
         cl.lesson_title,
         COALESCE(asub.submission_date, NULL) as submitted_date,
         COALESCE(asub.status, 'not_submitted') as submission_status,
@@ -29,19 +28,26 @@ export async function GET(request: NextRequest) {
           ELSE 'pending'
         END as calculated_status
       FROM assignments a
-      LEFT JOIN students s ON s.id::text = a.course_id -- 需要調整這個 JOIN
       LEFT JOIN course_lessons cl ON cl.id = a.lesson_id
-      LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id
-      WHERE 1=1
     `;
 
     const params: any[] = [];
     let paramCount = 0;
 
+    // 如果有 student_id，在 JOIN 時就加入條件
     if (studentId) {
       paramCount++;
-      query += ` AND a.course_id = $${paramCount}`;
+      query += ` LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.student_id = $${paramCount}`;
       params.push(studentId);
+    } else {
+      query += ` LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id`;
+    }
+
+    query += ` WHERE 1=1`;
+
+    if (studentId) {
+      // student_id 已在 JOIN 中使用，這裡可以用來篩選作業本身（如果需要）
+      // 目前保持原有邏輯
     }
 
     if (courseId) {
@@ -87,7 +93,7 @@ export async function GET(request: NextRequest) {
       description: row.description,
       courseId: row.course_id,
       lessonId: row.lesson_id,
-      studentName: row.student_name || '未指定學生',
+      lessonTitle: row.lesson_title,
       startDate: row.created_at,
       dueDate: row.due_date,
       completedDate: row.submitted_date,
@@ -102,6 +108,9 @@ export async function GET(request: NextRequest) {
       progress: row.submitted_date ? 100 : 0,
       isRequired: row.is_required,
       isPublished: row.is_published,
+      isDaily: row.is_daily || false,
+      weekNumber: row.week_number,
+      dailyType: row.daily_type,
       tags: row.tags || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at
