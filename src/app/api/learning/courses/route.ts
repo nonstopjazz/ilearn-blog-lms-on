@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const courseIds = approvedCourses.map(c => c.course_id);
 
-    // 查詢課程資訊
+    // 🔧 修正：查詢課程資訊，只返回真實存在的課程
     const { data: courses, error: courseInfoError } = await supabase
       .from('courses')
       .select('id, title, description, thumbnail_url')
@@ -54,6 +54,24 @@ export async function GET(request: NextRequest) {
         { success: false, error: '查詢課程資訊失敗' },
         { status: 500 }
       );
+    }
+
+    // 🔧 新增：過濾掉不存在於 courses 表中的課程
+    if (!courses || courses.length === 0) {
+      console.warn('警告：course_requests 中有已核准的課程，但 courses 表中沒有對應資料');
+      return NextResponse.json({
+        success: true,
+        courses: []
+      });
+    }
+
+    // 只處理真實存在的課程
+    const validCourseIds = courses.map(c => c.id);
+    console.log(`找到 ${approvedCourses.length} 個已核准申請，其中 ${validCourseIds.length} 個課程實際存在`);
+
+    if (validCourseIds.length < approvedCourses.length) {
+      const invalidCourseIds = courseIds.filter(id => !validCourseIds.includes(id));
+      console.warn('以下課程 ID 在 course_requests 中存在但 courses 表中不存在:', invalidCourseIds);
     }
 
     // 查詢每個課程的單元和進度

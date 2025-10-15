@@ -115,28 +115,57 @@ export default function MyCoursesPage() {
           setProgress([])
           return
         }
-        
-        // 不再查詢 courses 表，直接使用 course_requests 的資料
-        
-        // 直接使用 course_requests 的資料建立課程列表
-        console.log('=== 我的課程（使用 course_requests 資料）===')
-        console.log('已批准的課程數量:', approvedRequests.length)
 
-        const userCoursesData = approvedRequests.map((req, index) => {
-          console.log(`課程 ${index + 1}: ${req.course_id} - ${req.course_title}`)
+        // 🔧 修正：驗證課程是否真實存在於 courses 表
+        const courseIds = approvedRequests.map(req => req.course_id)
+
+        const { data: realCourses, error: coursesError } = await supabase
+          .from('courses')
+          .select('id, title, description, category, difficulty_level as level')
+          .in('id', courseIds)
+
+        if (coursesError) {
+          console.error('[My Courses] 查詢真實課程失敗:', coursesError)
+        }
+
+        // 建立真實課程 ID 的集合
+        const validCourseIds = new Set(realCourses?.map(c => c.id) || [])
+
+        // 過濾掉不存在的課程
+        const validRequests = approvedRequests.filter(req => validCourseIds.has(req.course_id))
+
+        console.log('=== 我的課程（已驗證真實性）===')
+        console.log('已批准的課程申請數量:', approvedRequests.length)
+        console.log('真實存在的課程數量:', validRequests.length)
+
+        if (validRequests.length < approvedRequests.length) {
+          const invalidIds = approvedRequests
+            .filter(req => !validCourseIds.has(req.course_id))
+            .map(req => req.course_id)
+          console.warn('以下課程 ID 不存在於 courses 表:', invalidIds)
+        }
+
+        // 使用真實課程資料
+        const userCoursesData = validRequests.map((req, index) => {
+          const realCourse = realCourses?.find(c => c.id === req.course_id)
+          console.log(`課程 ${index + 1}: ${req.course_id} - ${realCourse?.title || req.course_title}`)
+
           return {
             id: req.course_id,
-            title: req.course_title,
-            description: req.request_reason || '', // 使用申請原因作為描述
-            category: '線上課程', // 預設分類
-            difficulty: '初級', // 預設難度
-            total_lessons: 0 // 預設課程數，因為沒有實際課程資料
+            title: realCourse?.title || req.course_title,
+            description: realCourse?.description || req.request_reason || '',
+            category: realCourse?.category || '線上課程',
+            difficulty: realCourse?.level === 'beginner' ? '初級'
+                      : realCourse?.level === 'intermediate' ? '中級'
+                      : realCourse?.level === 'advanced' ? '高級'
+                      : '初級',
+            total_lessons: 0 // 稍後從 course_lessons 查詢
           }
         })
 
         console.log('最終顯示的課程數量:', userCoursesData.length)
         console.log('===================')
-        
+
         setCourses(userCoursesData)
         
         // 暫時設定空的進度資料
