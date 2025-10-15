@@ -24,7 +24,9 @@ import {
   AlertCircle,
   Trophy,
   FileText,
-  Download
+  Download,
+  Video,
+  PlayCircle
 } from 'lucide-react';
 import {
   LineChart,
@@ -72,6 +74,13 @@ const Dashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // 課程學習狀態
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [courseLessons, setCourseLessons] = useState<any[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(false);
 
   // [已棄用] 完整的成績數據（模擬一整年的資料）
   // 現在使用 API 取得真實數據
@@ -585,6 +594,13 @@ const Dashboard = () => {
     }
   }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange]);
 
+  // 當切換到課程頁籤時載入課程數據
+  useEffect(() => {
+    if (activeTab === 'courses' && isAuthenticated && currentUser) {
+      loadCourses();
+    }
+  }, [activeTab, isAuthenticated, currentUser]);
+
   // 載入成績數據（API）
   const loadGrades = async () => {
     if (!isAuthenticated || !currentUser) return;
@@ -928,6 +944,52 @@ const Dashboard = () => {
     }
   };
 
+  // 載入課程學習數據
+  const loadCourses = async () => {
+    if (!currentUser) return;
+
+    setLoadingCourses(true);
+    try {
+      const response = await fetch(`/api/learning/courses?user_id=${currentUser.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCourses(data.courses || []);
+      } else {
+        console.error('載入課程失敗:', data.error);
+        setCourses([]);
+      }
+    } catch (error) {
+      console.error('載入課程時發生錯誤:', error);
+      setCourses([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  // 載入課程詳細進度
+  const loadCourseLessons = async (courseId: string) => {
+    if (!currentUser) return;
+
+    setLoadingLessons(true);
+    try {
+      const response = await fetch(`/api/learning/courses/${courseId}/progress?user_id=${currentUser.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCourseLessons(data.lessons || []);
+      } else {
+        console.error('載入課程單元失敗:', data.error);
+        setCourseLessons([]);
+      }
+    } catch (error) {
+      console.error('載入課程單元時發生錯誤:', error);
+      setCourseLessons([]);
+    } finally {
+      setLoadingLessons(false);
+    }
+  };
+
   // 處理新增作業
   const handleCreateAssignment = async (formData: any) => {
     setLoading(true);
@@ -996,7 +1058,7 @@ const Dashboard = () => {
 
         {/* 頁籤系統 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-muted p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-7 bg-muted p-1 h-auto">
             <TabsTrigger value="overview" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <TrendingUp className="w-4 h-4" />
               <span>總覽</span>
@@ -1016,6 +1078,10 @@ const Dashboard = () => {
             <TabsTrigger value="progress" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <Calendar className="w-4 h-4" />
               <span>上課進度</span>
+            </TabsTrigger>
+            <TabsTrigger value="courses" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
+              <Video className="w-4 h-4" />
+              <span>課程學習</span>
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <FileText className="w-4 h-4" />
@@ -1775,6 +1841,205 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* 課程學習頁籤 */}
+          <TabsContent value="courses" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">課程學習統計</h2>
+                <p className="text-muted-foreground">追蹤您已選修課程的學習進度</p>
+              </div>
+            </div>
+
+            {loadingCourses ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">載入課程中...</p>
+                </div>
+              </div>
+            ) : courses.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-900 mb-2">尚無選修課程</p>
+                  <p className="text-sm text-gray-600 mb-6">請先到課程頁面選擇您想學習的課程</p>
+                  <Button asChild>
+                    <a href="/courses">瀏覽課程</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.map((course: any) => (
+                  <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      {course.thumbnail_url && (
+                        <img
+                          src={course.thumbnail_url}
+                          alt={course.title}
+                          className="w-full h-40 object-cover rounded-lg mb-3"
+                        />
+                      )}
+                      <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
+                      {course.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-2">{course.description}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {/* 進度條 */}
+                      <div>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-gray-600">完成進度</span>
+                          <span className="font-semibold text-blue-600">{course.progress_percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${course.progress_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* 統計資訊 */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-gray-700">
+                            {course.completed_lessons}/{course.total_lessons} 單元
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-blue-600" />
+                          <span className="text-gray-700">
+                            {Math.floor(course.total_watch_time / 60)} 分鐘
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 最後學習時間 */}
+                      {course.last_study_time && (
+                        <div className="text-xs text-gray-500">
+                          最後學習：{new Date(course.last_study_time).toLocaleDateString('zh-TW', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
+
+                      {/* 操作按鈕 */}
+                      <div className="flex space-x-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedCourse(course);
+                            loadCourseLessons(course.id);
+                          }}
+                        >
+                          查看詳情
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          asChild
+                        >
+                          <a href={`/courses/${course.id}/learn`}>
+                            <PlayCircle className="w-4 h-4 mr-1" />
+                            繼續學習
+                          </a>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* 課程詳細進度對話框 */}
+            {selectedCourse && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{selectedCourse.title} - 學習進度明細</CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedCourse(null);
+                        setCourseLessons([]);
+                      }}
+                    >
+                      關閉
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingLessons ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {courseLessons.map((lesson: any, index: number) => (
+                        <div
+                          key={lesson.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            {lesson.completed ? (
+                              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <PlayCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {index + 1}. {lesson.title}
+                              </p>
+                              <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
+                                <span>進度 {lesson.progress_percentage}%</span>
+                                {lesson.video_duration && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{Math.floor(lesson.current_time / 60)}/{Math.floor(lesson.video_duration / 60)} 分鐘</span>
+                                  </>
+                                )}
+                                {lesson.last_watched_at && (
+                                  <>
+                                    <span>•</span>
+                                    <span>
+                                      {new Date(lesson.last_watched_at).toLocaleDateString('zh-TW', {
+                                        month: '2-digit',
+                                        day: '2-digit'
+                                      })}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="w-24 ml-3">
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${
+                                  lesson.completed ? 'bg-green-600' : 'bg-blue-600'
+                                }`}
+                                style={{ width: `${lesson.progress_percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* 報表匯出頁籤 */}
