@@ -52,9 +52,30 @@ const Dashboard = () => {
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
-  // 完整的成績數據（模擬一整年的資料）
-  // 注意：這是示範假資料，實際應從 API 取得
-  const allGradeData = [
+  // 新增：API 數據狀態
+  const [gradeData, setGradeData] = useState<any[]>([]);
+  const [vocabularyData, setVocabularyData] = useState<any[]>([]);
+  const [assignmentsByWeek, setAssignmentsByWeek] = useState<any[]>([]);
+  const [loadingGrades, setLoadingGrades] = useState(false);
+  const [loadingVocabulary, setLoadingVocabulary] = useState(false);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+
+  // 三個頁籤的數據狀態
+  const [exams, setExams] = useState<any[]>([]);
+  const [vocabularySessions, setVocabularySessions] = useState<any[]>([]);
+  const [progressData, setProgressData] = useState<any[]>([]);
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [loadingVocabularySessions, setLoadingVocabularySessions] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(false);
+
+  // 認證狀態
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // [已棄用] 完整的成績數據（模擬一整年的資料）
+  // 現在使用 API 取得真實數據
+  const allGradeData_deprecated = [
     // 1月
     { name: "第1週", quiz: 85, class_test: 88, vocabulary_test: 90, speaking_eval: 82, month: 1 },
     { name: "第2週", quiz: 78, class_test: 85, vocabulary_test: 87, speaking_eval: 80, month: 1 },
@@ -82,30 +103,12 @@ const Dashboard = () => {
     { name: "第20週", quiz: 96, class_test: 98, vocabulary_test: 99, speaking_eval: 94, month: 5 },
   ];
 
-  // 根據時間範圍篩選資料
-  const getFilteredGradeData = () => {
-    const currentWeek = 20; // 假設目前是第20週
-    switch (gradeTimeRange) {
-      case 'week':
-        return allGradeData.slice(-2); // 最近2週
-      case 'month':
-        return allGradeData.slice(-4); // 最近1個月（4週）
-      case 'quarter':
-        return allGradeData.slice(-12); // 最近3個月（12週）
-      case 'semester':
-        return allGradeData.slice(-18); // 最近半年（18週）
-      case 'all':
-        return allGradeData; // 全部資料
-      default:
-        return allGradeData.slice(-4);
-    }
-  };
+  // [已移除] 根據時間範圍篩選資料 - 現在由 API 處理
+  // const gradeData = 由 useState 管理，透過 API 載入
 
-  const gradeData = getFilteredGradeData();
-
-  // 完整的單字學習數據（模擬一整年的資料）
-  // 每週顯示：已教單字、答對單字、答錯單字
-  const allVocabularyData = [
+  // [已棄用] 完整的單字學習數據（模擬一整年的資料）
+  // 現在使用 API 取得真實數據
+  const allVocabularyData_deprecated = [
     // 1月 (第1-4週)
     { name: "第1週", 已教單字: 20, 答對單字: 15, 答錯單字: 5, month: 1 },      // 教20個，答對15個 (75%)
     { name: "第2週", 已教單字: 25, 答對單字: 20, 答錯單字: 5, month: 1 },      // 教25個，答對20個 (80%)
@@ -133,29 +136,12 @@ const Dashboard = () => {
     { name: "第20週", 已教單字: 28, 答對單字: 25, 答錯單字: 3, month: 5 },     // 教28個，答對25個 (89%)
   ];
 
-  // 根據時間範圍篩選單字數據
-  const getFilteredVocabularyData = () => {
-    const currentWeek = 20; // 假設目前是第20週
-    switch (vocabularyTimeRange) {
-      case 'week':
-        return allVocabularyData.slice(-2); // 最近2週
-      case 'month':
-        return allVocabularyData.slice(-4); // 最近1個月（4週）
-      case 'quarter':
-        return allVocabularyData.slice(-12); // 最近3個月（12週）
-      case 'semester':
-        return allVocabularyData.slice(-18); // 最近半年（18週）
-      case 'all':
-        return allVocabularyData; // 全部資料
-      default:
-        return allVocabularyData.slice(-4);
-    }
-  };
+  // [已移除] 根據時間範圍篩選單字數據 - 現在由 API 處理
+  // const vocabularyData = 由 useState 管理，透過 API 載入
 
-  const vocabularyData = getFilteredVocabularyData();
-
-  // 完整的作業數據（模擬多週資料）
-  const allAssignmentsByWeek = [
+  // [已棄用] 完整的作業數據（模擬多週資料）
+  // 現在使用 API 取得真實數據
+  const allAssignmentsByWeek_deprecated = [
     {
       week: "第1周",
       dateRange: "2025/1/6-1/12",
@@ -214,32 +200,10 @@ const Dashboard = () => {
     }
   ];
 
-  // 根據時間範圍篩選作業數據
-  const getFilteredAssignments = () => {
-    let filtered;
-    switch (assignmentTimeRange) {
-      case 'week':
-        filtered = allAssignmentsByWeek.slice(-1); // 最近1週
-        break;
-      case 'month':
-        filtered = allAssignmentsByWeek.slice(-4); // 最近1個月（4週）
-        break;
-      case 'quarter':
-        filtered = allAssignmentsByWeek.slice(-12); // 最近3個月（12週）
-        break;
-      case 'all':
-        filtered = allAssignmentsByWeek; // 全部資料
-        break;
-      default:
-        filtered = allAssignmentsByWeek.slice(-4);
-    }
-    // 反轉陣列，讓最新的在最上面
-    return filtered.reverse();
-  };
+  // [已移除] 根據時間範圍篩選作業數據 - 現在由 API 處理
+  // const assignmentsByWeek = 由 useState 管理，透過 API 載入
 
-  const assignmentsByWeek = getFilteredAssignments();
-
-  // 其他頁籤數據
+  // 其他頁籤數據（保持 mock 數據用於未登入狀態）
   const mockAssignments = [
     { id: 1, title: "基礎單字 Unit 1-5 (200字)", category: "單字", status: "in-progress", dueDate: "2025/01/20", progress: 75 },
     { id: 2, title: "時態練習 - 現在式", category: "文法", status: "completed", dueDate: "2025/01/15", progress: 100 },
@@ -247,21 +211,24 @@ const Dashboard = () => {
     { id: 4, title: "聽力理解 - 短對話", category: "聽力", status: "not-started", dueDate: "2025/01/30", progress: 0 }
   ];
 
-  const exams = [
+  // Mock 考試成績數據（用於未登入狀態）
+  const mockExams = [
     { id: 1, name: "英語小考 - Unit 1", type: "小考", date: "2025/01/10", score: 88, maxScore: 100, subject: "英語" },
     { id: 2, name: "文法段考 - 時態", type: "段考", date: "2025/01/15", score: 92, maxScore: 100, subject: "英語" },
     { id: 3, name: "聽力測驗", type: "小考", date: "2025/01/18", score: 85, maxScore: 100, subject: "英語" },
     { id: 4, name: "口說評量", type: "評量", date: "2025/01/20", score: 90, maxScore: 100, subject: "英語" }
   ];
 
-  const vocabularySessions = [
+  // Mock 單字學習數據（用於未登入狀態）
+  const mockVocabularySessions = [
     { id: 1, date: "2025/01/15", wordsLearned: 15, unit: "Unit 1-2", accuracy: 90, duration: 30 },
     { id: 2, date: "2025/01/16", wordsLearned: 20, unit: "Unit 3-4", accuracy: 85, duration: 25 },
     { id: 3, date: "2025/01/17", wordsLearned: 18, unit: "Review", accuracy: 95, duration: 35 },
     { id: 4, date: "2025/01/18", wordsLearned: 25, unit: "Unit 5-6", accuracy: 88, duration: 40 }
   ];
 
-  const progressData = [
+  // Mock 上課進度數據（用於未登入狀態）
+  const mockProgressData = [
     { id: 1, date: "2025/01/15", lesson: "Unit 1: 日常問候", topics: ["基本問候語", "自我介紹", "數字1-10"], status: "completed", duration: 60, homework: "背誦對話" },
     { id: 2, date: "2025/01/17", lesson: "Unit 2: 家庭介紹", topics: ["家庭成員", "職業描述", "年齡表達"], status: "completed", duration: 60, homework: "完成練習題" },
     { id: 3, date: "2025/01/19", lesson: "Unit 3: 學校生活", topics: ["課程科目", "時間表達", "校園設施"], status: "in-progress", duration: 45, homework: "準備口說練習" },
@@ -565,6 +532,33 @@ const Dashboard = () => {
     }
   ];
 
+  // 檢查認證狀態
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        setIsAuthenticated(true);
+        setCurrentUser(user);
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    } catch (error) {
+      console.error('認證檢查失敗:', error);
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // 初始化數據
   useEffect(() => {
     setStudents([currentStudent]); // 只有當前學生
@@ -572,6 +566,334 @@ const Dashboard = () => {
     setAssignments(mockAssignments);
     loadExamTypes();
   }, []);
+
+  // 載入資料（根據認證狀態）
+  useEffect(() => {
+    if (authLoading) return; // 等待認證檢查完成
+
+    if (isAuthenticated) {
+      // 已登入：載入真實 API 數據
+      loadGrades();
+      loadVocabulary();
+      loadAssignments();
+      loadExamsData();
+      loadVocabularySessionsData();
+      loadProgressDataAPI();
+    } else {
+      // 未登入：使用 mock 數據
+      loadMockData();
+    }
+  }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange]);
+
+  // 載入成績數據（API）
+  const loadGrades = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingGrades(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/grades?student_id=${currentStudent.id}&range=${gradeTimeRange}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setGradeData(result.data || []);
+      } else {
+        console.error('載入成績數據失敗:', result.error);
+        // 失敗時使用 mock 數據
+        loadMockGradeData();
+      }
+    } catch (error) {
+      console.error('載入成績數據時發生錯誤:', error);
+      loadMockGradeData();
+    } finally {
+      setLoadingGrades(false);
+    }
+  };
+
+  // 載入單字數據（API）
+  const loadVocabulary = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingVocabulary(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/vocabulary/stats?student_id=${currentStudent.id}&range=${vocabularyTimeRange}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setVocabularyData(result.data || []);
+      } else {
+        console.error('載入單字數據失敗:', result.error);
+        loadMockVocabularyData();
+      }
+    } catch (error) {
+      console.error('載入單字數據時發生錯誤:', error);
+      loadMockVocabularyData();
+    } finally {
+      setLoadingVocabulary(false);
+    }
+  };
+
+  // 載入作業數據（API）
+  const loadAssignments = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingAssignments(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/assignments/progress?student_id=${currentStudent.id}&range=${assignmentTimeRange}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        // 轉換 API 數據格式以符合前端需求
+        const formattedData = result.data.map((week: any) => ({
+          week: week.week_label,
+          dateRange: week.date_range,
+          assignments: week.assignments.map((assignment: any) => {
+            if (assignment.type === 'daily') {
+              return {
+                name: assignment.name,
+                progress: assignment.progress,
+                type: 'daily',
+                description: assignment.description,
+                completedDays: assignment.completed_days,
+                totalDays: assignment.total_days,
+                streakDays: assignment.streak_days,
+                dailyCompletion: assignment.daily_completion
+              };
+            } else {
+              return {
+                name: assignment.name,
+                progress: assignment.progress,
+                type: 'session',
+                description: assignment.description,
+                status: assignment.status,
+                dueDate: assignment.due_date
+              };
+            }
+          })
+        }));
+        setAssignmentsByWeek(formattedData);
+      } else {
+        console.error('載入作業數據失敗:', result.error);
+        loadMockAssignmentData();
+      }
+    } catch (error) {
+      console.error('載入作業數據時發生錯誤:', error);
+      loadMockAssignmentData();
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
+
+  // 載入 Mock 數據（未登入時使用）
+  const loadMockData = () => {
+    loadMockGradeData();
+    loadMockVocabularyData();
+    loadMockAssignmentData();
+    loadMockExamsData();
+    loadMockVocabularySessionsData();
+    loadMockProgressData();
+  };
+
+  // Mock 數據載入函數
+  const loadMockExamsData = () => {
+    setExams(mockExams);
+  };
+
+  const loadMockVocabularySessionsData = () => {
+    setVocabularySessions(mockVocabularySessions);
+  };
+
+  const loadMockProgressData = () => {
+    setProgressData(mockProgressData);
+  };
+
+  // 載入考試成績列表數據（API）
+  const loadExamsData = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingExams(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/exams/list?student_id=${currentStudent.id}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setExams(result.data || []);
+      } else {
+        console.error('載入考試成績數據失敗:', result.error);
+        loadMockExamsData();
+      }
+    } catch (error) {
+      console.error('載入考試成績數據時發生錯誤:', error);
+      loadMockExamsData();
+    } finally {
+      setLoadingExams(false);
+    }
+  };
+
+  // 載入單字學習記錄數據（API）
+  const loadVocabularySessionsData = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingVocabularySessions(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/vocabulary/sessions?student_id=${currentStudent.id}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setVocabularySessions(result.data || []);
+      } else {
+        console.error('載入單字學習記錄失敗:', result.error);
+        loadMockVocabularySessionsData();
+      }
+    } catch (error) {
+      console.error('載入單字學習記錄時發生錯誤:', error);
+      loadMockVocabularySessionsData();
+    } finally {
+      setLoadingVocabularySessions(false);
+    }
+  };
+
+  // 載入上課進度數據（API）
+  const loadProgressDataAPI = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingProgress(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/lessons/progress?user_id=${currentUser.id}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setProgressData(result.data || []);
+      } else {
+        console.error('載入上課進度數據失敗:', result.error);
+        loadMockProgressData();
+      }
+    } catch (error) {
+      console.error('載入上課進度數據時發生錯誤:', error);
+      loadMockProgressData();
+    } finally {
+      setLoadingProgress(false);
+    }
+  };
+
+  // 根據時間範圍篩選 Mock 成績數據
+  const loadMockGradeData = () => {
+    let filteredData = [...allGradeData_deprecated];
+
+    switch (gradeTimeRange) {
+      case 'week':
+        filteredData = filteredData.slice(-2);
+        break;
+      case 'month':
+        filteredData = filteredData.slice(-4);
+        break;
+      case 'quarter':
+        filteredData = filteredData.slice(-12);
+        break;
+      case 'semester':
+        filteredData = filteredData.slice(-18);
+        break;
+      case 'all':
+        // 顯示全部
+        break;
+    }
+
+    setGradeData(filteredData);
+  };
+
+  // 根據時間範圍篩選 Mock 單字數據
+  const loadMockVocabularyData = () => {
+    let filteredData = [...allVocabularyData_deprecated];
+
+    switch (vocabularyTimeRange) {
+      case 'week':
+        filteredData = filteredData.slice(-2);
+        break;
+      case 'month':
+        filteredData = filteredData.slice(-4);
+        break;
+      case 'quarter':
+        filteredData = filteredData.slice(-12);
+        break;
+      case 'semester':
+        filteredData = filteredData.slice(-18);
+        break;
+      case 'all':
+        // 顯示全部
+        break;
+    }
+
+    setVocabularyData(filteredData);
+  };
+
+  // 根據時間範圍篩選 Mock 作業數據
+  const loadMockAssignmentData = () => {
+    let filteredData = [...allAssignmentsByWeek_deprecated];
+
+    switch (assignmentTimeRange) {
+      case 'week':
+        filteredData = filteredData.slice(-1);
+        break;
+      case 'month':
+        filteredData = filteredData.slice(-4);
+        break;
+      case 'quarter':
+        filteredData = filteredData.slice(-12);
+        break;
+      case 'all':
+        // 顯示全部
+        break;
+    }
+
+    setAssignmentsByWeek(filteredData);
+  };
 
   // 載入考試類型
   const loadExamTypes = async () => {
