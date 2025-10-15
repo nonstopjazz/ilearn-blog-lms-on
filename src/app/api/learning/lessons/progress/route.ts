@@ -31,30 +31,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 查詢用戶的課程進度記錄（JOIN course_lessons 表）
+    // 查詢用戶的課程進度記錄
     let query = supabase
       .from('user_lesson_progress')
-      .select(`
-        id,
-        user_id,
-        lesson_id,
-        current_time,
-        progress_percentage,
-        completed,
-        last_watched_at,
-        created_at,
-        updated_at,
-        course_lessons (
-          id,
-          course_id,
-          title,
-          slug,
-          order_index,
-          duration
-        )
-      `)
+      .select('*')
       .eq('user_id', user_id)
-      .order('last_watched_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     const { data: progressRecords, error: progressError } = await query;
@@ -67,17 +49,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 如果有進度記錄，獲取對應的課程資訊
+    let lessonsMap = new Map();
+    if (progressRecords && progressRecords.length > 0) {
+      const lessonIds = progressRecords.map((r: any) => r.lesson_id);
+      const { data: lessons } = await supabase
+        .from('course_lessons')
+        .select('id, course_id, title, slug, order_index, duration')
+        .in('id', lessonIds);
+
+      lessons?.forEach((lesson: any) => {
+        lessonsMap.set(lesson.id, lesson);
+      });
+    }
+
     // 如果指定了 course_id，過濾結果
     let filteredRecords = progressRecords || [];
     if (course_id) {
-      filteredRecords = filteredRecords.filter((record: any) =>
-        record.course_lessons?.course_id === course_id
-      );
+      filteredRecords = filteredRecords.filter((record: any) => {
+        const lesson = lessonsMap.get(record.lesson_id);
+        return lesson?.course_id === course_id;
+      });
     }
 
     // 轉換為前端需要的格式
     const progressData = filteredRecords.map((record: any) => {
-      const lesson = record.course_lessons;
+      const lesson = lessonsMap.get(record.lesson_id);
 
       // 判斷狀態
       let status = 'not-started';
@@ -95,7 +92,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: record.id,
-        date: record.last_watched_at?.split('T')[0] || record.created_at?.split('T')[0],
+        date: record.created_at?.split('T')[0],
         lesson: lesson?.title || 'Unknown Lesson',
         lessonId: record.lesson_id,
         topics: topics, // 可以後續擴展
@@ -104,11 +101,9 @@ export async function GET(request: NextRequest) {
         currentTime: record.current_time || 0,
         progress: record.progress_percentage || 0,
         completed: record.completed || false,
-        lastWatchedAt: record.last_watched_at,
         courseId: lesson?.course_id,
         homework: '', // 可以後續從其他表 JOIN
-        createdAt: record.created_at,
-        updatedAt: record.updated_at
+        createdAt: record.created_at
       };
     });
 
