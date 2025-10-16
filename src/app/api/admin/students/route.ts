@@ -247,6 +247,20 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // 計算百分比分數和等級
+        const maxScore = data.max_score || 100;
+        const percentageScore = (data.total_score / maxScore) * 100;
+
+        let grade = '';
+        if (percentageScore >= 90) grade = 'A+';
+        else if (percentageScore >= 85) grade = 'A';
+        else if (percentageScore >= 80) grade = 'B+';
+        else if (percentageScore >= 75) grade = 'B';
+        else if (percentageScore >= 70) grade = 'C+';
+        else if (percentageScore >= 65) grade = 'C';
+        else if (percentageScore >= 60) grade = 'D';
+        else grade = 'F';
+
         const { data: examResult, error: examError } = await supabase
           .from('exam_records')
           .insert([{
@@ -256,7 +270,9 @@ export async function POST(request: NextRequest) {
             exam_name: data.exam_name,
             exam_date: data.exam_date,
             total_score: data.total_score,
-            max_score: data.max_score || 100,
+            max_score: maxScore,
+            percentage_score: Math.round(percentageScore * 10) / 10, // 四捨五入到小數點一位
+            grade: grade,
             subject: data.subject || 'general',
             teacher_feedback: data.teacher_feedback
           }])
