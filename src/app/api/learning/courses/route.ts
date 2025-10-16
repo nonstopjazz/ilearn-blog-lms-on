@@ -108,10 +108,10 @@ export async function GET(request: NextRequest) {
           };
         }
 
-        // 查詢用戶進度
+        // 查詢用戶進度 - 使用實際的數據庫欄位名稱
         const { data: progress, error: progressError } = await supabase
           .from('user_lesson_progress')
-          .select('completed, current_time, last_watched_at')
+          .select('completed, watched_duration, completed_at, created_at')
           .eq('user_id', userId)
           .in('lesson_id', lessonIds);
 
@@ -120,9 +120,9 @@ export async function GET(request: NextRequest) {
         }
 
         const completedCount = (progress || []).filter(p => p.completed).length;
-        const totalWatchTime = (progress || []).reduce((sum, p) => sum + (p.current_time || 0), 0);
+        const totalWatchTime = (progress || []).reduce((sum, p) => sum + (p.watched_duration || 0), 0);
         const lastStudyTime = (progress || [])
-          .map(p => p.last_watched_at)
+          .map(p => p.completed_at || p.created_at)
           .filter(t => t)
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
 

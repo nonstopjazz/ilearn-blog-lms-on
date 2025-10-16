@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清理假課程資料</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #d32f2f;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+        .error {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ 清理假課程資料</h1>
+
+        <div class="info">
+            <strong>將要刪除的課程：</strong>
+            <ul>
+                <li>course_002</li>
+                <li>course_001</li>
+                <li>course_011</li>
+                <li>course_013</li>
+            </ul>
+            <p style="margin-top: 10px; color: #666;">
+                此操作將從 course_requests 和 user_course_access 表中刪除這些課程的記錄。
+            </p>
+        </div>
+
+        <label for="userId" style="display: block; margin-bottom: 10px;">
+            <strong>您的用戶 ID：</strong>
+        </label>
+        <input
+            type="text"
+            id="userId"
+            placeholder="請輸入您的用戶 ID"
+            style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;"
+        >
+
+        <button id="deleteBtn" onclick="deleteFakeCourses()">
+            刪除假課程
+        </button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function deleteFakeCourses() {
+            const userId = document.getElementById('userId').value.trim();
+            const resultDiv = document.getElementById('result');
+            const deleteBtn = document.getElementById('deleteBtn');
+
+            if (!userId) {
+                resultDiv.innerHTML = '<div class="result error">請輸入用戶 ID</div>';
+                return;
+            }
+
+            deleteBtn.disabled = true;
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在刪除...</div>';
+
+            try {
+                const response = await fetch('/api/admin/cleanup-fake-courses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        fake_course_ids: ['course_002', 'course_001', 'course_011', 'course_013']
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <strong>✅ 刪除成功！</strong><br>
+                            從 course_requests 刪除: ${data.deleted.course_requests} 條記錄<br>
+                            從 user_course_access 刪除: ${data.deleted.user_course_access} 條記錄<br><br>
+                            請重新整理 /my-courses 頁面查看結果。
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ 錯誤: ${data.error}</div>`;
+                    deleteBtn.disabled = false;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ 發生錯誤: ${error.message}</div>`;
+                deleteBtn.disabled = false;
+            }
+        }
+
+        // 自動從 localStorage 或 URL 獲取用戶 ID（如果可用）
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userIdFromUrl = urlParams.get('user_id');
+            if (userIdFromUrl) {
+                document.getElementById('userId').value = userIdFromUrl;
+            }
+        });
+    </script>
+</body>
+</html>

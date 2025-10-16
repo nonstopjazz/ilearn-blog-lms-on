@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // 關閉開發環境的錯誤覆蓋層（Error Overlay）中的某些警告
+  reactStrictMode: false, // 暫時關閉嚴格模式以避免誤報
 };
 
 export default nextConfig;
