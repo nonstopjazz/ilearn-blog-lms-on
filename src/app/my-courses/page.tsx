@@ -95,75 +95,99 @@ export default function MyCoursesPage() {
         setLoading(true)
         const { getSupabase } = await import('@/lib/supabase');
         const supabase = getSupabase();
-        
-        // 直接從 course_requests 查詢用戶已批准的課程（不再依賴 courses 表）
+
+        console.log('[My Courses] 開始載入用戶課程...')
+        console.log('[My Courses] 用戶 ID:', user.id)
+
+        // 🔧 方法1：從 course_requests 查詢已批准的課程
         const { data: approvedRequests, error: requestError } = await supabase
           .from('course_requests')
           .select('*')
           .eq('user_id', user.id)
           .eq('status', 'approved')
           .order('reviewed_at', { ascending: false })
-        
+
+        console.log('[My Courses] course_requests 查詢結果:', approvedRequests?.length || 0, '條記錄')
+
+        // 🔧 方法2：同時從 user_course_access 查詢課程權限
+        const { data: accessRecords, error: accessError } = await supabase
+          .from('user_course_access')
+          .select('*')
+          .eq('user_id', user.id)
+
+        console.log('[My Courses] user_course_access 查詢結果:', accessRecords?.length || 0, '條記錄')
+
+        // 🔧 合併兩種來源的課程 ID
+        const courseIdsFromRequests = approvedRequests?.map(req => req.course_id) || []
+        const courseIdsFromAccess = accessRecords?.map(acc => acc.course_id) || []
+        const allCourseIds = [...new Set([...courseIdsFromRequests, ...courseIdsFromAccess])]
+
+        console.log('[My Courses] 合併後的課程 ID 數量:', allCourseIds.length)
+
         if (requestError) {
-          console.error('[My Courses] 查詢課程申請失敗:', requestError)
-          setError('載入課程時發生錯誤')
-          return
+          console.error('[My Courses] 查詢 course_requests 失敗:', requestError)
         }
-        
-        if (!approvedRequests || approvedRequests.length === 0) {
+
+        if (accessError) {
+          console.error('[My Courses] 查詢 user_course_access 失敗:', accessError)
+        }
+
+        // 🔧 如果兩個表都沒有記錄，顯示空狀態
+        if (allCourseIds.length === 0) {
+          console.log('[My Courses] 用戶沒有任何課程')
           setCourses([])
           setProgress([])
           return
         }
 
-        // 🔧 修正：驗證課程是否真實存在於 courses 表
-        const courseIds = approvedRequests.map(req => req.course_id)
-
+        // 🔧 修正：從 courses 表獲取真實課程資料
         const { data: realCourses, error: coursesError } = await supabase
           .from('courses')
-          .select('id, title, description, category, difficulty_level as level')
-          .in('id', courseIds)
+          .select('id, title, description, category, difficulty_level')
+          .in('id', allCourseIds)
 
         if (coursesError) {
           console.error('[My Courses] 查詢真實課程失敗:', coursesError)
         }
 
+        console.log('[My Courses] 從 courses 表查到的課程:', realCourses?.length || 0)
+
         // 建立真實課程 ID 的集合
         const validCourseIds = new Set(realCourses?.map(c => c.id) || [])
 
         // 過濾掉不存在的課程
-        const validRequests = approvedRequests.filter(req => validCourseIds.has(req.course_id))
+        const validCourseIdsArray = allCourseIds.filter(courseId => validCourseIds.has(courseId))
 
         console.log('=== 我的課程（已驗證真實性）===')
-        console.log('已批准的課程申請數量:', approvedRequests.length)
-        console.log('真實存在的課程數量:', validRequests.length)
+        console.log('用戶有權限的課程數量:', allCourseIds.length)
+        console.log('真實存在的課程數量:', validCourseIdsArray.length)
 
-        if (validRequests.length < approvedRequests.length) {
-          const invalidIds = approvedRequests
-            .filter(req => !validCourseIds.has(req.course_id))
-            .map(req => req.course_id)
-          console.warn('以下課程 ID 不存在於 courses 表:', invalidIds)
+        if (validCourseIdsArray.length < allCourseIds.length) {
+          const invalidIds = allCourseIds.filter(id => !validCourseIds.has(id))
+          console.warn('[My Courses] 以下課程 ID 不存在於 courses 表:', invalidIds)
         }
 
-        // 使用真實課程資料
-        const userCoursesData = validRequests.map((req, index) => {
-          const realCourse = realCourses?.find(c => c.id === req.course_id)
-          console.log(`課程 ${index + 1}: ${req.course_id} - ${realCourse?.title || req.course_title}`)
+        // 🔧 使用真實課程資料構建課程列表
+        const userCoursesData = validCourseIdsArray.map((courseId, index) => {
+          const realCourse = realCourses?.find(c => c.id === courseId)
+          const requestInfo = approvedRequests?.find(req => req.course_id === courseId)
+
+          console.log(`[My Courses] 課程 ${index + 1}: ${courseId} - ${realCourse?.title || requestInfo?.course_title || '未知課程'}`)
 
           return {
-            id: req.course_id,
-            title: realCourse?.title || req.course_title,
-            description: realCourse?.description || req.request_reason || '',
+            id: courseId,
+            title: realCourse?.title || requestInfo?.course_title || '未知課程',
+            description: realCourse?.description || requestInfo?.request_reason || '課程描述載入中',
             category: realCourse?.category || '線上課程',
-            difficulty: realCourse?.level === 'beginner' ? '初級'
-                      : realCourse?.level === 'intermediate' ? '中級'
-                      : realCourse?.level === 'advanced' ? '高級'
+            difficulty: realCourse?.difficulty_level === 'beginner' ? '初級'
+                      : realCourse?.difficulty_level === 'intermediate' ? '中級'
+                      : realCourse?.difficulty_level === 'advanced' ? '高級'
                       : '初級',
             total_lessons: 0 // 稍後從 course_lessons 查詢
           }
         })
 
-        console.log('最終顯示的課程數量:', userCoursesData.length)
+        console.log('[My Courses] 最終顯示的課程數量:', userCoursesData.length)
         console.log('===================')
 
         setCourses(userCoursesData)
