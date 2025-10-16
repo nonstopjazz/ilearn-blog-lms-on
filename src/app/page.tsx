@@ -5,20 +5,38 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Play, Star, Users, Clock, CheckCircle, ArrowRight, BookOpen, Award, Shield, LogOut, User } from 'lucide-react';
 
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  short_description?: string;
+  instructor_name: string;
+  category: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  lessons_count: number;
+  duration_minutes: number;
+  price: number;
+  status: string;
+  rating?: number;
+  enrolled_count?: number;
+}
+
 export default function Homepage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { getSupabase } = await import('@/lib/supabase');
         const supabase = getSupabase();
-        
+
         // 檢查當前用戶
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
-        
+
         // 監聽認證狀態變化
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           setUser(session?.user ?? null);
@@ -35,6 +53,27 @@ export default function Homepage() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        setCoursesLoading(true);
+        const response = await fetch('/api/courses?status=published');
+        const result = await response.json();
+
+        if (result.success) {
+          // Display all published courses
+          setCourses(result.courses);
+        }
+      } catch (error) {
+        console.error('Error loading courses:', error);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, []);
+
   const handleSignOut = async () => {
     try {
       const { getSupabase } = await import('@/lib/supabase');
@@ -45,6 +84,32 @@ export default function Homepage() {
     } catch (error) {
       console.error('Sign out error:', error);
     }
+  };
+
+  // 格式化時長
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours > 0 && remainingMinutes > 0) {
+      return `${hours} 小時 ${remainingMinutes} 分`;
+    } else if (hours > 0) {
+      return `${hours} 小時`;
+    } else {
+      return `${remainingMinutes} 分`;
+    }
+  };
+
+  // 獲取課程顏色
+  const getCourseColor = (index: number) => {
+    const colors = [
+      'bg-gradient-to-br from-orange-400 to-red-500',
+      'bg-gradient-to-br from-yellow-400 to-orange-500',
+      'bg-gradient-to-br from-blue-400 to-cyan-500',
+      'bg-gradient-to-br from-purple-400 to-pink-500',
+      'bg-gradient-to-br from-green-400 to-teal-500',
+      'bg-gradient-to-br from-indigo-400 to-purple-500',
+    ];
+    return colors[index % colors.length];
   };
 
   return (
@@ -95,12 +160,12 @@ export default function Homepage() {
               </div>
             </div>
             <div className="relative">
-              <Link href="/courses/course_011" className="block">
+              <Link href="/courses" className="block">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300 cursor-pointer">
                   <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg mb-6 flex items-center justify-center">
                     <Play className="h-16 w-16 text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">JavaScript 完整課程</h3>
+                  <h3 className="text-xl font-semibold mb-2">探索我們的課程</h3>
                   <p className="text-gray-600 mb-2">從零基礎到專業開發者</p>
                   <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>120 個單元</span>
@@ -161,58 +226,56 @@ export default function Homepage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-4">目前提供給Joe老師的學生的課程</h2>
             <p className="text-xl text-gray-600">符合資格的學員可提出申請</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "HTML & CSS 基礎",
-                description: "網頁設計入門必學",
-                duration: "2 小時",
-                students: "5,200+",
-                image: "bg-gradient-to-br from-orange-400 to-red-500",
-                courseId: "course_012"
-              },
-              {
-                title: "JavaScript 完整課程",
-                description: "從零基礎到專業開發者",
-                duration: "3 小時",
-                students: "8,100+",
-                image: "bg-gradient-to-br from-yellow-400 to-orange-500",
-                courseId: "course_011"
-              },
-              {
-                title: "React 進階開發",
-                description: "現代前端框架深度學習",
-                duration: "2.5 小時",
-                students: "3,600+",
-                image: "bg-gradient-to-br from-blue-400 to-cyan-500",
-                courseId: "course_013"
-              }
-            ].map((course, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                <div className={`h-48 ${course.image} flex items-center justify-center`}>
-                  <Play className="h-12 w-12 text-white" />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-2">{course.title}</h3>
-                  <p className="text-gray-600 mb-4">{course.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {course.duration}
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      {course.students}
-                    </div>
+
+          {coursesLoading ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-6">
+                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
                   </div>
-                  <Link href={`/courses/${course.courseId}`} className="block w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-center">
-                    立即試聽
-                  </Link>
                 </div>
-              </div>
-            ))}
-          </div>
-          
+              ))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {courses.map((course, index) => (
+                <div key={course.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                  <div className={`h-48 ${getCourseColor(index)} flex items-center justify-center`}>
+                    <Play className="h-12 w-12 text-white" />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2">{course.title}</h3>
+                    <p className="text-gray-600 mb-4">{course.short_description || course.description}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {formatDuration(course.duration_minutes)}
+                      </div>
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 mr-1" />
+                        {course.enrolled_count?.toLocaleString() || '0'}
+                      </div>
+                    </div>
+                    <Link href={`/courses/${course.id}`} className="block w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-center">
+                      立即試聽
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!coursesLoading && courses.length === 0 && (
+            <div className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600">目前沒有可用的課程，敬請期待</p>
+            </div>
+          )}
+
           <div className="text-center mt-12">
             <Link href="/courses" className="inline-flex items-center bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors font-semibold border-2 border-blue-600">
               查看所有課程

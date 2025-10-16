@@ -54,12 +54,8 @@ const Dashboard = () => {
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
-  // 新增：API 數據狀態
-  const [gradeData, setGradeData] = useState<any[]>([]);
-  const [vocabularyData, setVocabularyData] = useState<any[]>([]);
+  // 作業數據狀態（保留，因為沒有對應的詳細頁籤）
   const [assignmentsByWeek, setAssignmentsByWeek] = useState<any[]>([]);
-  const [loadingGrades, setLoadingGrades] = useState(false);
-  const [loadingVocabulary, setLoadingVocabulary] = useState(false);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
 
   // 三個頁籤的數據狀態
@@ -582,8 +578,6 @@ const Dashboard = () => {
 
     if (isAuthenticated) {
       // 已登入：載入真實 API 數據
-      loadGrades();
-      loadVocabulary();
       loadAssignments();
       loadExamsData();
       loadVocabularySessionsData();
@@ -601,68 +595,8 @@ const Dashboard = () => {
     }
   }, [activeTab, isAuthenticated, currentUser]);
 
-  // 載入成績數據（API）
-  const loadGrades = async () => {
-    if (!isAuthenticated || !currentUser) return;
-
-    setLoadingGrades(true);
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
-      const response = await fetch(
-        `/api/learning/grades?student_id=${currentStudent.id}&range=${gradeTimeRange}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        setGradeData(result.data || []);
-      } else {
-        console.error('載入成績數據失敗:', result.error);
-        // 失敗時使用 mock 數據
-        loadMockGradeData();
-      }
-    } catch (error) {
-      console.error('載入成績數據時發生錯誤:', error);
-      loadMockGradeData();
-    } finally {
-      setLoadingGrades(false);
-    }
-  };
-
-  // 載入單字數據（API）
-  const loadVocabulary = async () => {
-    if (!isAuthenticated || !currentUser) return;
-
-    setLoadingVocabulary(true);
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
-      const response = await fetch(
-        `/api/learning/vocabulary/stats?student_id=${currentStudent.id}&range=${vocabularyTimeRange}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        setVocabularyData(result.data || []);
-      } else {
-        console.error('載入單字數據失敗:', result.error);
-        loadMockVocabularyData();
-      }
-    } catch (error) {
-      console.error('載入單字數據時發生錯誤:', error);
-      loadMockVocabularyData();
-    } finally {
-      setLoadingVocabulary(false);
-    }
-  };
+  // [已移除] loadGrades 和 loadVocabulary 函數
+  // 現在使用 aggregateGradeData 和 aggregateVocabularyData 從詳細數據聚合
 
   // 載入作業數據（API）
   const loadAssignments = async () => {
@@ -725,8 +659,6 @@ const Dashboard = () => {
 
   // 載入 Mock 數據（未登入時使用）
   const loadMockData = () => {
-    loadMockGradeData();
-    loadMockVocabularyData();
     loadMockAssignmentData();
     loadMockExamsData();
     loadMockVocabularySessionsData();
@@ -839,55 +771,8 @@ const Dashboard = () => {
     }
   };
 
-  // 根據時間範圍篩選 Mock 成績數據
-  const loadMockGradeData = () => {
-    let filteredData = [...allGradeData_deprecated];
-
-    switch (gradeTimeRange) {
-      case 'week':
-        filteredData = filteredData.slice(-2);
-        break;
-      case 'month':
-        filteredData = filteredData.slice(-4);
-        break;
-      case 'quarter':
-        filteredData = filteredData.slice(-12);
-        break;
-      case 'semester':
-        filteredData = filteredData.slice(-18);
-        break;
-      case 'all':
-        // 顯示全部
-        break;
-    }
-
-    setGradeData(filteredData);
-  };
-
-  // 根據時間範圍篩選 Mock 單字數據
-  const loadMockVocabularyData = () => {
-    let filteredData = [...allVocabularyData_deprecated];
-
-    switch (vocabularyTimeRange) {
-      case 'week':
-        filteredData = filteredData.slice(-2);
-        break;
-      case 'month':
-        filteredData = filteredData.slice(-4);
-        break;
-      case 'quarter':
-        filteredData = filteredData.slice(-12);
-        break;
-      case 'semester':
-        filteredData = filteredData.slice(-18);
-        break;
-      case 'all':
-        // 顯示全部
-        break;
-    }
-
-    setVocabularyData(filteredData);
-  };
+  // [已移除] loadMockGradeData 和 loadMockVocabularyData 函數
+  // 現在使用聚合函數從 exams 和 vocabularySessions 即時計算
 
   // 根據時間範圍篩選 Mock 作業數據
   const loadMockAssignmentData = () => {
@@ -1034,6 +919,168 @@ const Dashboard = () => {
     }
   };
 
+  // 數據聚合函數：從 exams 聚合成績趨勢數據
+  const aggregateGradeData = (examsList: any[], timeRange: string) => {
+    if (!examsList || examsList.length === 0) return [];
+
+    // 按日期排序
+    const sortedExams = [...examsList].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // 根據時間範圍篩選
+    const now = new Date();
+    let filteredExams = sortedExams;
+
+    switch (timeRange) {
+      case 'week':
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        filteredExams = sortedExams.filter(e => new Date(e.date) >= twoWeeksAgo);
+        break;
+      case 'month':
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filteredExams = sortedExams.filter(e => new Date(e.date) >= oneMonthAgo);
+        break;
+      case 'quarter':
+        const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        filteredExams = sortedExams.filter(e => new Date(e.date) >= threeMonthsAgo);
+        break;
+      case 'semester':
+        const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        filteredExams = sortedExams.filter(e => new Date(e.date) >= sixMonthsAgo);
+        break;
+      case 'all':
+      default:
+        filteredExams = sortedExams;
+        break;
+    }
+
+    // 按週分組
+    const weekMap = new Map<string, any>();
+    filteredExams.forEach(exam => {
+      const examDate = new Date(exam.date);
+      const weekStart = new Date(examDate);
+      weekStart.setDate(examDate.getDate() - examDate.getDay()); // 週日為起始
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      if (!weekMap.has(weekKey)) {
+        weekMap.set(weekKey, {
+          name: `第${Array.from(weekMap.keys()).length + 1}週`,
+          date: weekKey,
+          examsByType: {}
+        });
+      }
+
+      const weekData = weekMap.get(weekKey);
+      const examType = exam.type || 'other';
+
+      if (!weekData.examsByType[examType]) {
+        weekData.examsByType[examType] = [];
+      }
+
+      weekData.examsByType[examType].push(exam);
+    });
+
+    // 計算每週各類型考試的平均分數
+    const result = Array.from(weekMap.values()).map(week => {
+      const weekData: any = { name: week.name };
+
+      Object.keys(week.examsByType).forEach(examType => {
+        const examsOfType = week.examsByType[examType];
+        const avgScore = examsOfType.reduce((sum: number, e: any) =>
+          sum + (e.score / e.maxScore * 100), 0
+        ) / examsOfType.length;
+        weekData[examType] = Math.round(avgScore);
+      });
+
+      return weekData;
+    });
+
+    return result;
+  };
+
+  // 數據聚合函數：從 vocabularySessions 聚合單字統計數據
+  const aggregateVocabularyData = (sessions: any[], timeRange: string) => {
+    if (!sessions || sessions.length === 0) return [];
+
+    // 按日期排序
+    const sortedSessions = [...sessions].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // 根據時間範圍篩選
+    const now = new Date();
+    let filteredSessions = sortedSessions;
+
+    switch (timeRange) {
+      case 'week':
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        filteredSessions = sortedSessions.filter(s => new Date(s.date) >= twoWeeksAgo);
+        break;
+      case 'month':
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filteredSessions = sortedSessions.filter(s => new Date(s.date) >= oneMonthAgo);
+        break;
+      case 'quarter':
+        const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        filteredSessions = sortedSessions.filter(s => new Date(s.date) >= threeMonthsAgo);
+        break;
+      case 'semester':
+        const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        filteredSessions = sortedSessions.filter(s => new Date(s.date) >= sixMonthsAgo);
+        break;
+      case 'all':
+      default:
+        filteredSessions = sortedSessions;
+        break;
+    }
+
+    // 按週分組
+    const weekMap = new Map<string, any>();
+    filteredSessions.forEach(session => {
+      const sessionDate = new Date(session.date);
+      const weekStart = new Date(sessionDate);
+      weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      if (!weekMap.has(weekKey)) {
+        weekMap.set(weekKey, {
+          name: `第${Array.from(weekMap.keys()).length + 1}週`,
+          date: weekKey,
+          totalWords: 0,
+          correctWords: 0,
+          sessionCount: 0
+        });
+      }
+
+      const weekData = weekMap.get(weekKey);
+      weekData.totalWords += session.wordsLearned || 0;
+      weekData.correctWords += Math.round((session.wordsLearned || 0) * (session.accuracy || 0) / 100);
+      weekData.sessionCount += 1;
+    });
+
+    // 轉換為圖表數據格式
+    const result = Array.from(weekMap.values()).map(week => ({
+      name: week.name,
+      已教單字: week.totalWords,
+      答對單字: week.correctWords,
+      答錯單字: week.totalWords - week.correctWords
+    }));
+
+    return result;
+  };
+
+  // 使用 React.useMemo 優化效能，只在依賴項改變時重新計算
+  const aggregatedGradeData = React.useMemo(() =>
+    aggregateGradeData(exams, gradeTimeRange),
+    [exams, gradeTimeRange]
+  );
+
+  const aggregatedVocabularyData = React.useMemo(() =>
+    aggregateVocabularyData(vocabularySessions, vocabularyTimeRange),
+    [vocabularySessions, vocabularyTimeRange]
+  );
+
   // 處理甘特圖任務點擊
   const handleTaskClick = (task: GanttTask) => {
     console.log('點擊任務:', task);
@@ -1140,13 +1187,13 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {loadingExamTypes ? (
+                  {loadingExams ? (
                     <div className="flex items-center justify-center h-[300px]">
                       <p className="text-muted-foreground">載入中...</p>
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={gradeData}>
+                      <LineChart data={aggregatedGradeData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -1194,8 +1241,13 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={vocabularyData}>
+                  {loadingVocabularySessions ? (
+                    <div className="flex items-center justify-center h-[300px]">
+                      <p className="text-muted-foreground">載入中...</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={aggregatedVocabularyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -1236,6 +1288,7 @@ const Dashboard = () => {
                       <Bar dataKey="答錯單字" stackId="a" fill="rgb(239, 68, 68)" radius={[4, 4, 0, 0]} name="答錯單字" />
                     </BarChart>
                   </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
             </div>
