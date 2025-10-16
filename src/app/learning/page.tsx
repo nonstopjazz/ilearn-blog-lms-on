@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -1070,13 +1070,13 @@ const Dashboard = () => {
     return result;
   };
 
-  // 使用 React.useMemo 優化效能，只在依賴項改變時重新計算
-  const aggregatedGradeData = React.useMemo(() =>
+  // 使用 useMemo 優化效能，只在依賴項改變時重新計算
+  const aggregatedGradeData = useMemo(() =>
     aggregateGradeData(exams, gradeTimeRange),
     [exams, gradeTimeRange]
   );
 
-  const aggregatedVocabularyData = React.useMemo(() =>
+  const aggregatedVocabularyData = useMemo(() =>
     aggregateVocabularyData(vocabularySessions, vocabularyTimeRange),
     [vocabularySessions, vocabularyTimeRange]
   );
