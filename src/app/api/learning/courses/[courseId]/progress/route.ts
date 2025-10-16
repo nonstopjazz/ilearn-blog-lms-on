@@ -46,10 +46,10 @@ export async function GET(
 
     const lessonIds = lessons.map(l => l.id);
 
-    // 查詢用戶進度
+    // 查詢用戶進度 - 使用實際的數據庫欄位名稱
     const { data: progress, error: progressError } = await supabase
       .from('user_lesson_progress')
-      .select('lesson_id, progress_percentage, completed, current_time, last_watched_at')
+      .select('lesson_id, progress_percent, completed, watched_duration, completed_at, created_at')
       .eq('user_id', userId)
       .in('lesson_id', lessonIds);
 
@@ -69,10 +69,10 @@ export async function GET(
         title: lesson.title,
         order_index: lesson.order_index,
         video_duration: lesson.video_duration,
-        progress_percentage: userProgress?.progress_percentage || 0,
+        progress_percentage: userProgress?.progress_percent || 0,
         completed: userProgress?.completed || false,
-        current_time: userProgress?.current_time || 0,
-        last_watched_at: userProgress?.last_watched_at || null
+        current_time: userProgress?.watched_duration || 0,
+        last_watched_at: userProgress?.completed_at || userProgress?.created_at || null
       };
     });
 
