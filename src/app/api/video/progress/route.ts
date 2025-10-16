@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       user_id,
       lesson_id,
       course_id,
-      watched_duration: videoPosition,
-      progress_percent: progressValue,
+      current_time: videoPosition,
+      progress_percentage: progressValue,
       completed
     })
 
@@ -53,15 +53,14 @@ export async function POST(request: NextRequest) {
     let data, error
 
     if (existing) {
-      // 更新現有記錄
+      // 更新現有記錄 - 使用正確的數據庫欄位名稱
       const result = await supabase
         .from('user_lesson_progress')
         .update({
-          course_id,
-          watched_duration: videoPosition,
-          progress_percent: progressValue || 0,
+          current_time: videoPosition,
+          progress_percentage: progressValue || 0,
           completed: completed || false,
-          completed_at: completed ? new Date().toISOString() : null
+          last_watched_at: new Date().toISOString()
         })
         .eq('user_id', user_id)
         .eq('lesson_id', lesson_id)
@@ -71,17 +70,16 @@ export async function POST(request: NextRequest) {
       data = result.data
       error = result.error
     } else {
-      // 插入新記錄
+      // 插入新記錄 - 使用正確的數據庫欄位名稱
       const result = await supabase
         .from('user_lesson_progress')
         .insert({
           user_id,
           lesson_id,
-          course_id,
-          watched_duration: videoPosition,
-          progress_percent: progressValue || 0,
+          current_time: videoPosition,
+          progress_percentage: progressValue || 0,
           completed: completed || false,
-          completed_at: completed ? new Date().toISOString() : null
+          last_watched_at: new Date().toISOString()
         })
         .select()
         .single()
