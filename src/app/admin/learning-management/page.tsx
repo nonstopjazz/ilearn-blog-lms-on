@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import { LearningReport } from '@/components/LearningReport';
 import { Checkbox } from '@/components/ui/checkbox';
+import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 
 interface Student {
   id: string;
@@ -134,6 +135,11 @@ export default function AdminLearningManagementPage() {
   // 作業列表狀態
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
+
+  // 專案作業管理狀態
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [deletingAssignmentId, setDeletingAssignmentId] = useState<string | null>(null);
 
   // 載入數據
   useEffect(() => {
@@ -405,6 +411,64 @@ export default function AdminLearningManagementPage() {
       alert('寄送報告失敗: ' + error.message);
     } finally {
       setIsSendingReport(false);
+    }
+  };
+
+  // 處理新增/編輯專案作業
+  const handleSubmitAssignment = async (formData: any) => {
+    try {
+      const url = editingAssignment
+        ? `/api/assignments/${editingAssignment.id}`
+        : '/api/assignments';
+
+      const method = editingAssignment ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(editingAssignment ? '作業更新成功！' : '作業新增成功！');
+        loadAssignments(); // 重新載入作業列表
+        setShowAssignmentDialog(false);
+        setEditingAssignment(null);
+      } else {
+        throw new Error(result.error || '操作失敗');
+      }
+    } catch (error: any) {
+      alert('操作失敗: ' + error.message);
+      throw error;
+    }
+  };
+
+  // 處理刪除作業
+  const handleDeleteAssignment = async (assignmentId: string) => {
+    if (!confirm('確定要刪除這個專案作業嗎？相關的提交記錄也會被刪除。')) {
+      return;
+    }
+
+    setDeletingAssignmentId(assignmentId);
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('作業刪除成功！');
+        loadAssignments();
+      } else {
+        throw new Error(result.error || '刪除失敗');
+      }
+    } catch (error: any) {
+      alert('刪除失敗: ' + error.message);
+    } finally {
+      setDeletingAssignmentId(null);
     }
   };
 
@@ -1125,17 +1189,127 @@ export default function AdminLearningManagementPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="records">
+        <TabsContent value="records" className="space-y-4">
+          {/* 專案作業管理 */}
           <Card>
             <CardHeader>
-              <CardTitle>學習記錄管理</CardTitle>
-              <CardDescription>新增、編輯和查看學生的詳細學習記錄</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>專案作業管理</CardTitle>
+                  <CardDescription>管理學生的專案作業與甘特圖任務</CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingAssignment(null);
+                    setShowAssignmentDialog(true);
+                  }}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  新增專案作業
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">學習記錄管理功能開發中</p>
-              </div>
+              {loadingAssignments ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                  <p className="text-muted-foreground mt-2">載入作業列表中...</p>
+                </div>
+              ) : assignments.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">尚未建立任何專案作業</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    點擊上方按鈕新增作業
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>作業標題</TableHead>
+                      <TableHead>類型</TableHead>
+                      <TableHead>截止日期</TableHead>
+                      <TableHead>優先度</TableHead>
+                      <TableHead>滿分</TableHead>
+                      <TableHead>狀態</TableHead>
+                      <TableHead>操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignments.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.title}</div>
+                            {assignment.description && (
+                              <div className="text-sm text-muted-foreground line-clamp-1">
+                                {assignment.description}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{assignment.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {assignment.dueDate
+                            ? new Date(assignment.dueDate).toLocaleDateString('zh-TW')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              assignment.priority === 'urgent' ? 'destructive' :
+                              assignment.priority === 'high' ? 'default' :
+                              'secondary'
+                            }
+                          >
+                            {assignment.priority === 'urgent' ? '緊急' :
+                             assignment.priority === 'high' ? '高' :
+                             assignment.priority === 'medium' ? '中' : '低'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{assignment.maxScore || 100}</TableCell>
+                        <TableCell>
+                          <Badge variant={assignment.isPublished ? 'default' : 'secondary'}>
+                            {assignment.isPublished ? '已發布' : '草稿'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingAssignment(assignment);
+                                setShowAssignmentDialog(true);
+                              }}
+                              title="編輯作業"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteAssignment(assignment.id)}
+                              disabled={deletingAssignmentId === assignment.id}
+                              title="刪除作業"
+                            >
+                              {deletingAssignmentId === assignment.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1627,6 +1801,36 @@ export default function AdminLearningManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 專案作業表單對話框 */}
+      <AssignmentFormDialog
+        open={showAssignmentDialog}
+        onOpenChange={setShowAssignmentDialog}
+        onSubmit={handleSubmitAssignment}
+        students={students.map(s => ({
+          id: s.id,
+          name: s.name,
+          courseId: '', // TODO: 從學生資料中取得課程ID
+          courseName: '' // TODO: 從學生資料中取得課程名稱
+        }))}
+        editData={editingAssignment ? {
+          title: editingAssignment.title,
+          description: editingAssignment.description,
+          instructions: editingAssignment.instructions,
+          courseId: editingAssignment.courseId,
+          studentIds: editingAssignment.studentIds || [],
+          dueDate: editingAssignment.dueDate,
+          assignmentType: editingAssignment.category,
+          priority: editingAssignment.priority,
+          submissionType: editingAssignment.submissionType,
+          maxScore: editingAssignment.maxScore,
+          estimatedDuration: editingAssignment.estimatedDuration,
+          isRequired: editingAssignment.isRequired,
+          tags: editingAssignment.tags || [],
+          resources: editingAssignment.resources || []
+        } : undefined}
+        loading={false}
+      />
     </div>
   );
 }
