@@ -515,7 +515,7 @@ export default function AdminLearningManagementPage() {
                     <SelectContent>
                       <SelectItem value="vocabulary">單字學習</SelectItem>
                       <SelectItem value="exam">考試成績</SelectItem>
-                      <SelectItem value="assignment">作業提交</SelectItem>
+                      <SelectItem value="task">學生任務</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -782,110 +782,131 @@ export default function AdminLearningManagementPage() {
                   </>
                 )}
 
-                {newRecordForm.recordType === 'assignment' && (
+                {newRecordForm.recordType === 'task' && (
                   <>
                     <div>
                       <Label>
-                        選擇作業 <span className="text-red-500">*</span>
+                        任務類型 <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={newRecordForm.data.assignment_id || ''}
+                        value={newRecordForm.data.task_type || 'onetime'}
                         onValueChange={(value) => setNewRecordForm(prev => ({
                           ...prev,
-                          data: { ...prev.data, assignment_id: value }
-                        }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={loadingAssignments ? "載入作業中..." : "選擇作業"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {assignments.map(assignment => (
-                            <SelectItem key={assignment.id} value={assignment.id}>
-                              {assignment.title}
-                              {assignment.due_date && ` (截止: ${new Date(assignment.due_date).toLocaleDateString('zh-TW')})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {assignments.length === 0 && !loadingAssignments && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          目前沒有已發布的作業
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label>提交內容</Label>
-                      <Textarea
-                        value={newRecordForm.data.content || ''}
-                        onChange={(e) => setNewRecordForm(prev => ({
-                          ...prev,
-                          data: { ...prev.data, content: e.target.value }
-                        }))}
-                        placeholder="輸入作業內容或答案..."
-                        rows={4}
-                      />
-                    </div>
-                    <div>
-                      <Label>提交狀態</Label>
-                      <Select
-                        value={newRecordForm.data.status || 'submitted'}
-                        onValueChange={(value) => setNewRecordForm(prev => ({
-                          ...prev,
-                          data: { ...prev.data, status: value }
+                          data: { ...prev.data, task_type: value }
                         }))}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="submitted">已提交</SelectItem>
-                          <SelectItem value="graded">已批改</SelectItem>
-                          <SelectItem value="returned">已退回</SelectItem>
-                          <SelectItem value="resubmit">需重新提交</SelectItem>
+                          <SelectItem value="onetime">一次性任務(有截止日期)</SelectItem>
+                          <SelectItem value="daily">每日任務(持續追蹤)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>得分</Label>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="例如: 90"
-                          value={newRecordForm.data.score || ''}
-                          onChange={(e) => setNewRecordForm(prev => ({
-                            ...prev,
-                            data: { ...prev.data, score: parseFloat(e.target.value) || 0 }
-                          }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>滿分</Label>
-                        <Input
-                          type="number"
-                          value={newRecordForm.data.max_score || 100}
-                          onChange={(e) => setNewRecordForm(prev => ({
-                            ...prev,
-                            data: { ...prev.data, max_score: parseFloat(e.target.value) || 100 }
-                          }))}
-                        />
-                      </div>
-                    </div>
-                    {newRecordForm.data.score && newRecordForm.data.max_score && (
-                      <div className="text-sm text-muted-foreground bg-purple-50 dark:bg-purple-950 p-3 rounded-md">
-                        得分率: <span className="font-semibold">{((newRecordForm.data.score / newRecordForm.data.max_score) * 100).toFixed(1)}%</span>
-                      </div>
-                    )}
                     <div>
-                      <Label>批改評語</Label>
+                      <Label>
+                        任務內容 <span className="text-red-500">*</span>
+                      </Label>
                       <Textarea
-                        placeholder="針對作業內容給予回饋..."
-                        value={newRecordForm.data.feedback || ''}
+                        value={newRecordForm.data.task_description || ''}
                         onChange={(e) => setNewRecordForm(prev => ({
                           ...prev,
-                          data: { ...prev.data, feedback: e.target.value }
+                          data: { ...prev.data, task_description: e.target.value }
                         }))}
+                        placeholder="例如: 完成 Unit 5 閱讀理解習題 / 每天背10個單字..."
                         rows={3}
+                      />
+                    </div>
+                    {newRecordForm.data.task_type === 'onetime' && (
+                      <div>
+                        <Label>
+                          截止日期 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          value={newRecordForm.data.due_date || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, due_date: e.target.value }
+                          }))}
+                        />
+                      </div>
+                    )}
+                    {newRecordForm.data.task_type === 'daily' && (
+                      <div>
+                        <Label>執行天數</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="例如: 7 (代表連續7天)"
+                          value={newRecordForm.data.daily_total_days || ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, daily_total_days: parseInt(e.target.value) || 0 }
+                          }))}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          設定後會追蹤學生連續完成的天數
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>任務分類</Label>
+                        <Select
+                          value={newRecordForm.data.category || ''}
+                          onValueChange={(value) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, category: value }
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="選擇分類" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="reading">閱讀</SelectItem>
+                            <SelectItem value="writing">寫作</SelectItem>
+                            <SelectItem value="vocabulary">背單字</SelectItem>
+                            <SelectItem value="listening">聽力</SelectItem>
+                            <SelectItem value="speaking">口說</SelectItem>
+                            <SelectItem value="homework">作業</SelectItem>
+                            <SelectItem value="other">其他</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>優先級</Label>
+                        <Select
+                          value={newRecordForm.data.priority || 'normal'}
+                          onValueChange={(value) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, priority: value }
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">低</SelectItem>
+                            <SelectItem value="normal">普通</SelectItem>
+                            <SelectItem value="high">高</SelectItem>
+                            <SelectItem value="urgent">緊急</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>預估時間(分鐘)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="例如: 30"
+                        value={newRecordForm.data.estimated_duration || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, estimated_duration: parseInt(e.target.value) || 0 }
+                        }))}
                       />
                     </div>
                   </>

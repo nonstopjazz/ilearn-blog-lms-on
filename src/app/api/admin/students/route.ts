@@ -303,6 +303,42 @@ export async function POST(request: NextRequest) {
         result = assignResult;
         break;
 
+      case 'task':
+        // 檢查必填欄位
+        if (!data.task_description || !data.task_type) {
+          return NextResponse.json(
+            { success: false, error: 'Missing required fields: task_description, task_type' },
+            { status: 400 }
+          );
+        }
+
+        // 一次性任務需要截止日期
+        if (data.task_type === 'onetime' && !data.due_date) {
+          return NextResponse.json(
+            { success: false, error: 'due_date is required for onetime tasks' },
+            { status: 400 }
+          );
+        }
+
+        const { data: taskResult, error: taskError } = await supabase
+          .from('student_tasks')
+          .insert([{
+            student_id: validStudentId,
+            task_description: data.task_description,
+            task_type: data.task_type,
+            due_date: data.due_date || null,
+            category: data.category || null,
+            priority: data.priority || 'normal',
+            daily_total_days: data.daily_total_days || null,
+            estimated_duration: data.estimated_duration || null
+          }])
+          .select()
+          .single();
+
+        if (taskError) throw taskError;
+        result = taskResult;
+        break;
+
       default:
         return NextResponse.json(
           { success: false, error: 'Invalid record type' },
