@@ -162,11 +162,11 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 驗證必填欄位
-    if (!title || !courseId || !dueDate) {
+    if (!title || !dueDate) {
       return NextResponse.json({
         success: false,
         error: '缺少必填欄位',
-        message: '標題、課程ID和截止日期為必填欄位'
+        message: '標題和截止日期為必填欄位'
       }, { status: 400 });
     }
 
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
             resources, repeat_schedule, requirements, is_published,
             created_at, updated_at
           ) VALUES (
-            ${title}, ${description}, ${studentId}, ${lessonId}, ${dueDate},
+            ${title}, ${description}, ${courseId}, ${lessonId}, ${dueDate},
             ${assignmentType || '一般作業'}, ${priority || 'medium'},
             ${submissionType || 'text'}, ${maxScore || 100},
             ${estimatedDuration}, ${isRequired || false}, ${instructions},
