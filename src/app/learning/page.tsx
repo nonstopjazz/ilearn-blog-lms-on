@@ -78,6 +78,11 @@ const Dashboard = () => {
   const [courseLessons, setCourseLessons] = useState<any[]>([]);
   const [loadingLessons, setLoadingLessons] = useState(false);
 
+  // 學生任務狀態
+  const [studentTasks, setStudentTasks] = useState<any[]>([]);
+  const [loadingStudentTasks, setLoadingStudentTasks] = useState(false);
+  const [taskStats, setTaskStats] = useState<any>({});
+
   // [已棄用] 完整的成績數據（模擬一整年的資料）
   // 現在使用 API 取得真實數據
   const allGradeData_deprecated = [
@@ -579,6 +584,7 @@ const Dashboard = () => {
     if (isAuthenticated) {
       // 已登入：載入真實 API 數據
       loadAssignments();
+      loadStudentTasks();
       loadExamsData();
       loadVocabularySessionsData();
       loadProgressDataAPI();
@@ -598,7 +604,7 @@ const Dashboard = () => {
   // [已移除] loadGrades 和 loadVocabulary 函數
   // 現在使用 aggregateGradeData 和 aggregateVocabularyData 從詳細數據聚合
 
-  // 載入作業數據（API）
+  // 載入作業數據（API）- 專案作業用
   const loadAssignments = async () => {
     if (!isAuthenticated || !currentUser) return;
 
@@ -654,6 +660,40 @@ const Dashboard = () => {
       loadMockAssignmentData();
     } finally {
       setLoadingAssignments(false);
+    }
+  };
+
+  // 載入學生任務數據（API）- 作業管理用
+  const loadStudentTasks = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    setLoadingStudentTasks(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
+      const response = await fetch(
+        `/api/learning/tasks?student_id=${currentUser.id}`,
+        {
+          headers: {
+            'x-api-key': apiKey
+          }
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setStudentTasks(result.data);
+        setTaskStats(result.stats);
+      } else {
+        console.error('載入學生任務失敗:', result.error);
+        setStudentTasks([]);
+        setTaskStats({});
+      }
+    } catch (error) {
+      console.error('載入學生任務時發生錯誤:', error);
+      setStudentTasks([]);
+      setTaskStats({});
+    } finally {
+      setLoadingStudentTasks(false);
     }
   };
 
@@ -1105,14 +1145,18 @@ const Dashboard = () => {
 
         {/* 頁籤系統 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 bg-muted p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-8 bg-muted p-1 h-auto">
             <TabsTrigger value="overview" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <TrendingUp className="w-4 h-4" />
               <span>總覽</span>
             </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
+              <CheckCircle className="w-4 h-4" />
+              <span>作業管理</span>
+            </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <ClipboardList className="w-4 h-4" />
-              <span>作業管理</span>
+              <span>專案作業</span>
             </TabsTrigger>
             <TabsTrigger value="grades" className="flex items-center space-x-2 data-[state=active]:bg-white py-3">
               <Target className="w-4 h-4" />
@@ -1299,185 +1343,415 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>作業進度追蹤</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">各項作業完成情況一覽</p>
+                    <p className="text-sm text-muted-foreground mt-1">每堂課交代的作業完成情況</p>
                   </div>
-                  <Select value={assignmentTimeRange} onValueChange={setAssignmentTimeRange}>
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="week">最近1週</SelectItem>
-                      <SelectItem value="month">最近1個月</SelectItem>
-                      <SelectItem value="quarter">最近3個月</SelectItem>
-                      <SelectItem value="all">全部資料</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {taskStats.max_streak > 0 && (
+                    <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                      <Trophy className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">最高連續 {taskStats.max_streak} 天</span>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-              <div className="space-y-6">
-                {assignmentsByWeek.map((weekData, weekIndex) => (
-                  <div key={weekIndex} className="border border-border/50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-foreground">{weekData.week}</h3>
-                      <span className="text-sm text-muted-foreground">({weekData.dateRange})</span>
-                    </div>
-                    <div className="space-y-3">
-                      {weekData.assignments.map((assignment, index) => {
-                        // 計算每週完成天數（模擬數據）
-                        const daysInWeek = 7;
-                        const completedDays = Math.floor((assignment.progress / 100) * daysInWeek);
-                        const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
+              {loadingStudentTasks ? (
+                <div className="text-center py-8 text-muted-foreground">載入中...</div>
+              ) : studentTasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
+              ) : (
+                <div className="space-y-3">
+                  {studentTasks.map((task, index) => {
+                    // 計算進度百分比
+                    let progress = 0;
+                    if (task.task_type === 'daily' && task.daily_total_days > 0) {
+                      progress = Math.round((task.daily_completed_days / task.daily_total_days) * 100);
+                    } else if (task.task_type === 'onetime') {
+                      progress = task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 0;
+                    }
 
-                        // 計算連續天數（簡化版，實際應從後端獲取）
-                        const streakDays = assignment.type === 'daily' ? completedDays : 0;
+                    // 解析每日完成記錄
+                    const dailyCompletion = task.daily_completion || [];
 
-                        return assignment.type === 'daily' ? (
-                          // 每日任務樣式
-                          <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-l-4 border-blue-500">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xl">📅</span>
-                                  <h4 className="font-semibold text-foreground">{assignment.name}</h4>
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
-                                    每日任務
-                                  </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground ml-7">{assignment.description}</p>
-                              </div>
-                              {streakDays > 0 && (
-                                <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                                  <span className="text-lg">🔥</span>
-                                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">連續 {streakDays} 天</span>
-                                </div>
+                    return task.task_type === 'daily' ? (
+                      // 每日任務樣式
+                      <div key={task.id} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-l-4 border-blue-500">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">📅</span>
+                              <h4 className="font-semibold text-foreground">{task.task_description}</h4>
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
+                                每日任務
+                              </span>
+                              {task.category && (
+                                <Badge variant="outline" className="text-xs">{task.category}</Badge>
                               )}
                             </div>
+                            <p className="text-sm text-muted-foreground ml-7">
+                              交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
+                              {task.daily_total_days > 0 && ` · 目標: ${task.daily_total_days} 天`}
+                            </p>
+                          </div>
+                          {task.daily_streak > 0 && (
+                            <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                              <span className="text-lg">🔥</span>
+                              <span className="text-sm font-bold text-orange-600 dark:text-orange-400">連續 {task.daily_streak} 天</span>
+                            </div>
+                          )}
+                        </div>
 
-                            {/* 本週完成狀況 */}
-                            <div className="ml-7 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-foreground">本週完成狀況</span>
-                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                  {completedDays}/{daysInWeek} 天
-                                </span>
-                              </div>
+                        {/* 完成進度 */}
+                        <div className="ml-7 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-foreground">完成進度</span>
+                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                              {task.daily_completed_days || 0}/{task.daily_total_days || 0} 天
+                            </span>
+                          </div>
 
-                              {/* 週一到週日勾選框 */}
-                              <div className="flex gap-2">
-                                {weekDays.map((day, dayIndex) => (
-                                  <div key={dayIndex} className="flex-1 flex flex-col items-center gap-1">
-                                    <span className="text-xs text-muted-foreground">{day}</span>
-                                    <div className={`w-full h-8 rounded flex items-center justify-center font-semibold text-sm transition-all ${
-                                      dayIndex < completedDays
-                                        ? 'bg-blue-500 text-white shadow-sm'
-                                        : 'bg-muted text-muted-foreground'
-                                    }`}>
-                                      {dayIndex < completedDays ? '✓' : '○'}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                          {/* 完成率進度條 */}
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-muted rounded-full h-2.5">
+                              <div
+                                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold text-foreground min-w-[3rem] text-right">
+                              {progress}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // 一次性任務樣式
+                      <div key={task.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border-l-4 border-purple-500">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">📝</span>
+                              <h4 className="font-semibold text-foreground">{task.task_description}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                task.status === 'completed' ? 'bg-green-500 text-white' :
+                                task.status === 'in_progress' ? 'bg-yellow-500 text-white' :
+                                task.status === 'overdue' ? 'bg-red-500 text-white' :
+                                'bg-purple-500 text-white'
+                              }`}>
+                                {task.status === 'completed' ? '已完成' :
+                                 task.status === 'in_progress' ? '進行中' :
+                                 task.status === 'overdue' ? '逾期' : '待處理'}
+                              </span>
+                              {task.category && (
+                                <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-7">
+                              交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {task.due_date ? `截止: ${new Date(task.due_date).toLocaleDateString('zh-TW')}` : '下次上課檢查'}
+                            </span>
+                          </div>
+                        </div>
 
-                              {/* 完成率進度條 */}
-                              <div className="flex items-center gap-3 mt-3">
-                                <div className="flex-1 bg-muted rounded-full h-2.5">
-                                  <div
-                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${assignment.progress}%` }}
-                                  />
-                                </div>
-                                <span className="text-sm font-semibold text-foreground min-w-[3rem] text-right">
-                                  {assignment.progress}%
-                                </span>
-                              </div>
+                        {/* 整體進度 */}
+                        <div className="ml-7 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-foreground">完成狀態</span>
+                            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                              {progress}%
+                            </span>
+                          </div>
+
+                          {/* 進度條 */}
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-muted rounded-full h-2.5">
+                              <div
+                                className={`h-2.5 rounded-full transition-all duration-300 ${
+                                  progress === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                  progress >= 50 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                  'bg-gradient-to-r from-purple-500 to-pink-500'
+                                }`}
+                                style={{ width: `${progress}%` }}
+                              />
                             </div>
                           </div>
-                        ) : (
-                          // 單次作業樣式
-                          <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border-l-4 border-purple-500">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xl">📝</span>
-                                  <h4 className="font-semibold text-foreground">{assignment.name}</h4>
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500 text-white">
-                                    上課檢查
+
+                          {/* 狀態指示 */}
+                          <div className="flex items-center gap-2 mt-2">
+                            {task.status === 'completed' ? (
+                              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                <CheckCircle className="w-4 h-4" />
+                                <span className="text-xs font-medium">已完成</span>
+                                {task.completion_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({new Date(task.completion_date).toLocaleDateString('zh-TW')})
                                   </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground ml-7">{assignment.description}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">下次上課檢查</span>
-                              </div>
-                            </div>
-
-                            {/* 整體進度 */}
-                            <div className="ml-7 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-foreground">完成進度</span>
-                                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                                  {assignment.progress}%
-                                </span>
-                              </div>
-
-                              {/* 進度條 */}
-                              <div className="flex items-center gap-3">
-                                <div className="flex-1 bg-muted rounded-full h-2.5">
-                                  <div
-                                    className={`h-2.5 rounded-full transition-all duration-300 ${
-                                      assignment.progress === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                                      assignment.progress >= 70 ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                                      assignment.progress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                                      'bg-gradient-to-r from-red-500 to-rose-500'
-                                    }`}
-                                    style={{ width: `${assignment.progress}%` }}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* 狀態指示 */}
-                              <div className="flex items-center gap-2 mt-2">
-                                {assignment.progress === 100 ? (
-                                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                    <CheckCircle className="w-4 h-4" />
-                                    <span className="text-xs font-medium">已完成</span>
-                                  </div>
-                                ) : assignment.progress >= 70 ? (
-                                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                    <TrendingUp className="w-4 h-4" />
-                                    <span className="text-xs font-medium">進度良好</span>
-                                  </div>
-                                ) : assignment.progress >= 40 ? (
-                                  <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                                    <AlertCircle className="w-4 h-4" />
-                                    <span className="text-xs font-medium">需加強</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                                    <AlertCircle className="w-4 h-4" />
-                                    <span className="text-xs font-medium">進度落後</span>
-                                  </div>
                                 )}
                               </div>
-                            </div>
+                            ) : task.status === 'in_progress' ? (
+                              <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                                <Clock className="w-4 h-4" />
+                                <span className="text-xs font-medium">進行中</span>
+                              </div>
+                            ) : task.status === 'overdue' ? (
+                              <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                <AlertCircle className="w-4 h-4" />
+                                <span className="text-xs font-medium">逾期</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                <TrendingUp className="w-4 h-4" />
+                                <span className="text-xs font-medium">待處理</span>
+                              </div>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* 作業管理頁籤 */}
-          <TabsContent value="assignments" className="space-y-6">
+          {/* 作業管理頁籤 (新) - 學生任務 */}
+          <TabsContent value="tasks" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">作業管理</h2>
+                <p className="text-muted-foreground">每堂課交代的作業任務與完成追蹤</p>
+              </div>
+            </div>
+
+            {/* 統計卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">總任務數</p>
+                      <p className="text-2xl font-bold">{taskStats.total || 0}</p>
+                    </div>
+                    <ClipboardList className="w-8 h-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">已完成</p>
+                      <p className="text-2xl font-bold text-green-600">{taskStats.completed || 0}</p>
+                    </div>
+                    <CheckCircle className="w-8 h-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">進行中</p>
+                      <p className="text-2xl font-bold text-yellow-600">{taskStats.in_progress || 0}</p>
+                    </div>
+                    <Clock className="w-8 h-8 text-yellow-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">最高連續</p>
+                      <p className="text-2xl font-bold text-orange-600">{taskStats.max_streak || 0} 天</p>
+                    </div>
+                    <Trophy className="w-8 h-8 text-orange-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 任務列表 - 與總覽頁籤相同的顯示 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>所有任務</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingStudentTasks ? (
+                  <div className="text-center py-8 text-muted-foreground">載入中...</div>
+                ) : studentTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentTasks.map((task, index) => {
+                      // 計算進度百分比
+                      let progress = 0;
+                      if (task.task_type === 'daily' && task.daily_total_days > 0) {
+                        progress = Math.round((task.daily_completed_days / task.daily_total_days) * 100);
+                      } else if (task.task_type === 'onetime') {
+                        progress = task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 0;
+                      }
+
+                      return task.task_type === 'daily' ? (
+                        // 每日任務樣式
+                        <div key={task.id} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-l-4 border-blue-500">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xl">📅</span>
+                                <h4 className="font-semibold text-foreground">{task.task_description}</h4>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
+                                  每日任務
+                                </span>
+                                {task.category && (
+                                  <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground ml-7">
+                                交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
+                                {task.daily_total_days > 0 && ` · 目標: ${task.daily_total_days} 天`}
+                              </p>
+                            </div>
+                            {task.daily_streak > 0 && (
+                              <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                                <span className="text-lg">🔥</span>
+                                <span className="text-sm font-bold text-orange-600 dark:text-orange-400">連續 {task.daily_streak} 天</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 完成進度 */}
+                          <div className="ml-7 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-foreground">完成進度</span>
+                              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                {task.daily_completed_days || 0}/{task.daily_total_days || 0} 天
+                              </span>
+                            </div>
+
+                            {/* 完成率進度條 */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 bg-muted rounded-full h-2.5">
+                                <div
+                                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-foreground min-w-[3rem] text-right">
+                                {progress}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // 一次性任務樣式
+                        <div key={task.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border-l-4 border-purple-500">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xl">📝</span>
+                                <h4 className="font-semibold text-foreground">{task.task_description}</h4>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  task.status === 'completed' ? 'bg-green-500 text-white' :
+                                  task.status === 'in_progress' ? 'bg-yellow-500 text-white' :
+                                  task.status === 'overdue' ? 'bg-red-500 text-white' :
+                                  'bg-purple-500 text-white'
+                                }`}>
+                                  {task.status === 'completed' ? '已完成' :
+                                   task.status === 'in_progress' ? '進行中' :
+                                   task.status === 'overdue' ? '逾期' : '待處理'}
+                                </span>
+                                {task.category && (
+                                  <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground ml-7">
+                                交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {task.due_date ? `截止: ${new Date(task.due_date).toLocaleDateString('zh-TW')}` : '下次上課檢查'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 整體進度 */}
+                          <div className="ml-7 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-foreground">完成狀態</span>
+                              <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                                {progress}%
+                              </span>
+                            </div>
+
+                            {/* 進度條 */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 bg-muted rounded-full h-2.5">
+                                <div
+                                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                                    progress === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                    progress >= 50 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                    'bg-gradient-to-r from-purple-500 to-pink-500'
+                                  }`}
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* 狀態指示 */}
+                            <div className="flex items-center gap-2 mt-2">
+                              {task.status === 'completed' ? (
+                                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span className="text-xs font-medium">已完成</span>
+                                  {task.completion_date && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ({new Date(task.completion_date).toLocaleDateString('zh-TW')})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : task.status === 'in_progress' ? (
+                                <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                                  <Clock className="w-4 h-4" />
+                                  <span className="text-xs font-medium">進行中</span>
+                                </div>
+                              ) : task.status === 'overdue' ? (
+                                <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                  <AlertCircle className="w-4 h-4" />
+                                  <span className="text-xs font-medium">逾期</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                  <TrendingUp className="w-4 h-4" />
+                                  <span className="text-xs font-medium">待處理</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 專案作業頁籤 (原作業管理) */}
+          <TabsContent value="assignments" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">專案作業</h2>
                 <p className="text-muted-foreground">甘特圖形式管理學習作業進度</p>
               </div>
               <Button onClick={() => setShowAssignmentDialog(true)}>
