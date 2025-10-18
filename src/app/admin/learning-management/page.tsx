@@ -26,6 +26,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -121,10 +131,15 @@ export default function AdminLearningManagementPage() {
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
 
+  // 作業列表狀態
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+
   // 載入數據
   useEffect(() => {
     loadStudentsData();
     loadExamTypes();
+    loadAssignments();
   }, []);
 
   const loadStudentsData = async () => {
@@ -165,6 +180,26 @@ export default function AdminLearningManagementPage() {
       setExamTypes([]);
     } finally {
       setLoadingExamTypes(false);
+    }
+  };
+
+  const loadAssignments = async () => {
+    setLoadingAssignments(true);
+    try {
+      const response = await fetch('/api/assignments?is_published=true');
+      const data = await response.json();
+
+      if (data.success) {
+        setAssignments(data.data || []);
+      } else {
+        console.error('載入作業列表失敗:', data.error);
+        setAssignments([]);
+      }
+    } catch (error) {
+      console.error('載入作業列表時發生錯誤:', error);
+      setAssignments([]);
+    } finally {
+      setLoadingAssignments(false);
     }
   };
 
@@ -407,23 +442,25 @@ export default function AdminLearningManagementPage() {
             <Download className="h-4 w-4" />
             匯出報告
           </Button>
-          <Dialog open={isAddingRecord} onOpenChange={setIsAddingRecord}>
-            <DialogTrigger asChild>
+          <Sheet open={isAddingRecord} onOpenChange={setIsAddingRecord}>
+            <SheetTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
                 新增記錄
               </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white dark:bg-gray-900 border-2 shadow-lg max-w-2xl backdrop-blur-none">
-              <DialogHeader>
-                <DialogTitle>新增學習記錄</DialogTitle>
-                <DialogDescription>
+            </SheetTrigger>
+            <SheetContent className="overflow-y-auto sm:max-w-2xl">
+              <SheetHeader>
+                <SheetTitle>新增學習記錄</SheetTitle>
+                <SheetDescription>
                   為學生新增單字、考試或作業記錄
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
+                </SheetDescription>
+              </SheetHeader>
+              <div className="space-y-6 py-6">
                 <div>
-                  <Label htmlFor="student-select">選擇學生</Label>
+                  <Label htmlFor="student-select">
+                    選擇學生 <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={newRecordForm.studentId}
                     onValueChange={(value) => {
@@ -446,15 +483,23 @@ export default function AdminLearningManagementPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="record-type">記錄類型</Label>
+                  <Label htmlFor="record-type">
+                    記錄類型 <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={newRecordForm.recordType}
                     onValueChange={(value) => {
                       let defaultData = {};
+                      const today = new Date().toISOString().split('T')[0];
                       if (value === 'exam') {
                         defaultData = {
-                          exam_type: '小考', // 預設考試類型
-                          max_score: 100
+                          exam_type: '小考',
+                          max_score: 100,
+                          exam_date: today
+                        };
+                      } else if (value === 'vocabulary') {
+                        defaultData = {
+                          session_date: today
                         };
                       }
                       setNewRecordForm(prev => ({
@@ -479,7 +524,9 @@ export default function AdminLearningManagementPage() {
                 {newRecordForm.recordType === 'vocabulary' && (
                   <>
                     <div>
-                      <Label>選擇課程</Label>
+                      <Label>
+                        選擇課程 <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={newRecordForm.data.course_id || ''}
                         onValueChange={(value) => setNewRecordForm(prev => ({
@@ -505,7 +552,9 @@ export default function AdminLearningManagementPage() {
                       )}
                     </div>
                     <div>
-                      <Label>學習日期</Label>
+                      <Label>
+                        學習日期 <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="date"
                         value={newRecordForm.data.session_date || ''}
@@ -515,11 +564,14 @@ export default function AdminLearningManagementPage() {
                         }))}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>起始號碼</Label>
+                        <Label>
+                          起始號碼 <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
+                          placeholder="例如: 1"
                           value={newRecordForm.data.start_number || ''}
                           onChange={(e) => setNewRecordForm(prev => ({
                             ...prev,
@@ -528,9 +580,12 @@ export default function AdminLearningManagementPage() {
                         />
                       </div>
                       <div>
-                        <Label>結束號碼</Label>
+                        <Label>
+                          結束號碼 <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
+                          placeholder="例如: 50"
                           value={newRecordForm.data.end_number || ''}
                           onChange={(e) => setNewRecordForm(prev => ({
                             ...prev,
@@ -539,17 +594,36 @@ export default function AdminLearningManagementPage() {
                         />
                       </div>
                     </div>
+                    {newRecordForm.data.start_number && newRecordForm.data.end_number && (
+                      <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                        學習單字數: <span className="font-semibold">{newRecordForm.data.end_number - newRecordForm.data.start_number + 1}</span> 個
+                      </div>
+                    )}
                     <div>
                       <Label>正確率 (%)</Label>
                       <Input
                         type="number"
                         min="0"
                         max="100"
+                        step="0.1"
+                        placeholder="例如: 85.5"
                         value={newRecordForm.data.accuracy_rate || ''}
                         onChange={(e) => setNewRecordForm(prev => ({
                           ...prev,
                           data: { ...prev.data, accuracy_rate: parseFloat(e.target.value) || 0 }
                         }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>備註</Label>
+                      <Textarea
+                        placeholder="記錄學習狀況或特別注意事項..."
+                        value={newRecordForm.data.notes || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, notes: e.target.value }
+                        }))}
+                        rows={3}
                       />
                     </div>
                   </>
@@ -584,7 +658,9 @@ export default function AdminLearningManagementPage() {
                       )}
                     </div>
                     <div>
-                      <Label>考試類型</Label>
+                      <Label>
+                        考試類型 <span className="text-red-500">*</span>
+                      </Label>
                       <Select
                         value={newRecordForm.data.exam_type || ''}
                         onValueChange={(value) => setNewRecordForm(prev => ({
@@ -606,23 +682,27 @@ export default function AdminLearningManagementPage() {
                       </Select>
                       {examTypes.length === 0 && !loadingExamTypes && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          尚未設定考試類型，請先到<a href="/admin/exam-types" className="underline">考試類型管理</a>新增
+                          尚未設定考試類型,請先到<a href="/admin/exam-types" className="underline">考試類型管理</a>新增
                         </p>
                       )}
                     </div>
                     <div>
-                      <Label>考試名稱</Label>
+                      <Label>
+                        考試名稱 <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={newRecordForm.data.exam_name || ''}
                         onChange={(e) => setNewRecordForm(prev => ({
                           ...prev,
                           data: { ...prev.data, exam_name: e.target.value }
                         }))}
-                        placeholder="輸入考試名稱"
+                        placeholder="例如: Unit 1-3 小考"
                       />
                     </div>
                     <div>
-                      <Label>考試日期</Label>
+                      <Label>
+                        考試日期 <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="date"
                         value={newRecordForm.data.exam_date || ''}
@@ -632,11 +712,37 @@ export default function AdminLearningManagementPage() {
                         }))}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>科目</Label>
+                      <Select
+                        value={newRecordForm.data.subject || 'general'}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, subject: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">一般</SelectItem>
+                          <SelectItem value="english">英文</SelectItem>
+                          <SelectItem value="math">數學</SelectItem>
+                          <SelectItem value="science">自然</SelectItem>
+                          <SelectItem value="social">社會</SelectItem>
+                          <SelectItem value="chinese">國文</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>得分</Label>
+                        <Label>
+                          得分 <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
+                          step="0.5"
+                          placeholder="例如: 85"
                           value={newRecordForm.data.total_score || ''}
                           onChange={(e) => setNewRecordForm(prev => ({
                             ...prev,
@@ -656,64 +762,96 @@ export default function AdminLearningManagementPage() {
                         />
                       </div>
                     </div>
+                    {newRecordForm.data.total_score && newRecordForm.data.max_score && (
+                      <div className="text-sm text-muted-foreground bg-green-50 dark:bg-green-950 p-3 rounded-md">
+                        百分比: <span className="font-semibold">{((newRecordForm.data.total_score / newRecordForm.data.max_score) * 100).toFixed(1)}%</span>
+                      </div>
+                    )}
+                    <div>
+                      <Label>老師評語</Label>
+                      <Textarea
+                        placeholder="記錄學生表現、需要加強的部分等..."
+                        value={newRecordForm.data.teacher_feedback || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, teacher_feedback: e.target.value }
+                        }))}
+                        rows={4}
+                      />
+                    </div>
                   </>
                 )}
 
                 {newRecordForm.recordType === 'assignment' && (
                   <>
                     <div>
-                      <Label>選擇課程</Label>
+                      <Label>
+                        選擇作業 <span className="text-red-500">*</span>
+                      </Label>
                       <Select
-                        value={newRecordForm.data.course_id || ''}
+                        value={newRecordForm.data.assignment_id || ''}
                         onValueChange={(value) => setNewRecordForm(prev => ({
                           ...prev,
-                          data: { ...prev.data, course_id: value }
+                          data: { ...prev.data, assignment_id: value }
                         }))}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingCourses ? "載入課程中..." : "選擇課程"} />
+                          <SelectValue placeholder={loadingAssignments ? "載入作業中..." : "選擇作業"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {studentCourses.map(course => (
-                            <SelectItem key={course.id} value={course.id}>
-                              {course.title}
+                          {assignments.map(assignment => (
+                            <SelectItem key={assignment.id} value={assignment.id}>
+                              {assignment.title}
+                              {assignment.due_date && ` (截止: ${new Date(assignment.due_date).toLocaleDateString('zh-TW')})`}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {studentCourses.length === 0 && newRecordForm.studentId && !loadingCourses && (
+                      {assignments.length === 0 && !loadingAssignments && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          該學生尚未註冊任何課程
+                          目前沒有已發布的作業
                         </p>
                       )}
                     </div>
                     <div>
-                      <Label>作業 ID</Label>
-                      <Input
-                        value={newRecordForm.data.assignment_id || ''}
-                        onChange={(e) => setNewRecordForm(prev => ({
-                          ...prev,
-                          data: { ...prev.data, assignment_id: e.target.value }
-                        }))}
-                        placeholder="輸入作業 ID"
-                      />
-                    </div>
-                    <div>
                       <Label>提交內容</Label>
-                      <Input
+                      <Textarea
                         value={newRecordForm.data.content || ''}
                         onChange={(e) => setNewRecordForm(prev => ({
                           ...prev,
                           data: { ...prev.data, content: e.target.value }
                         }))}
-                        placeholder="輸入提交內容"
+                        placeholder="輸入作業內容或答案..."
+                        rows={4}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>提交狀態</Label>
+                      <Select
+                        value={newRecordForm.data.status || 'submitted'}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, status: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="submitted">已提交</SelectItem>
+                          <SelectItem value="graded">已批改</SelectItem>
+                          <SelectItem value="returned">已退回</SelectItem>
+                          <SelectItem value="resubmit">需重新提交</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>得分</Label>
                         <Input
                           type="number"
+                          step="0.5"
+                          placeholder="例如: 90"
                           value={newRecordForm.data.score || ''}
                           onChange={(e) => setNewRecordForm(prev => ({
                             ...prev,
@@ -733,10 +871,27 @@ export default function AdminLearningManagementPage() {
                         />
                       </div>
                     </div>
+                    {newRecordForm.data.score && newRecordForm.data.max_score && (
+                      <div className="text-sm text-muted-foreground bg-purple-50 dark:bg-purple-950 p-3 rounded-md">
+                        得分率: <span className="font-semibold">{((newRecordForm.data.score / newRecordForm.data.max_score) * 100).toFixed(1)}%</span>
+                      </div>
+                    )}
+                    <div>
+                      <Label>批改評語</Label>
+                      <Textarea
+                        placeholder="針對作業內容給予回饋..."
+                        value={newRecordForm.data.feedback || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, feedback: e.target.value }
+                        }))}
+                        rows={3}
+                      />
+                    </div>
                   </>
                 )}
               </div>
-              <DialogFooter>
+              <SheetFooter className="sticky bottom-0 bg-background pt-6 pb-2 border-t">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -752,9 +907,9 @@ export default function AdminLearningManagementPage() {
                 >
                   {isSubmittingRecord ? '新增中...' : '確認新增'}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 

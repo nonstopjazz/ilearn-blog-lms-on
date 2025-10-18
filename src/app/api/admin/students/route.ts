@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
             exam_date: data.exam_date,
             total_score: data.total_score,
             max_score: maxScore,
-            percentage_score: Math.round(percentageScore * 10) / 10, // 四捨五入到小數點一位
+            // percentage_score 是資料庫自動計算的欄位,不需要手動插入
             grade: grade,
             subject: data.subject || 'general',
             teacher_feedback: data.teacher_feedback
@@ -316,10 +316,19 @@ export async function POST(request: NextRequest) {
       message: 'Record created successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Admin Students API] Create error:', error);
+    // 提供更詳細的錯誤訊息以便除錯
+    const errorMessage = error?.message || 'Internal server error';
+    const errorDetails = error?.details || error?.hint || '';
+    console.error('[Admin Students API] Error details:', errorDetails);
+
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: 'Internal server error',
+        debug: process.env.NODE_ENV === 'development' ? { message: errorMessage, details: errorDetails } : undefined
+      },
       { status: 500 }
     );
   }
