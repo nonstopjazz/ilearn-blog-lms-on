@@ -606,7 +606,7 @@ const Dashboard = () => {
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/assignments/progress?student_id=${currentStudent.id}&range=${assignmentTimeRange}`,
+        `/api/learning/assignments/progress?student_id=${currentUser.id}&range=${assignmentTimeRange}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -686,7 +686,7 @@ const Dashboard = () => {
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/exams/list?student_id=${currentStudent.id}`,
+        `/api/learning/exams/list?student_id=${currentUser.id}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -717,7 +717,7 @@ const Dashboard = () => {
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/vocabulary/sessions?student_id=${currentStudent.id}`,
+        `/api/learning/vocabulary/sessions?student_id=${currentUser.id}`,
         {
           headers: {
             'x-api-key': apiKey
