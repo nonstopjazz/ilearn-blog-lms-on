@@ -181,58 +181,44 @@ export async function POST(request: NextRequest) {
     const normalizedCourseId = courseId || null;
     const normalizedLessonId = lessonId || null;
 
-    // 如果有學生ID列表，為每個學生創建作業
-    const createdAssignments = [];
+    // 創建一個作業記錄（不論有多少學生，只創建一個作業）
+    const result = await sql`
+      INSERT INTO assignments (
+        title, description, course_id, lesson_id, due_date,
+        assignment_type, priority, submission_type, max_score,
+        estimated_duration, is_required, instructions, tags,
+        resources, repeat_schedule, requirements, is_published,
+        created_at, updated_at
+      ) VALUES (
+        ${title}, ${description}, ${normalizedCourseId}, ${normalizedLessonId}, ${dueDate},
+        ${assignmentType || '一般作業'}, ${priority || 'medium'},
+        ${submissionType || 'text'}, ${maxScore || 100},
+        ${estimatedDuration || null}, ${isRequired || false}, ${instructions || null},
+        ${JSON.stringify(tags || [])}, ${JSON.stringify(resources || [])},
+        ${JSON.stringify(repeatSchedule || {})}, ${JSON.stringify(requirements || {})},
+        ${true}, NOW(), NOW()
+      ) RETURNING *
+    `;
 
+    const createdAssignment = result.rows[0];
+
+    // 如果有指定學生列表，為每個學生創建初始的提交記錄（狀態為 not_submitted）
     if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
       for (const studentId of studentIds) {
-        const result = await sql`
-          INSERT INTO assignments (
-            title, description, course_id, lesson_id, due_date,
-            assignment_type, priority, submission_type, max_score,
-            estimated_duration, is_required, instructions, tags,
-            resources, repeat_schedule, requirements, is_published,
-            created_at, updated_at
+        await sql`
+          INSERT INTO assignment_submissions (
+            assignment_id, student_id, status, created_at, updated_at
           ) VALUES (
-            ${title}, ${description}, ${normalizedCourseId}, ${normalizedLessonId}, ${dueDate},
-            ${assignmentType || '一般作業'}, ${priority || 'medium'},
-            ${submissionType || 'text'}, ${maxScore || 100},
-            ${estimatedDuration}, ${isRequired || false}, ${instructions},
-            ${JSON.stringify(tags || [])}, ${JSON.stringify(resources || [])},
-            ${JSON.stringify(repeatSchedule || {})}, ${JSON.stringify(requirements || {})},
-            ${true}, NOW(), NOW()
-          ) RETURNING *
+            ${createdAssignment.id}, ${studentId}, 'not_submitted', NOW(), NOW()
+          )
         `;
-
-        createdAssignments.push(result.rows[0]);
       }
-    } else {
-      // 沒有指定學生，創建一般作業
-      const result = await sql`
-        INSERT INTO assignments (
-          title, description, course_id, lesson_id, due_date,
-          assignment_type, priority, submission_type, max_score,
-          estimated_duration, is_required, instructions, tags,
-          resources, repeat_schedule, requirements, is_published,
-          created_at, updated_at
-        ) VALUES (
-          ${title}, ${description}, ${normalizedCourseId}, ${normalizedLessonId}, ${dueDate},
-          ${assignmentType || '一般作業'}, ${priority || 'medium'},
-          ${submissionType || 'text'}, ${maxScore || 100},
-          ${estimatedDuration}, ${isRequired || false}, ${instructions},
-          ${JSON.stringify(tags || [])}, ${JSON.stringify(resources || [])},
-          ${JSON.stringify(repeatSchedule || {})}, ${JSON.stringify(requirements || {})},
-          ${true}, NOW(), NOW()
-        ) RETURNING *
-      `;
-
-      createdAssignments.push(result.rows[0]);
     }
 
-    const response: ApiResponse<any[]> = {
+    const response: ApiResponse<any> = {
       success: true,
-      data: createdAssignments,
-      message: `成功創建 ${createdAssignments.length} 項作業`
+      data: createdAssignment,
+      message: `成功創建作業${studentIds && studentIds.length > 0 ? `並分配給 ${studentIds.length} 位學生` : ''}`
     };
 
     return NextResponse.json(response);
