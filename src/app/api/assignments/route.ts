@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
+    const isPublished = searchParams.get('is_published');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -72,6 +73,12 @@ export async function GET(request: NextRequest) {
       paramCount++;
       query += ` AND a.due_date <= $${paramCount}`;
       params.push(dateTo);
+    }
+
+    if (isPublished !== null) {
+      paramCount++;
+      query += ` AND a.is_published = $${paramCount}`;
+      params.push(isPublished === 'true');
     }
 
     query += ` ORDER BY a.due_date ASC, a.created_at DESC`;
@@ -170,6 +177,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // 將空字串的 courseId 和 lessonId 轉為 null
+    const normalizedCourseId = courseId || null;
+    const normalizedLessonId = lessonId || null;
+
     // 如果有學生ID列表，為每個學生創建作業
     const createdAssignments = [];
 
@@ -183,7 +194,7 @@ export async function POST(request: NextRequest) {
             resources, repeat_schedule, requirements, is_published,
             created_at, updated_at
           ) VALUES (
-            ${title}, ${description}, ${courseId}, ${lessonId}, ${dueDate},
+            ${title}, ${description}, ${normalizedCourseId}, ${normalizedLessonId}, ${dueDate},
             ${assignmentType || '一般作業'}, ${priority || 'medium'},
             ${submissionType || 'text'}, ${maxScore || 100},
             ${estimatedDuration}, ${isRequired || false}, ${instructions},
@@ -205,7 +216,7 @@ export async function POST(request: NextRequest) {
           resources, repeat_schedule, requirements, is_published,
           created_at, updated_at
         ) VALUES (
-          ${title}, ${description}, ${courseId}, ${lessonId}, ${dueDate},
+          ${title}, ${description}, ${normalizedCourseId}, ${normalizedLessonId}, ${dueDate},
           ${assignmentType || '一般作業'}, ${priority || 'medium'},
           ${submissionType || 'text'}, ${maxScore || 100},
           ${estimatedDuration}, ${isRequired || false}, ${instructions},
