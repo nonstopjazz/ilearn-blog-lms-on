@@ -162,10 +162,12 @@ export async function POST(request: NextRequest) {
     const supabase = createSupabaseAdminClient();
 
     // 準備插入的資料
+    // 注意: course_id 在資料庫中是 NOT NULL,但專案作業可能不屬於特定課程
+    // 如果沒有提供 courseId,我們需要使用一個預設值或修改資料庫 schema
     const insertData = {
       title,
       description: description || null,
-      course_id: courseId || null,
+      course_id: courseId || 'general', // 使用 'general' 作為預設值,表示一般作業
       lesson_id: lessonId || null,
       due_date: dueDate,
       assignment_type: assignmentType || '一般作業',
