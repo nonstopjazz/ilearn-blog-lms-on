@@ -145,6 +145,16 @@ const AssignmentFormDialog: React.FC<AssignmentFormDialogProps> = ({
       newErrors.studentIds = '請至少選擇一位學生';
     }
 
+    // 檢查學生是否都有課程資訊
+    const selectedStudents = students.filter(s => formData.studentIds.includes(s.id));
+    const studentsWithCourse = selectedStudents.filter(s => s.courseId);
+
+    if (studentsWithCourse.length > 0 && !formData.courseId) {
+      // 自動使用第一位學生的課程
+      const firstCourseId = studentsWithCourse[0].courseId;
+      setFormData(prev => ({ ...prev, courseId: firstCourseId }));
+    }
+
     if (formData.maxScore <= 0) {
       newErrors.maxScore = '分數必須大於0';
     }

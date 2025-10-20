@@ -161,13 +161,58 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseAdminClient();
 
+    // 如果沒有提供 courseId,嘗試從學生的課程註冊記錄中獲取
+    let finalCourseId = courseId;
+
+    if (!finalCourseId && studentIds && studentIds.length > 0) {
+      console.log('[POST /api/assignments] 未提供 courseId,嘗試從學生課程註冊中獲取...');
+
+      // 查詢第一位學生的課程註冊記錄
+      const { data: courseRequests, error: courseError } = await supabase
+        .from('course_requests')
+        .select('course_id, course_title')
+        .eq('user_id', studentIds[0])
+        .eq('status', 'approved')
+        .limit(1);
+
+      if (!courseError && courseRequests && courseRequests.length > 0) {
+        finalCourseId = courseRequests[0].course_id;
+        console.log('[POST /api/assignments] 自動使用課程:', finalCourseId, courseRequests[0].course_title);
+      } else {
+        console.log('[POST /api/assignments] 無法找到學生的課程註冊記錄');
+      }
+    }
+
+    // 如果還是沒有 courseId,使用第一個可用課程
+    if (!finalCourseId) {
+      console.log('[POST /api/assignments] 仍無 courseId,嘗試使用第一個可用課程...');
+
+      const { data: courses, error: coursesError } = await supabase
+        .from('course_lessons')
+        .select('course_id')
+        .limit(1);
+
+      if (!coursesError && courses && courses.length > 0) {
+        finalCourseId = courses[0].course_id;
+        console.log('[POST /api/assignments] 使用預設課程:', finalCourseId);
+      }
+    }
+
+    // 最後的保底措施
+    if (!finalCourseId) {
+      console.error('[POST /api/assignments] 無法確定 course_id');
+      return NextResponse.json({
+        success: false,
+        error: '無法確定課程',
+        message: '請提供 courseId 或確保學生已註冊課程'
+      }, { status: 400 });
+    }
+
     // 準備插入的資料
-    // 注意: course_id 在資料庫中是 NOT NULL,但專案作業可能不屬於特定課程
-    // 如果沒有提供 courseId,我們需要使用一個預設值或修改資料庫 schema
     const insertData: any = {
       title,
       description: description || null,
-      course_id: courseId || 'general', // 使用 'general' 作為預設值,表示一般作業
+      course_id: finalCourseId,
       lesson_id: lessonId || null,
       due_date: dueDate,
       priority: priority || 'medium',
