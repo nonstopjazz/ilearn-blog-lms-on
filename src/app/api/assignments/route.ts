@@ -164,13 +164,12 @@ export async function POST(request: NextRequest) {
     // 準備插入的資料
     // 注意: course_id 在資料庫中是 NOT NULL,但專案作業可能不屬於特定課程
     // 如果沒有提供 courseId,我們需要使用一個預設值或修改資料庫 schema
-    const insertData = {
+    const insertData: any = {
       title,
       description: description || null,
       course_id: courseId || 'general', // 使用 'general' 作為預設值,表示一般作業
       lesson_id: lessonId || null,
       due_date: dueDate,
-      assignment_type: assignmentType || '一般作業',
       priority: priority || 'medium',
       submission_type: submissionType || 'text',
       max_score: maxScore || 100,
@@ -183,6 +182,12 @@ export async function POST(request: NextRequest) {
       requirements: requirements || {},
       is_published: true,
     };
+
+    // assignment_type 欄位有 CHECK 約束,只有當值存在且不為空時才添加
+    // 如果資料庫允許 NULL,則不添加此欄位
+    if (assignmentType) {
+      insertData.assignment_type = assignmentType;
+    }
 
     console.log('[POST /api/assignments] 準備插入作業:', JSON.stringify(insertData, null, 2));
 
