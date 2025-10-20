@@ -572,7 +572,8 @@ const Dashboard = () => {
   // 初始化數據
   useEffect(() => {
     setStudents([currentStudent]); // 只有當前學生
-    setGanttTasks(mockGanttTasks);
+    // 移除模擬資料,改用 API 載入
+    // setGanttTasks(mockGanttTasks);
     setAssignments(mockAssignments);
     loadExamTypes();
   }, []);
@@ -588,6 +589,7 @@ const Dashboard = () => {
       loadExamsData();
       loadVocabularySessionsData();
       loadProgressDataAPI();
+      loadGanttAssignments(); // 載入甘特圖專案作業
     } else {
       // 未登入：使用 mock 數據
       loadMockData();
@@ -660,6 +662,52 @@ const Dashboard = () => {
       loadMockAssignmentData();
     } finally {
       setLoadingAssignments(false);
+    }
+  };
+
+  // 載入甘特圖專案作業數據（API）
+  const loadGanttAssignments = async () => {
+    if (!isAuthenticated || !currentUser) return;
+
+    try {
+      console.log('[loadGanttAssignments] 開始載入甘特圖作業資料...');
+
+      // 從 /api/assignments 載入所有已發布的作業
+      const response = await fetch(`/api/assignments?is_published=true`);
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        console.log('[loadGanttAssignments] 成功載入作業:', result.data.length, '項');
+
+        // 轉換為甘特圖格式
+        const ganttData: GanttTask[] = result.data.map((assignment: any) => ({
+          id: assignment.id,
+          title: assignment.title,
+          description: assignment.description || '',
+          courseId: assignment.courseId || assignment.course_id || 'unknown',
+          startDate: assignment.startDate || assignment.created_at || new Date().toISOString(),
+          dueDate: assignment.dueDate || assignment.due_date,
+          completedDate: assignment.completedDate,
+          status: assignment.submissionStatus || assignment.status || 'not_started',
+          progress: assignment.progress || 0,
+          priority: assignment.priority || 'medium',
+          category: assignment.category || assignment.assignment_type || 'task',
+          submissionType: assignment.submissionType || assignment.submission_type || 'text',
+          maxScore: assignment.maxScore || assignment.max_score || 100,
+          estimatedDuration: assignment.estimatedDuration || assignment.estimated_duration,
+          isRequired: assignment.isRequired !== undefined ? assignment.isRequired : assignment.is_required !== undefined ? assignment.is_required : true,
+          tags: assignment.tags || [],
+          resources: assignment.resources || [],
+          instructions: assignment.instructions || ''
+        }));
+
+        console.log('[loadGanttAssignments] 轉換後的甘特圖資料:', ganttData);
+        setGanttTasks(ganttData);
+      } else {
+        console.error('[loadGanttAssignments] 載入失敗:', result.error);
+      }
+    } catch (error) {
+      console.error('[loadGanttAssignments] 載入時發生錯誤:', error);
     }
   };
 
