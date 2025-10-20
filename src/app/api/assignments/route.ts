@@ -209,13 +209,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 準備插入的資料
+    // 某些欄位有 CHECK 約束,需要謹慎處理
     const insertData: any = {
       title,
       description: description || null,
       course_id: finalCourseId,
       lesson_id: lessonId || null,
       due_date: dueDate,
-      priority: priority || 'medium',
       submission_type: submissionType || 'text',
       max_score: maxScore || 100,
       estimated_duration: estimatedDuration || null,
@@ -229,9 +229,13 @@ export async function POST(request: NextRequest) {
     };
 
     // assignment_type 欄位有 CHECK 約束,只有當值存在且不為空時才添加
-    // 如果資料庫允許 NULL,則不添加此欄位
     if (assignmentType) {
       insertData.assignment_type = assignmentType;
+    }
+
+    // priority 欄位也有 CHECK 約束,只有當值存在且不為空時才添加
+    if (priority) {
+      insertData.priority = priority;
     }
 
     console.log('[POST /api/assignments] 準備插入作業:', JSON.stringify(insertData, null, 2));
