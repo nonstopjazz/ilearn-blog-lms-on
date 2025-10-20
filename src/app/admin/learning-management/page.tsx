@@ -417,11 +417,17 @@ export default function AdminLearningManagementPage() {
   // 處理新增/編輯專案作業
   const handleSubmitAssignment = async (formData: any) => {
     try {
+      console.log('[handleSubmitAssignment] 準備提交的表單資料:', formData);
+
       const url = editingAssignment
         ? `/api/assignments/${editingAssignment.id}`
         : '/api/assignments';
 
       const method = editingAssignment ? 'PUT' : 'POST';
+
+      console.log('[handleSubmitAssignment] 請求 URL:', url);
+      console.log('[handleSubmitAssignment] 請求方法:', method);
+      console.log('[handleSubmitAssignment] 請求 body:', JSON.stringify(formData, null, 2));
 
       const response = await fetch(url, {
         method,
@@ -429,7 +435,10 @@ export default function AdminLearningManagementPage() {
         body: JSON.stringify(formData)
       });
 
+      console.log('[handleSubmitAssignment] 回應狀態:', response.status);
+
       const result = await response.json();
+      console.log('[handleSubmitAssignment] 回應內容:', result);
 
       if (result.success) {
         alert(editingAssignment ? '作業更新成功！' : '作業新增成功！');
@@ -437,9 +446,11 @@ export default function AdminLearningManagementPage() {
         setShowAssignmentDialog(false);
         setEditingAssignment(null);
       } else {
-        throw new Error(result.error || '操作失敗');
+        console.error('[handleSubmitAssignment] 操作失敗:', result);
+        throw new Error(result.message || result.error || '操作失敗');
       }
     } catch (error: any) {
+      console.error('[handleSubmitAssignment] 錯誤:', error);
       alert('操作失敗: ' + error.message);
       throw error;
     }

@@ -228,14 +228,43 @@ export async function POST(request: NextRequest) {
       is_published: true,
     };
 
-    // assignment_type 欄位有 CHECK 約束,只有當值存在且不為空時才添加
+    // assignment_type 欄位有 CHECK 約束
+    // 前端使用中文,需要映射到資料庫允許的值
     if (assignmentType) {
-      insertData.assignment_type = assignmentType;
+      const typeMapping: Record<string, string> = {
+        '一般作業': 'general',
+        '每日作業': 'daily',
+        '週作業': 'weekly',
+        '專案作業': 'project',
+        '口說練習': 'speaking',
+        '聽力作業': 'listening',
+        '閱讀理解': 'reading',
+        '寫作練習': 'writing',
+        '文法練習': 'grammar',
+        '單字測驗': 'vocabulary'
+      };
+
+      // 如果是中文,轉換為英文;否則直接使用
+      const mappedType = typeMapping[assignmentType] || assignmentType;
+      insertData.assignment_type = mappedType;
+      console.log('[POST /api/assignments] assignment_type 映射:', assignmentType, '->', mappedType);
     }
 
-    // priority 欄位也有 CHECK 約束,只有當值存在且不為空時才添加
+    // priority 欄位也有 CHECK 約束
+    // 前端使用中文,需要映射到資料庫允許的值
     if (priority) {
-      insertData.priority = priority;
+      const priorityMapping: Record<string, string> = {
+        '低': 'low',
+        '中': 'medium',
+        '普通': 'normal',
+        '高': 'high',
+        '緊急': 'urgent'
+      };
+
+      // 如果是中文,轉換為英文;否則直接使用
+      const mappedPriority = priorityMapping[priority] || priority;
+      insertData.priority = mappedPriority;
+      console.log('[POST /api/assignments] priority 映射:', priority, '->', mappedPriority);
     }
 
     console.log('[POST /api/assignments] 準備插入作業:', JSON.stringify(insertData, null, 2));
