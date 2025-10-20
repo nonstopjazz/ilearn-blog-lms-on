@@ -229,25 +229,11 @@ export async function POST(request: NextRequest) {
     };
 
     // assignment_type 欄位有 CHECK 約束
-    // 前端使用中文,需要映射到資料庫允許的值
-    if (assignmentType) {
-      const typeMapping: Record<string, string> = {
-        '一般作業': 'general',
-        '每日作業': 'daily',
-        '週作業': 'weekly',
-        '專案作業': 'project',
-        '口說練習': 'speaking',
-        '聽力作業': 'listening',
-        '閱讀理解': 'reading',
-        '寫作練習': 'writing',
-        '文法練習': 'grammar',
-        '單字測驗': 'vocabulary'
-      };
-
-      // 如果是中文,轉換為英文;否則直接使用
-      const mappedType = typeMapping[assignmentType] || assignmentType;
-      insertData.assignment_type = mappedType;
-      console.log('[POST /api/assignments] assignment_type 映射:', assignmentType, '->', mappedType);
+    // 根據現有資料,資料庫只接受 'task' 值
+    // 前端的不同作業類型都統一映射為 'task'
+    if (assignmentType && assignmentType.trim()) {
+      insertData.assignment_type = 'task';
+      console.log('[POST /api/assignments] assignment_type 統一映射為: task (原值:', assignmentType, ')');
     }
 
     // priority 欄位也有 CHECK 約束
