@@ -285,13 +285,22 @@ const Dashboard = () => {
     return 'D';
   };
 
-  // 當前學生資訊（實際應該從登入狀態取得）
-  const currentStudent = {
-    id: 'student_001',
-    name: '王小明',
-    courseId: 'course_001',
-    courseName: '基礎英語',
-    grade: '國中二年級'
+  // 當前學生資訊（從登入狀態取得）
+  const currentStudent = currentUser ? {
+    id: currentUser.id,
+    name: currentUser.user_metadata?.name ||
+          currentUser.user_metadata?.full_name ||
+          currentUser.email?.split('@')[0] ||
+          '學生',
+    courseId: currentUser.user_metadata?.courseId || 'unknown',
+    courseName: currentUser.user_metadata?.courseName || '未指定課程',
+    grade: currentUser.user_metadata?.grade || '未指定年級'
+  } : {
+    id: 'guest',
+    name: '訪客',
+    courseId: 'unknown',
+    courseName: '未指定課程',
+    grade: '未指定年級'
   };
 
   // 模擬甘特圖任務數據 - 涵蓋整年度的作業規劃
