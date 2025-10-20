@@ -113,6 +113,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('[POST /api/assignments] 收到請求:', JSON.stringify(body, null, 2));
+
     const {
       title,
       description,
@@ -135,6 +137,7 @@ export async function POST(request: NextRequest) {
 
     // 驗證必填欄位
     if (!title || !dueDate) {
+      console.error('[POST /api/assignments] 缺少必填欄位:', { title, dueDate });
       return NextResponse.json({
         success: false,
         error: '缺少必填欄位',
@@ -142,37 +145,64 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // 驗證學生 ID 格式 (應該是 UUID)
+    if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const invalidIds = studentIds.filter(id => !uuidRegex.test(id));
+      if (invalidIds.length > 0) {
+        console.error('[POST /api/assignments] 無效的學生 ID 格式:', invalidIds);
+        return NextResponse.json({
+          success: false,
+          error: '無效的學生 ID 格式',
+          message: `以下學生 ID 格式不正確: ${invalidIds.join(', ')}`
+        }, { status: 400 });
+      }
+    }
+
     const supabase = createSupabaseAdminClient();
+
+    // 準備插入的資料
+    const insertData = {
+      title,
+      description: description || null,
+      course_id: courseId || null,
+      lesson_id: lessonId || null,
+      due_date: dueDate,
+      assignment_type: assignmentType || '一般作業',
+      priority: priority || 'medium',
+      submission_type: submissionType || 'text',
+      max_score: maxScore || 100,
+      estimated_duration: estimatedDuration || null,
+      is_required: isRequired || false,
+      instructions: instructions || null,
+      tags: tags || [],
+      resources: resources || [],
+      repeat_schedule: repeatSchedule || {},
+      requirements: requirements || {},
+      is_published: true,
+    };
+
+    console.log('[POST /api/assignments] 準備插入作業:', JSON.stringify(insertData, null, 2));
 
     // 創建一個作業記錄
     const { data: createdAssignment, error: insertError } = await supabase
       .from('assignments')
-      .insert({
-        title,
-        description: description || null,
-        course_id: courseId || null,
-        lesson_id: lessonId || null,
-        due_date: dueDate,
-        assignment_type: assignmentType || '一般作業',
-        priority: priority || 'medium',
-        submission_type: submissionType || 'text',
-        max_score: maxScore || 100,
-        estimated_duration: estimatedDuration || null,
-        is_required: isRequired || false,
-        instructions: instructions || null,
-        tags: tags || [],
-        resources: resources || [],
-        repeat_schedule: repeatSchedule || {},
-        requirements: requirements || {},
-        is_published: true,
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (insertError) {
-      console.error('新增作業失敗:', insertError);
-      throw insertError;
+      console.error('[POST /api/assignments] 新增作業失敗:', {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
+      throw new Error(`資料庫錯誤: ${insertError.message} (${insertError.code})`);
     }
+
+    console.log('[POST /api/assignments] 作業創建成功:', createdAssignment);
 
     // 如果有指定學生列表，為每個學生創建初始的提交記錄
     if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
@@ -182,13 +212,23 @@ export async function POST(request: NextRequest) {
         status: 'not_submitted'
       }));
 
+      console.log('[POST /api/assignments] 準備插入提交記錄:', JSON.stringify(submissions, null, 2));
+
       const { error: submissionError } = await supabase
         .from('assignment_submissions')
         .insert(submissions);
 
       if (submissionError) {
-        console.error('創建提交記錄失敗:', submissionError);
+        console.error('[POST /api/assignments] 創建提交記錄失敗:', {
+          error: submissionError,
+          code: submissionError.code,
+          message: submissionError.message,
+          details: submissionError.details,
+          hint: submissionError.hint
+        });
         // 不中斷，只記錄錯誤
+      } else {
+        console.log('[POST /api/assignments] 提交記錄創建成功');
       }
     }
 
@@ -201,7 +241,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('新增作業失敗:', error);
+    console.error('[POST /api/assignments] 新增作業失敗:', error);
 
     const response: ApiResponse<null> = {
       success: false,
