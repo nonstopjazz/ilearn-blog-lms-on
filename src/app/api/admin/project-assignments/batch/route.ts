@@ -83,28 +83,33 @@ export async function POST(request: NextRequest) {
         }
 
         // 建立作業
+        const assignmentData = {
+          title: assignment.title,
+          description: assignment.description || '',
+          course_id: assignment.courseId || null,
+          due_date: assignment.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 預設7天後
+          is_project_assignment: true,
+          is_published: assignment.isPublished !== undefined ? assignment.isPublished : false, // 預設為未發布，需要 admin 登記後才發布
+          submission_type: assignment.submissionType || 'file',
+          max_score: assignment.maxScore || 100,
+          estimated_duration: assignment.estimatedDuration || 120,
+          priority: assignment.priority || 'medium',
+          requirements: assignment.requirements || [],
+          instructions: assignment.instructions || '',
+          tags: [...(assignment.tags || []), '專案作業'],
+          resources: assignment.resources || []
+        };
+
+        console.log(`[批次上傳] 作業 ${i}: 準備建立`, assignmentData);
+
         const { data: newAssignment, error: assignmentError } = await supabase
           .from('assignments')
-          .insert({
-            title: assignment.title,
-            description: assignment.description || '',
-            course_id: assignment.courseId || null,
-            due_date: assignment.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 預設7天後
-            is_project_assignment: true,
-            is_published: assignment.isPublished !== undefined ? assignment.isPublished : false, // 預設為未發布，需要 admin 登記後才發布
-            submission_type: assignment.submissionType || 'file',
-            max_score: assignment.maxScore || 100,
-            estimated_duration: assignment.estimatedDuration || 120,
-            priority: assignment.priority || 'medium',
-            requirements: assignment.requirements || [],
-            instructions: assignment.instructions || '',
-            tags: [...(assignment.tags || []), '專案作業'],
-            resources: assignment.resources || []
-          })
+          .insert(assignmentData)
           .select()
           .single();
 
         if (assignmentError) {
+          console.error(`[批次上傳] 作業 ${i} 建立失敗:`, assignmentError);
           errors.push({
             index: i,
             assignment: assignment,
@@ -113,19 +118,23 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        console.log(`[批次上傳] 作業 ${i} 建立成功:`, newAssignment.id);
+
         // 為每個學生建立提交記錄
-        const submissionInserts = assignment.studentIds.map((studentId: string) => ({
+        const submissionInserts = studentIds.map((studentId: string) => ({
           assignment_id: newAssignment.id,
           student_id: studentId,
           status: 'not_started'
         }));
+
+        console.log(`[批次上傳] 作業 ${i}: 準備建立 ${submissionInserts.length} 筆提交記錄`, submissionInserts);
 
         const { error: submissionError } = await supabase
           .from('assignment_submissions')
           .insert(submissionInserts);
 
         if (submissionError) {
-          console.error('建立提交記錄失敗:', submissionError);
+          console.error(`[批次上傳] 作業 ${i} 提交記錄建立失敗:`, submissionError);
           errors.push({
             index: i,
             assignment: assignment,
@@ -133,6 +142,8 @@ export async function POST(request: NextRequest) {
           });
           continue;
         }
+
+        console.log(`[批次上傳] 作業 ${i} 提交記錄建立成功`);
 
         results.push({
           index: i,

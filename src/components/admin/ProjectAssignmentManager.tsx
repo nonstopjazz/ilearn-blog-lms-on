@@ -216,6 +216,8 @@ export function ProjectAssignmentManager() {
     try {
       const assignments = JSON.parse(batchData);
 
+      console.log('[批次上傳] 準備上傳:', assignments);
+
       const response = await fetch('/api/admin/project-assignments/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -223,16 +225,46 @@ export function ProjectAssignmentManager() {
       });
 
       const result = await response.json();
+      console.log('[批次上傳] API 回應:', result);
 
-      if (result.success) {
-        alert(`批次處理完成：成功 ${result.data.successCount} 項，失敗 ${result.data.errorCount} 項`);
-        await loadAssignments();
-        setBatchDialogOpen(false);
-        setBatchData('');
+      if (result.success || result.data) {
+        const successCount = result.data?.successCount || 0;
+        const errorCount = result.data?.errorCount || 0;
+        const errors = result.data?.errors || [];
+
+        let message = `批次處理完成！\n\n✅ 成功：${successCount} 項\n❌ 失敗：${errorCount} 項`;
+
+        if (errors.length > 0) {
+          message += '\n\n失敗原因：\n';
+          errors.forEach((err: any, idx: number) => {
+            message += `\n${idx + 1}. ${err.assignment?.title || '未知作業'}: ${err.error}`;
+          });
+        }
+
+        if (successCount > 0) {
+          message += '\n\n⚠️ 重要提醒：\n批次上傳的作業預設為「未發布」狀態。\n請在下方列表中找到作業，將狀態改為「進行中」，學生才能看到！';
+        }
+
+        alert(message);
+
+        if (successCount > 0) {
+          await loadAssignments();
+        }
+
+        if (errorCount === 0) {
+          setBatchDialogOpen(false);
+          setBatchData('');
+        }
+      } else {
+        alert(`批次上傳失敗：${result.message || result.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error('批次上傳失敗:', error);
-      alert('批次上傳失敗，請檢查資料格式');
+      if (error instanceof SyntaxError) {
+        alert('JSON 格式錯誤，請檢查格式是否正確！\n\n常見錯誤：\n- 缺少逗號\n- 使用單引號而非雙引號\n- 少了方括號 [ ]');
+      } else {
+        alert(`批次上傳失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+      }
     } finally {
       setLoading(false);
     }
