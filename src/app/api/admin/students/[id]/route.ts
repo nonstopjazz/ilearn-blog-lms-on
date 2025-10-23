@@ -51,7 +51,30 @@ export async function PATCH(
       parent: parent || currentUserInfo.parent || null,
     };
 
-    // 3. 更新所有該學生的課程申請記錄的 user_info
+    // 3. 更新 Auth user_metadata（用於批次上傳學生姓名匹配）
+    try {
+      const { data: authUser, error: authUpdateError } = await supabase.auth.admin.updateUserById(
+        studentId,
+        {
+          user_metadata: {
+            full_name: name || currentUserInfo.name,
+            phone: phone || currentUserInfo.phone || null,
+          }
+        }
+      );
+
+      if (authUpdateError) {
+        console.warn('[更新] Auth user_metadata 更新失敗（非關鍵錯誤）:', authUpdateError);
+        // 不中斷流程，繼續更新 course_requests
+      } else {
+        console.log('[更新] Auth user_metadata 更新成功:', authUser?.user?.email);
+      }
+    } catch (authError) {
+      console.warn('[更新] Auth user_metadata 更新發生錯誤（非關鍵錯誤）:', authError);
+      // 不中斷流程
+    }
+
+    // 4. 更新所有該學生的課程申請記錄的 user_info
     const { error: updateError } = await supabase
       .from('course_requests')
       .update({ user_info: updatedUserInfo })
@@ -67,7 +90,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      message: '學生資訊已更新',
+      message: '學生資訊已更新（包含 Auth 帳號資料）',
       data: {
         student_id: studentId,
         user_info: updatedUserInfo,
