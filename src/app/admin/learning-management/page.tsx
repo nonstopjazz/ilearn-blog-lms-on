@@ -62,6 +62,7 @@ import {
 import { LearningReport } from '@/components/LearningReport';
 import { Checkbox } from '@/components/ui/checkbox';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
+import { ProjectAssignmentManager } from '@/components/admin/ProjectAssignmentManager';
 
 interface Student {
   id: string;
@@ -1062,9 +1063,10 @@ export default function AdminLearningManagementPage() {
 
       {/* 主要內容區 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">學生總覽</TabsTrigger>
           <TabsTrigger value="records">學習記錄</TabsTrigger>
+          <TabsTrigger value="projects">專案作業</TabsTrigger>
           <TabsTrigger value="reports">進度報告</TabsTrigger>
           <TabsTrigger value="settings">系統設定</TabsTrigger>
         </TabsList>
@@ -1323,6 +1325,11 @@ export default function AdminLearningManagementPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* 專案作業管理頁籤 */}
+        <TabsContent value="projects">
+          <ProjectAssignmentManager />
         </TabsContent>
 
         <TabsContent value="reports">

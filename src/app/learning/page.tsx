@@ -681,12 +681,12 @@ const Dashboard = () => {
     try {
       console.log('[loadGanttAssignments] 開始載入甘特圖作業資料...');
 
-      // 從 /api/assignments 載入所有已發布的作業
-      const response = await fetch(`/api/assignments?is_published=true`);
+      // 從新的學生專屬 API 載入專案作業（只包含進行中和已完成）
+      const response = await fetch(`/api/assignments/student?student_id=${currentUser.id}&status=in_progress,completed`);
       const result = await response.json();
 
       if (result.success && result.data) {
-        console.log('[loadGanttAssignments] 成功載入作業:', result.data.length, '項');
+        console.log('[loadGanttAssignments] 成功載入專案作業:', result.data.length, '項');
 
         // 轉換為甘特圖格式
         const ganttData: GanttTask[] = result.data.map((assignment: any) => ({
@@ -697,7 +697,7 @@ const Dashboard = () => {
           startDate: assignment.startDate || assignment.created_at || new Date().toISOString(),
           dueDate: assignment.dueDate || assignment.due_date,
           completedDate: assignment.completedDate,
-          status: assignment.submissionStatus || assignment.status || 'not_started',
+          status: assignment.status || 'not_started',
           progress: assignment.progress || 0,
           priority: assignment.priority || 'medium',
           category: assignment.category || assignment.assignment_type || 'task',
