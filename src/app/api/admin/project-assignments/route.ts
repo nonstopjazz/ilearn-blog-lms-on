@@ -198,3 +198,72 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(response, { status: 500 });
   }
 }
+
+// DELETE - 刪除專案作業（Admin 用）
+// 支援單筆刪除和批次刪除
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { assignmentIds } = body;
+
+    if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: '缺少必填參數',
+        message: '需要提供 assignmentIds 陣列'
+      }, { status: 400 });
+    }
+
+    const supabase = createSupabaseAdminClient();
+
+    console.log(`[DELETE] 準備刪除 ${assignmentIds.length} 筆作業:`, assignmentIds);
+
+    // 先刪除相關的提交記錄（因為有外鍵約束）
+    const { error: submissionError } = await supabase
+      .from('assignment_submissions')
+      .delete()
+      .in('assignment_id', assignmentIds);
+
+    if (submissionError) {
+      console.error('[DELETE] 刪除提交記錄失敗:', submissionError);
+      throw new Error(`刪除提交記錄失敗: ${submissionError.message}`);
+    }
+
+    console.log('[DELETE] 提交記錄刪除成功');
+
+    // 再刪除作業本身
+    const { error: assignmentError } = await supabase
+      .from('assignments')
+      .delete()
+      .in('id', assignmentIds);
+
+    if (assignmentError) {
+      console.error('[DELETE] 刪除作業失敗:', assignmentError);
+      throw new Error(`刪除作業失敗: ${assignmentError.message}`);
+    }
+
+    console.log('[DELETE] 作業刪除成功');
+
+    const response: ApiResponse<any> = {
+      success: true,
+      data: {
+        deletedCount: assignmentIds.length,
+        deletedIds: assignmentIds
+      },
+      message: `成功刪除 ${assignmentIds.length} 筆專案作業`
+    };
+
+    return NextResponse.json(response);
+
+  } catch (error) {
+    console.error('刪除專案作業失敗:', error);
+
+    const response: ApiResponse<null> = {
+      success: false,
+      error: '刪除專案作業失敗',
+      message: error instanceof Error ? error.message : '未知錯誤'
+    };
+
+    return NextResponse.json(response, { status: 500 });
+  }
+}

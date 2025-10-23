@@ -39,7 +39,8 @@ import {
   AlertCircle,
   Edit,
   Plus,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -68,6 +69,11 @@ export function ProjectAssignmentManager() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // 批次選擇和刪除
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
 
   // 編輯狀態
   const [editingAssignment, setEditingAssignment] = useState<ProjectAssignment | null>(null);
@@ -284,6 +290,93 @@ export function ProjectAssignmentManager() {
     }
   };
 
+  // 處理單筆刪除
+  const handleDeleteSingle = (assignmentId: string) => {
+    setAssignmentToDelete(assignmentId);
+    setDeleteDialogOpen(true);
+  };
+
+  // 處理批次刪除
+  const handleDeleteBatch = () => {
+    if (selectedAssignments.size === 0) {
+      alert('請先選擇要刪除的作業');
+      return;
+    }
+    setAssignmentToDelete(null);
+    setDeleteDialogOpen(true);
+  };
+
+  // 確認刪除
+  const confirmDelete = async () => {
+    setLoading(true);
+    try {
+      // 獲取要刪除的作業 ID 列表（去重）
+      let assignmentIds: string[];
+
+      if (assignmentToDelete) {
+        // 單筆刪除
+        assignmentIds = [assignmentToDelete];
+      } else {
+        // 批次刪除 - 從選中的項目中提取唯一的 assignmentId
+        assignmentIds = Array.from(
+          new Set(
+            Array.from(selectedAssignments).map(key => {
+              const assignment = assignments.find(a => `${a.assignmentId}-${a.studentId}` === key);
+              return assignment?.assignmentId;
+            }).filter(Boolean) as string[]
+          )
+        );
+      }
+
+      console.log('[刪除] 準備刪除作業 IDs:', assignmentIds);
+
+      const response = await fetch('/api/admin/project-assignments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentIds })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`成功刪除 ${result.data.deletedCount} 筆作業`);
+        await loadAssignments();
+        setSelectedAssignments(new Set());
+        setDeleteDialogOpen(false);
+        setAssignmentToDelete(null);
+      } else {
+        alert(`刪除失敗：${result.message || result.error || '未知錯誤'}`);
+      }
+    } catch (error) {
+      console.error('刪除作業失敗:', error);
+      alert(`刪除失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 切換單個選擇
+  const toggleSelectAssignment = (key: string) => {
+    const newSelected = new Set(selectedAssignments);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      newSelected.add(key);
+    }
+    setSelectedAssignments(newSelected);
+  };
+
+  // 全選/取消全選
+  const toggleSelectAll = () => {
+    if (selectedAssignments.size === filteredAssignments.length) {
+      setSelectedAssignments(new Set());
+    } else {
+      setSelectedAssignments(
+        new Set(filteredAssignments.map(a => `${a.assignmentId}-${a.studentId}`))
+      );
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: any; label: string; icon: any }> = {
       'not_started': { variant: 'secondary', label: '未開始', icon: AlertCircle },
@@ -374,19 +467,31 @@ export function ProjectAssignmentManager() {
       </div>
 
       {/* 操作按鈕 */}
-      <div className="flex gap-2">
-        <Button onClick={() => setDistributeDialogOpen(true)}>
-          <Users className="w-4 h-4 mr-2" />
-          派發模板
-        </Button>
-        <Button variant="outline" onClick={() => setBatchDialogOpen(true)}>
-          <Upload className="w-4 h-4 mr-2" />
-          批次上傳
-        </Button>
-        <Button variant="outline" onClick={loadAssignments}>
-          <Download className="w-4 h-4 mr-2" />
-          重新載入
-        </Button>
+      <div className="flex gap-2 justify-between">
+        <div className="flex gap-2">
+          <Button onClick={() => setDistributeDialogOpen(true)}>
+            <Users className="w-4 h-4 mr-2" />
+            派發模板
+          </Button>
+          <Button variant="outline" onClick={() => setBatchDialogOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            批次上傳
+          </Button>
+          <Button variant="outline" onClick={loadAssignments}>
+            <Download className="w-4 h-4 mr-2" />
+            重新載入
+          </Button>
+        </div>
+        {selectedAssignments.size > 0 && (
+          <Button
+            variant="destructive"
+            onClick={handleDeleteBatch}
+            disabled={loading}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            批次刪除 ({selectedAssignments.size})
+          </Button>
+        )}
       </div>
 
       {/* 搜尋和篩選 */}
@@ -421,6 +526,14 @@ export function ProjectAssignmentManager() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={filteredAssignments.length > 0 && selectedAssignments.size === filteredAssignments.length}
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
+                </TableHead>
                 <TableHead>作業名稱</TableHead>
                 <TableHead>學生</TableHead>
                 <TableHead>狀態</TableHead>
@@ -433,34 +546,55 @@ export function ProjectAssignmentManager() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">載入中...</TableCell>
+                  <TableCell colSpan={8} className="text-center">載入中...</TableCell>
                 </TableRow>
               ) : filteredAssignments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">暫無資料</TableCell>
+                  <TableCell colSpan={8} className="text-center">暫無資料</TableCell>
                 </TableRow>
               ) : (
-                filteredAssignments.map((assignment) => (
-                  <TableRow key={`${assignment.assignmentId}-${assignment.studentId}`}>
-                    <TableCell className="font-medium">{assignment.assignmentTitle}</TableCell>
-                    <TableCell>{assignment.studentName}</TableCell>
-                    <TableCell>{getStatusBadge(assignment.submissionStatus)}</TableCell>
-                    <TableCell>{assignment.progress}%</TableCell>
-                    <TableCell>
-                      {assignment.score !== null ? `${assignment.score}/${assignment.maxScore}` : '-'}
-                    </TableCell>
-                    <TableCell>{new Date(assignment.dueDate).toLocaleDateString('zh-TW')}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditAssignment(assignment)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredAssignments.map((assignment) => {
+                  const rowKey = `${assignment.assignmentId}-${assignment.studentId}`;
+                  return (
+                    <TableRow key={rowKey}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedAssignments.has(rowKey)}
+                          onChange={() => toggleSelectAssignment(rowKey)}
+                          className="cursor-pointer"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{assignment.assignmentTitle}</TableCell>
+                      <TableCell>{assignment.studentName}</TableCell>
+                      <TableCell>{getStatusBadge(assignment.submissionStatus)}</TableCell>
+                      <TableCell>{assignment.progress}%</TableCell>
+                      <TableCell>
+                        {assignment.score !== null ? `${assignment.score}/${assignment.maxScore}` : '-'}
+                      </TableCell>
+                      <TableCell>{new Date(assignment.dueDate).toLocaleDateString('zh-TW')}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditAssignment(assignment)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSingle(assignment.assignmentId)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -678,6 +812,55 @@ export function ProjectAssignmentManager() {
             </Button>
             <Button onClick={handleBatchUpload} disabled={loading}>
               {loading ? '上傳中...' : '開始上傳'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 刪除確認對話框 */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除</DialogTitle>
+            <DialogDescription>
+              {assignmentToDelete
+                ? '確定要刪除此作業嗎？此操作將同時刪除所有學生的相關提交記錄。'
+                : `確定要刪除選中的 ${selectedAssignments.size} 個項目嗎？這將刪除相關的作業及所有學生的提交記錄。`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>⚠️ 警告：</strong>此操作無法復原！
+            </p>
+            <p className="text-sm text-yellow-700 mt-2">
+              {assignmentToDelete
+                ? '刪除後，該作業及所有學生的提交記錄將永久移除。'
+                : `刪除後，${Array.from(new Set(Array.from(selectedAssignments).map(key => {
+                    const assignment = assignments.find(a => `${a.assignmentId}-${a.studentId}` === key);
+                    return assignment?.assignmentId;
+                  }).filter(Boolean))).length} 個作業及相關的所有提交記錄將永久移除。`
+              }
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setAssignmentToDelete(null);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={loading}
+            >
+              {loading ? '刪除中...' : '確認刪除'}
             </Button>
           </DialogFooter>
         </DialogContent>
