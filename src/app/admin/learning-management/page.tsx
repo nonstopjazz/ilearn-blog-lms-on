@@ -1203,126 +1203,23 @@ export default function AdminLearningManagementPage() {
         </TabsContent>
 
         <TabsContent value="records" className="space-y-4">
-          {/* 專案作業管理 */}
+          {/* 學習記錄頁籤 - 專案作業管理已移至「專案作業」頁籤 */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>專案作業管理</CardTitle>
-                  <CardDescription>管理學生的專案作業與甘特圖任務</CardDescription>
-                </div>
-                <Button
-                  onClick={() => {
-                    setEditingAssignment(null);
-                    setShowAssignmentDialog(true);
-                  }}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  新增專案作業
-                </Button>
-              </div>
+              <CardTitle>學習記錄</CardTitle>
+              <CardDescription>查看學生的學習記錄與進度</CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingAssignments ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                  <p className="text-muted-foreground mt-2">載入作業列表中...</p>
-                </div>
-              ) : assignments.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">尚未建立任何專案作業</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    點擊上方按鈕新增作業
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>作業標題</TableHead>
-                      <TableHead>類型</TableHead>
-                      <TableHead>截止日期</TableHead>
-                      <TableHead>優先度</TableHead>
-                      <TableHead>滿分</TableHead>
-                      <TableHead>狀態</TableHead>
-                      <TableHead>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignments.map((assignment) => (
-                      <TableRow key={assignment.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{assignment.title}</div>
-                            {assignment.description && (
-                              <div className="text-sm text-muted-foreground line-clamp-1">
-                                {assignment.description}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{assignment.category}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {assignment.dueDate
-                            ? new Date(assignment.dueDate).toLocaleDateString('zh-TW')
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              assignment.priority === 'urgent' ? 'destructive' :
-                              assignment.priority === 'high' ? 'default' :
-                              'secondary'
-                            }
-                          >
-                            {assignment.priority === 'urgent' ? '緊急' :
-                             assignment.priority === 'high' ? '高' :
-                             assignment.priority === 'medium' ? '中' : '低'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{assignment.maxScore || 100}</TableCell>
-                        <TableCell>
-                          <Badge variant={assignment.isPublished ? 'default' : 'secondary'}>
-                            {assignment.isPublished ? '已發布' : '草稿'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingAssignment(assignment);
-                                setShowAssignmentDialog(true);
-                              }}
-                              title="編輯作業"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteAssignment(assignment.id)}
-                              disabled={deletingAssignmentId === assignment.id}
-                              title="刪除作業"
-                            >
-                              {deletingAssignmentId === assignment.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">學習記錄功能</p>
+                <p className="text-muted-foreground mb-4">
+                  此區域可用於顯示學生的詳細學習記錄、出席狀況、作業提交歷史等資訊。
+                </p>
+                <p className="text-sm text-blue-600">
+                  💡 提示：專案作業管理功能已移至「專案作業」頁籤
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
