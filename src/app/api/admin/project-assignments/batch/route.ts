@@ -121,10 +121,12 @@ export async function POST(request: NextRequest) {
         console.log(`[批次上傳] 作業 ${i} 建立成功:`, newAssignment.id);
 
         // 為每個學生建立提交記錄
+        // 支援設定初始狀態，預設為 not_started
+        const initialStatus = assignment.initialStatus || 'not_started';
         const submissionInserts = studentIds.map((studentId: string) => ({
           assignment_id: newAssignment.id,
           student_id: studentId,
-          status: 'not_started'
+          status: initialStatus
         }));
 
         console.log(`[批次上傳] 作業 ${i}: 準備建立 ${submissionInserts.length} 筆提交記錄`, submissionInserts);

@@ -168,7 +168,8 @@
 | `studentEmails` | ❌* | 學生 Email 陣列 | ["a@example.com"] |
 | `studentIds` | ❌* | 學生 UUID 陣列 | ["uuid-1", "uuid-2"] |
 | `dueDate` | ❌ | 截止日期 (ISO 8601) | "2025-12-31" |
-| `isPublished` | ❌ | 是否發布（預設 false） | false |
+| `isPublished` | ❌ | 是否發布（預設 false） | true |
+| `initialStatus` | ❌ | 初始狀態 | "not_started", "in_progress" |
 | `maxScore` | ❌ | 滿分（預設 100） | 100 |
 | `priority` | ❌ | 優先順序 | "low", "normal", "high", "urgent" |
 | `estimatedDuration` | ❌ | 預估時長（分鐘） | 120 |
@@ -180,6 +181,14 @@
 | `courseId` | ❌ | 課程 ID | "course-123" |
 
 \* 三者至少要提供一個
+
+### 🚀 快速上傳並立即顯示（最簡單！）
+
+**在前端勾選「✅ 上傳後立即顯示給學生」，系統會自動設定：**
+- `initialStatus: "in_progress"`
+- `isPublished: true`
+
+**學生立即可見！** 不需要手動編輯。
 
 ---
 

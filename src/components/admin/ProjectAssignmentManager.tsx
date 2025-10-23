@@ -85,6 +85,7 @@ export function ProjectAssignmentManager() {
   // 批次上傳狀態
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchData, setBatchData] = useState('');
+  const [showImmediately, setShowImmediately] = useState(true); // 是否立即顯示給學生
 
   useEffect(() => {
     loadAssignments();
@@ -214,7 +215,16 @@ export function ProjectAssignmentManager() {
 
     setLoading(true);
     try {
-      const assignments = JSON.parse(batchData);
+      let assignments = JSON.parse(batchData);
+
+      // 如果選擇立即顯示，自動設定 initialStatus 為 in_progress
+      if (showImmediately) {
+        assignments = assignments.map((a: any) => ({
+          ...a,
+          initialStatus: 'in_progress',
+          isPublished: true
+        }));
+      }
 
       console.log('[批次上傳] 準備上傳:', assignments);
 
@@ -242,7 +252,11 @@ export function ProjectAssignmentManager() {
         }
 
         if (successCount > 0) {
-          message += '\n\n⚠️ 重要提醒：\n批次上傳的作業預設為「未發布」狀態。\n請在下方列表中找到作業，將狀態改為「進行中」，學生才能看到！';
+          if (showImmediately) {
+            message += '\n\n✅ 作業已設定為「進行中」，學生可以立即在前台看到！';
+          } else {
+            message += '\n\n⚠️ 重要提醒：\n批次上傳的作業狀態為「未開始」。\n請在下方列表中找到作業，將狀態改為「進行中」，學生才能看到！';
+          }
         }
 
         alert(message);
@@ -592,6 +606,28 @@ export function ProjectAssignmentManager() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* 立即顯示選項 */}
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="showImmediately"
+                  checked={showImmediately}
+                  onChange={(e) => setShowImmediately(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <label htmlFor="showImmediately" className="font-semibold text-green-900 cursor-pointer">
+                    ✅ 上傳後立即顯示給學生（推薦）
+                  </label>
+                  <p className="text-sm text-green-700 mt-1">
+                    勾選後，學生可以立即在前台看到作業。<br/>
+                    取消勾選則需要手動編輯狀態才能顯示。
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* 使用說明 */}
             <div className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-2 text-sm">
               <h4 className="font-semibold text-blue-900">📝 三種指定學生的方式：</h4>
