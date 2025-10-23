@@ -270,8 +270,8 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
 
         /* 任務狀態顏色 */
         .gantt_task_line.task-in-progress {
-          background: #fb923c; /* 亮橘色 - 進行中 */
-          border: 1px solid #f97316;
+          background: transparent; /* 完全透明 - 進行中 */
+          border: 1px solid transparent;
         }
 
         .gantt_task_line.task-completed {
