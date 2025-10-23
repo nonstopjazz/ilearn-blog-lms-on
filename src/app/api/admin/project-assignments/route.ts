@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
             assignmentDescription: assignment.description,
             dueDate: assignment.due_date,
             maxScore: assignment.max_score || 100,
-            priority: assignment.priority || 'medium',
+            priority: assignment.priority || 'normal',
             templateId: assignment.template_id,
             courseId: assignment.course_id,
             requirements: assignment.requirements,

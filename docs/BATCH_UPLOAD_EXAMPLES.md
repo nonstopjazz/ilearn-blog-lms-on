@@ -13,7 +13,7 @@
     "dueDate": "2025-12-31",
     "isPublished": false,
     "maxScore": 100,
-    "priority": "medium"
+    "priority": "normal"
   }
 ]
 ```
@@ -29,7 +29,7 @@
     "dueDate": "2025-12-31",
     "isPublished": false,
     "maxScore": 100,
-    "priority": "medium"
+    "priority": "normal"
   }
 ]
 ```
@@ -67,7 +67,7 @@
     "dueDate": "2025-11-15",
     "isPublished": false,
     "maxScore": 100,
-    "priority": "medium",
+    "priority": "normal",
     "estimatedDuration": 120
   },
   {
@@ -81,7 +81,7 @@
     "dueDate": "2025-11-22",
     "isPublished": false,
     "maxScore": 100,
-    "priority": "medium"
+    "priority": "normal"
   },
   {
     "title": "第三週英文閱讀",
@@ -170,7 +170,7 @@
 | `dueDate` | ❌ | 截止日期 (ISO 8601) | "2025-12-31" |
 | `isPublished` | ❌ | 是否發布（預設 false） | false |
 | `maxScore` | ❌ | 滿分（預設 100） | 100 |
-| `priority` | ❌ | 優先順序 | "low", "medium", "high", "urgent" |
+| `priority` | ❌ | 優先順序 | "low", "normal", "high", "urgent" |
 | `estimatedDuration` | ❌ | 預估時長（分鐘） | 120 |
 | `submissionType` | ❌ | 繳交類型 | "text", "file", "photo", "link" |
 | `instructions` | ❌ | 作業說明 | "請在截止日前完成..." |
@@ -310,7 +310,7 @@
     "dueDate": "2025-12-31",
     "isPublished": false,
     "maxScore": 100,
-    "priority": "medium"
+    "priority": "normal"
   }
 ]
 ```

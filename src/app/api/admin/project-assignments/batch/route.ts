@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           submission_type: assignment.submissionType || 'file',
           max_score: assignment.maxScore || 100,
           estimated_duration: assignment.estimatedDuration || 120,
-          priority: assignment.priority || 'medium',
+          priority: assignment.priority || 'normal',
           requirements: assignment.requirements || [],
           instructions: assignment.instructions || '',
           tags: [...(assignment.tags || []), '專案作業'],

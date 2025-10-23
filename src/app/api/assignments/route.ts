@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         submissionStatus: submission?.status || 'not_submitted',
         score: submission?.score,
         maxScore: row.max_score || 100,
-        priority: row.priority || 'medium',
+        priority: row.priority || 'normal',
         category: row.assignment_type || '一般作業',
         submissionType: row.submission_type || 'text',
         estimatedDuration: row.estimated_duration,

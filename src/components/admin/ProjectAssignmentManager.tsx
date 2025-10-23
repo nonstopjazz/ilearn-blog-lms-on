@@ -609,7 +609,7 @@ export function ProjectAssignmentManager() {
               <Textarea
                 value={batchData}
                 onChange={(e) => setBatchData(e.target.value)}
-                placeholder={`[\n  {\n    "title": "第一週英文閱讀",\n    "description": "閱讀 Chapter 1 並完成練習題",\n    "studentNames": ["王小明", "李小華", "張小美"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "medium"\n  },\n  {\n    "title": "第二週英文閱讀",\n    "description": "閱讀 Chapter 2 並完成練習題",\n    "studentNames": ["王小明", "李小華"],\n    "dueDate": "2026-01-07",\n    "isPublished": false,\n    "maxScore": 100\n  }\n]`}
+                placeholder={`[\n  {\n    "title": "第一週英文閱讀",\n    "description": "閱讀 Chapter 1 並完成練習題",\n    "studentNames": ["王小明", "李小華", "張小美"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "normal"\n  },\n  {\n    "title": "第二週英文閱讀",\n    "description": "閱讀 Chapter 2 並完成練習題",\n    "studentNames": ["王小明", "李小華"],\n    "dueDate": "2026-01-07",\n    "isPublished": false,\n    "maxScore": 100\n  }\n]`}
                 rows={18}
                 className="font-mono text-sm"
               />
@@ -621,7 +621,7 @@ export function ProjectAssignmentManager() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setBatchData(`[\n  {\n    "title": "測試作業 - 閱讀練習",\n    "description": "這是一個測試作業",\n    "studentNames": ["王小明"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "medium"\n  }\n]`)}
+                onClick={() => setBatchData(`[\n  {\n    "title": "測試作業 - 閱讀練習",\n    "description": "這是一個測試作業",\n    "studentNames": ["王小明"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "normal"\n  }\n]`)}
               >
                 載入範例
               </Button>

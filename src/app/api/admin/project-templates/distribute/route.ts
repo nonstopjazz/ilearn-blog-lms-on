@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
             estimated_duration: templateAssignment.estimatedDuration,
             requirements: templateAssignment.requirements || [],
             tags: [...(template.tags || []), '專案作業'],
-            priority: i === 0 ? 'high' : i === templateAssignments.length - 1 ? 'urgent' : 'medium'
+            priority: i === 0 ? 'high' : i === templateAssignments.length - 1 ? 'urgent' : 'normal'
           })
           .select()
           .single();
