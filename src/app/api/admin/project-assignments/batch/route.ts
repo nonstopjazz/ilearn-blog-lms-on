@@ -20,17 +20,64 @@ export async function POST(request: NextRequest) {
     const results: any[] = [];
     const errors: any[] = [];
 
+    // 獲取所有學生資料（用於姓名/email 查詢）
+    const { data: allUsers } = await supabase.auth.admin.listUsers();
+    const usersByEmail = new Map(allUsers.users.map(u => [u.email?.toLowerCase(), u]));
+    const usersByName = new Map(
+      allUsers.users.map(u => {
+        const name = u.user_metadata?.full_name || u.user_metadata?.name || '';
+        return [name.toLowerCase(), u];
+      })
+    );
+
     // 批次處理每個作業
     for (let i = 0; i < assignments.length; i++) {
       const assignment = assignments[i];
 
       try {
         // 驗證必填欄位
-        if (!assignment.title || !assignment.studentIds || assignment.studentIds.length === 0) {
+        if (!assignment.title) {
           errors.push({
             index: i,
             assignment: assignment,
-            error: '缺少必填欄位（title 或 studentIds）'
+            error: '缺少必填欄位（title）'
+          });
+          continue;
+        }
+
+        // 支援三種方式指定學生：studentIds (UUID), studentEmails, studentNames
+        let studentIds: string[] = [];
+
+        if (assignment.studentIds && assignment.studentIds.length > 0) {
+          // 方式 1: 直接使用 UUID
+          studentIds = assignment.studentIds;
+        } else if (assignment.studentEmails && assignment.studentEmails.length > 0) {
+          // 方式 2: 使用 email
+          for (const email of assignment.studentEmails) {
+            const user = usersByEmail.get(email.toLowerCase());
+            if (user) {
+              studentIds.push(user.id);
+            } else {
+              console.warn(`找不到 email 為 ${email} 的學生`);
+            }
+          }
+        } else if (assignment.studentNames && assignment.studentNames.length > 0) {
+          // 方式 3: 使用姓名
+          for (const name of assignment.studentNames) {
+            const user = usersByName.get(name.toLowerCase());
+            if (user) {
+              studentIds.push(user.id);
+            } else {
+              console.warn(`找不到姓名為 ${name} 的學生`);
+            }
+          }
+        }
+
+        if (studentIds.length === 0) {
+          errors.push({
+            index: i,
+            assignment: assignment,
+            error: '找不到任何學生（請提供 studentIds, studentEmails 或 studentNames）'
           });
           continue;
         }
@@ -91,7 +138,7 @@ export async function POST(request: NextRequest) {
           index: i,
           assignmentId: newAssignment.id,
           title: newAssignment.title,
-          studentCount: assignment.studentIds.length,
+          studentCount: studentIds.length,
           success: true
         });
 

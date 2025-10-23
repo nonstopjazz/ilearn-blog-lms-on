@@ -551,22 +551,57 @@ export function ProjectAssignmentManager() {
 
       {/* 批次上傳對話框 */}
       <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>批次上傳專案作業</DialogTitle>
             <DialogDescription>
-              請輸入 JSON 格式的作業資料
+              支援使用<strong>學生姓名</strong>、Email 或 UUID 來指定學生
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <Textarea
-              value={batchData}
-              onChange={(e) => setBatchData(e.target.value)}
-              placeholder={`[\n  {\n    "title": "作業名稱",\n    "description": "作業描述",\n    "studentIds": ["學生UUID"],\n    "dueDate": "2025-12-31",\n    "isPublished": false\n  }\n]`}
-              rows={15}
-              className="font-mono text-sm"
-            />
+            {/* 使用說明 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 space-y-2 text-sm">
+              <h4 className="font-semibold text-blue-900">📝 三種指定學生的方式：</h4>
+              <div className="space-y-1 text-blue-800">
+                <p><strong>方式 1 - 使用姓名（推薦）：</strong> <code className="bg-blue-100 px-1 rounded">"studentNames": ["王小明", "李小華"]</code></p>
+                <p><strong>方式 2 - 使用 Email：</strong> <code className="bg-blue-100 px-1 rounded">"studentEmails": ["a@example.com"]</code></p>
+                <p><strong>方式 3 - 使用 UUID：</strong> <code className="bg-blue-100 px-1 rounded">"studentIds": ["uuid-1"]</code></p>
+              </div>
+              <p className="text-blue-700 text-xs mt-2">💡 詳細範例請參考：docs/BATCH_UPLOAD_EXAMPLES.md</p>
+            </div>
+
+            {/* JSON 輸入框 */}
+            <div>
+              <Label>JSON 資料</Label>
+              <Textarea
+                value={batchData}
+                onChange={(e) => setBatchData(e.target.value)}
+                placeholder={`[\n  {\n    "title": "第一週英文閱讀",\n    "description": "閱讀 Chapter 1 並完成練習題",\n    "studentNames": ["王小明", "李小華", "張小美"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "medium"\n  },\n  {\n    "title": "第二週英文閱讀",\n    "description": "閱讀 Chapter 2 並完成練習題",\n    "studentNames": ["王小明", "李小華"],\n    "dueDate": "2026-01-07",\n    "isPublished": false,\n    "maxScore": 100\n  }\n]`}
+                rows={18}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            {/* 快速範例 */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchData(`[\n  {\n    "title": "測試作業 - 閱讀練習",\n    "description": "這是一個測試作業",\n    "studentNames": ["王小明"],\n    "dueDate": "2025-12-31",\n    "isPublished": false,\n    "maxScore": 100,\n    "priority": "medium"\n  }\n]`)}
+              >
+                載入範例
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchData('')}
+              >
+                清空
+              </Button>
+            </div>
           </div>
 
           <DialogFooter>
@@ -574,7 +609,7 @@ export function ProjectAssignmentManager() {
               取消
             </Button>
             <Button onClick={handleBatchUpload} disabled={loading}>
-              上傳
+              {loading ? '上傳中...' : '開始上傳'}
             </Button>
           </DialogFooter>
         </DialogContent>
