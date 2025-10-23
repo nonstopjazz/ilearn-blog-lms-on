@@ -134,11 +134,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH - 更新學生的專案作業狀態（Admin 用）
+// PATCH - 更新學生的專案作業狀態和作業資訊（Admin 用）
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { submissionId, status, score, feedback, progress } = body;
+    const {
+      submissionId,
+      assignmentId,
+      status,
+      score,
+      feedback,
+      progress,
+      startDate,
+      dueDate
+    } = body;
 
     if (!submissionId) {
       return NextResponse.json({
@@ -150,38 +159,54 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createSupabaseAdminClient();
 
-    // 準備更新資料
-    const updateData: any = {
+    // 1. 更新 assignment_submissions（提交記錄）
+    const submissionUpdateData: any = {
       updated_at: new Date().toISOString()
     };
 
-    if (status) updateData.status = status;
-    if (score !== undefined) updateData.score = score;
-    if (feedback !== undefined) updateData.feedback = feedback;
+    if (status) submissionUpdateData.status = status;
+    if (score !== undefined) submissionUpdateData.score = score;
+    if (feedback !== undefined) submissionUpdateData.feedback = feedback;
 
     // 如果狀態變更為 graded，記錄評分時間
     if (status === 'graded') {
-      updateData.graded_at = new Date().toISOString();
-      // TODO: 從 session 中獲取當前管理員 ID
-      // updateData.graded_by = adminUserId;
+      submissionUpdateData.graded_at = new Date().toISOString();
     }
 
-    const { data, error } = await supabase
+    const { data: submissionData, error: submissionError } = await supabase
       .from('assignment_submissions')
-      .update(updateData)
+      .update(submissionUpdateData)
       .eq('id', submissionId)
       .select()
       .single();
 
-    if (error) {
-      console.error('更新提交狀態失敗:', error);
-      throw error;
+    if (submissionError) {
+      console.error('更新提交狀態失敗:', submissionError);
+      throw submissionError;
+    }
+
+    // 2. 如果有提供 assignmentId 和日期，更新 assignments（作業本身）
+    if (assignmentId && (startDate || dueDate)) {
+      const assignmentUpdateData: any = {};
+
+      if (startDate) assignmentUpdateData.created_at = new Date(startDate).toISOString();
+      if (dueDate) assignmentUpdateData.due_date = new Date(dueDate).toISOString();
+
+      const { error: assignmentError } = await supabase
+        .from('assignments')
+        .update(assignmentUpdateData)
+        .eq('id', assignmentId);
+
+      if (assignmentError) {
+        console.warn('[更新] 作業日期更新失敗（非關鍵錯誤）:', assignmentError);
+        // 不中斷流程
+      }
     }
 
     const response: ApiResponse<any> = {
       success: true,
-      data: data,
-      message: '成功更新專案作業狀態'
+      data: submissionData,
+      message: '成功更新專案作業狀態和日期'
     };
 
     return NextResponse.json(response);

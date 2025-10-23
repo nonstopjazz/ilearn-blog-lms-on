@@ -15,6 +15,7 @@ interface DHtmlxGanttTask {
   duration: number;
   progress: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'not_started' | 'in_progress' | 'completed' | 'overdue';
   category: string;
   isPersonalized?: boolean;
   assignedBy?: string;
@@ -60,19 +61,23 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
   const isInitialized = useRef(false);
 
   // 轉換任務格式
+  // 過濾掉 not_started 狀態的作業（不顯示條狀物，但仍在列表中）
   const convertTasks = useCallback((originalTasks: GanttTask[]): DHtmlxGanttTask[] => {
-    return originalTasks.map(task => ({
-      id: task.id,
-      text: task.title,
-      start_date: new Date(task.startDate),
-      end_date: new Date(task.dueDate),
-      duration: Math.ceil((new Date(task.dueDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24)),
-      progress: task.progress / 100,
-      priority: task.priority,
-      category: task.category,
-      isPersonalized: task.isPersonalized,
-      assignedBy: task.assignedBy
-    }));
+    return originalTasks
+      .filter(task => task.status !== 'not_started') // 過濾掉未開始的作業
+      .map(task => ({
+        id: task.id,
+        text: task.title,
+        start_date: new Date(task.startDate),
+        end_date: new Date(task.dueDate),
+        duration: Math.ceil((new Date(task.dueDate).getTime() - new Date(task.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+        progress: task.progress / 100,
+        priority: task.priority,
+        status: task.status,
+        category: task.category,
+        isPersonalized: task.isPersonalized,
+        assignedBy: task.assignedBy
+      }));
   }, []);
 
   // 設定 DHTMLX Gantt 配置
@@ -125,23 +130,24 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
     // 設定只讀模式
     gantt.config.readonly = true;
 
-    // 設定任務顏色
+    // 設定任務顏色 - 根據狀態而非優先級
     gantt.templates.task_class = function(start: Date, end: Date, task: any) {
       let classes = [];
 
-      // 根據優先度設定顏色
-      switch (task.priority) {
-        case 'urgent':
-          classes.push('task-urgent');
+      // 根據狀態設定顏色
+      switch (task.status) {
+        case 'in_progress':
+          classes.push('task-in-progress'); // 進行中 - 亮橘色
           break;
-        case 'high':
-          classes.push('task-high');
+        case 'completed':
+          classes.push('task-completed'); // 已完成 - 亮綠色
           break;
-        case 'medium':
-          classes.push('task-medium');
+        case 'overdue':
+          classes.push('task-overdue'); // 逾期 - 紅色
           break;
         default:
-          classes.push('task-low');
+          // not_started 不應該出現在這裡（已被過濾）
+          classes.push('task-not-started');
       }
 
       // 個人專屬作業標記
@@ -262,25 +268,25 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
           font-family: inherit;
         }
 
-        /* 任務優先度顏色 */
-        .gantt_task_line.task-urgent {
-          background: #ef4444;
+        /* 任務狀態顏色 */
+        .gantt_task_line.task-in-progress {
+          background: #fb923c; /* 亮橘色 - 進行中 */
+          border: 1px solid #f97316;
+        }
+
+        .gantt_task_line.task-completed {
+          background: #4ade80; /* 亮綠色 - 已完成 */
+          border: 1px solid #22c55e;
+        }
+
+        .gantt_task_line.task-overdue {
+          background: #ef4444; /* 紅色 - 逾期 */
           border: 1px solid #dc2626;
         }
 
-        .gantt_task_line.task-high {
-          background: #f97316;
-          border: 1px solid #ea580c;
-        }
-
-        .gantt_task_line.task-medium {
-          background: #eab308;
-          border: 1px solid #ca8a04;
-        }
-
-        .gantt_task_line.task-low {
-          background: #6b7280;
-          border: 1px solid #4b5563;
+        .gantt_task_line.task-not-started {
+          background: #9ca3af; /* 灰色 - 未開始（不應出現）*/
+          border: 1px solid #6b7280;
         }
 
         /* 個人專屬作業樣式 */

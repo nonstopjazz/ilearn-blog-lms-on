@@ -81,6 +81,9 @@ export function ProjectAssignmentManager() {
   const [editStatus, setEditStatus] = useState('');
   const [editScore, setEditScore] = useState<number | null>(null);
   const [editFeedback, setEditFeedback] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editProgress, setEditProgress] = useState<number>(0);
 
   // 派發模板狀態
   const [distributeDialogOpen, setDistributeDialogOpen] = useState(false);
@@ -146,6 +149,10 @@ export function ProjectAssignmentManager() {
     setEditStatus(assignment.submissionStatus);
     setEditScore(assignment.score);
     setEditFeedback(assignment.feedback || '');
+    // 新增：初始化日期和進度
+    setEditStartDate(assignment.assignmentTitle ? new Date().toISOString().split('T')[0] : ''); // 暫時用今天
+    setEditDueDate(assignment.dueDate ? new Date(assignment.dueDate).toISOString().split('T')[0] : '');
+    setEditProgress(assignment.progress || 0);
     setEditDialogOpen(true);
   };
 
@@ -159,9 +166,13 @@ export function ProjectAssignmentManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submissionId: editingAssignment.submissionId,
+          assignmentId: editingAssignment.assignmentId,
           status: editStatus,
           score: editScore,
-          feedback: editFeedback
+          feedback: editFeedback,
+          progress: editProgress,
+          startDate: editStartDate,
+          dueDate: editDueDate
         })
       });
 
@@ -619,12 +630,43 @@ export function ProjectAssignmentManager() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="not_started">未開始</SelectItem>
-                  <SelectItem value="in_progress">進行中</SelectItem>
-                  <SelectItem value="completed">已完成</SelectItem>
-                  <SelectItem value="graded">已評分</SelectItem>
+                  <SelectItem value="not_started">未開始（不顯示條狀物）</SelectItem>
+                  <SelectItem value="in_progress">進行中（橘色）</SelectItem>
+                  <SelectItem value="completed">已完成（綠色）</SelectItem>
+                  <SelectItem value="graded">已評分（綠色）</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>開始日期</Label>
+                <Input
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>截止日期</Label>
+                <Input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>完成進度：{editProgress}%</Label>
+              <Input
+                type="range"
+                min="0"
+                max="100"
+                value={editProgress}
+                onChange={(e) => setEditProgress(Number(e.target.value))}
+                className="w-full"
+              />
             </div>
 
             <div>

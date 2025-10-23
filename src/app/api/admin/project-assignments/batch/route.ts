@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         console.log(`[批次上傳] 作業 ${i} 建立成功:`, newAssignment.id);
 
         // 為每個學生建立提交記錄
-        // 支援設定初始狀態，預設為 not_started
+        // 預設為 not_started（不顯示在前台），admin 登記後改為 in_progress 才顯示
         const initialStatus = assignment.initialStatus || 'not_started';
         const submissionInserts = studentIds.map((studentId: string) => ({
           assignment_id: newAssignment.id,

@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
       .eq('is_published', true)
       .eq('assignment_submissions.student_id', studentId);
 
-    // 如果有狀態篩選，只顯示進行中和已完成
+    // 如果有狀態篩選，使用指定狀態
+    // 否則顯示所有狀態（包含 not_started，但甘特圖中不顯示條狀物）
     if (statusFilter) {
       const statuses = statusFilter.split(',');
       query = query.in('assignment_submissions.status', statuses);
-    } else {
-      // 預設只顯示 in_progress 和 completed
-      query = query.in('assignment_submissions.status', ['in_progress', 'completed']);
     }
+    // 不再過濾狀態，讓所有作業都顯示在列表中
+    // not_started 的作業在甘特圖中不會繪製條狀物
 
     query = query.order('due_date', { ascending: true });
 
