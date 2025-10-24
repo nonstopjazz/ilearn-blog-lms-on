@@ -1,16 +1,16 @@
 'use client';
-import { User } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { 
-  Calendar, 
-  User, 
-  Tag, 
-  Clock, 
+import {
+  Calendar,
+  User,
+  Tag,
+  Clock,
   Eye,
   ArrowLeft,
   Share2,
@@ -53,7 +53,7 @@ interface BlogDetailPageProps {
 const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ params }) => {
   const router = useRouter();
   const resolvedParams = use(params);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
