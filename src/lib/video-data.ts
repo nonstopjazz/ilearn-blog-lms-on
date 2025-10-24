@@ -293,7 +293,7 @@ function Link() {
 ]
 
 // 模擬用戶觀看進度
-let videoProgresses: VideoProgress[] = [
+const videoProgresses: VideoProgress[] = [
   {
     user_id: '36258aeb-f26d-406e-a8ed-25595a736614',
     lesson_id: 'lesson_001',

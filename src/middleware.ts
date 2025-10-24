@@ -1,12 +1,11 @@
 // src/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { 
-  getClientIP, 
-  checkRateLimit, 
-  recordAttempt, 
-  isSuspiciousIP, 
-  logSecurityEvent 
+import {
+  getClientIP,
+  checkRateLimit,
+  isSuspiciousIP,
+  logSecurityEvent
 } from '@/lib/rate-limiter';
 
 // 需要速率限制的路徑

@@ -1,4 +1,5 @@
 // src/lib/security-config.ts
+import type { User } from '@supabase/supabase-js';
 
 /**
  * 安全配置文件
@@ -117,7 +118,7 @@ export const PROTECTED_ROUTES = {
  * @param user Supabase 用戶對象
  * @returns 是否為管理員
  */
-export function isAdmin(user: any): boolean {
+export function isAdmin(user: User | null): boolean {
   if (!user) return false;
   
   // 方法1: 檢查用戶 metadata
@@ -138,7 +139,7 @@ export function isAdmin(user: any): boolean {
  * @param user Supabase 用戶對象
  * @returns 用戶角色
  */
-export function getUserRole(user: any): UserRole {
+export function getUserRole(user: User | null): UserRole {
   if (!user) return UserRole.GUEST;
   
   if (isAdmin(user)) return UserRole.ADMIN;
@@ -159,7 +160,7 @@ export function getUserRole(user: any): UserRole {
  * @param permission 權限
  * @returns 是否有權限
  */
-export function hasPermission(user: any, permission: Permission): boolean {
+export function hasPermission(user: User | null, permission: Permission): boolean {
   const role = getUserRole(user);
   const permissions = ROLE_PERMISSIONS[role];
   return permissions.includes(permission);

@@ -210,7 +210,7 @@ export interface ParentNotification {
   notification_type: 'weekly_report' | 'assignment_reminder' | 'exam_result' | 'achievement';
   subject: string;
   content: string;
-  data?: any;
+  data?: Record<string, unknown>;
   is_read?: boolean;
   read_at?: string;
   sent_via?: ('email' | 'sms' | 'in_app')[];
