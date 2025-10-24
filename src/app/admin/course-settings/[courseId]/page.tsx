@@ -1360,15 +1360,15 @@ const CourseSettingsPage: React.FC = () => {
       //   .from('course_reviews')
       //   .select('rating')
       //   .eq('course_id', courseId);
-      let reviews: Array<{ rating: number }> | null = null;
-      
+      const reviews: Array<{ rating: number }> = [];
+
       // 計算統計數據
       const totalEnrollments = enrollments?.length || 0;
       const activeStudents = enrollments?.filter(e => e.status === 'approved').length || 0;
-      
+
       // 計算平均評分
       let averageRating = 0;
-      if (reviews?.length) {
+      if (reviews.length > 0) {
         const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
         averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
       }
