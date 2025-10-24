@@ -1360,7 +1360,7 @@ const CourseSettingsPage: React.FC = () => {
       //   .from('course_reviews')
       //   .select('rating')
       //   .eq('course_id', courseId);
-      const reviews = null;
+      const reviews: Array<{ rating: number }> | null = null;
       
       // 計算統計數據
       const totalEnrollments = enrollments?.length || 0;
