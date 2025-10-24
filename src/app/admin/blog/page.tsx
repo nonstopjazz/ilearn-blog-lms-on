@@ -136,13 +136,13 @@ const BlogAdminList: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges = {
+    const badges: Record<string, string> = {
       draft: 'bg-yellow-100 text-yellow-800',
       published: 'bg-green-100 text-green-800',
       archived: 'bg-gray-100 text-gray-800'
     };
-    
-    const labels = {
+
+    const labels: Record<string, string> = {
       draft: '草稿',
       published: '已發布',
       archived: '已封存'
