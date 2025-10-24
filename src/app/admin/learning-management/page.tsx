@@ -577,6 +577,11 @@ export default function AdminLearningManagementPage() {
                         defaultData = {
                           session_date: today
                         };
+                      } else if (value === 'task') {
+                        defaultData = {
+                          task_type: 'onetime',
+                          priority: 'normal'
+                        };
                       }
                       setNewRecordForm(prev => ({
                         ...prev,
