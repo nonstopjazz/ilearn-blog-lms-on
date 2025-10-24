@@ -1368,7 +1368,7 @@ const CourseSettingsPage: React.FC = () => {
       
       // 計算平均評分
       let averageRating = 0;
-      if (reviews && reviews.length > 0) {
+      if (reviews?.length) {
         const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
         averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
       }
