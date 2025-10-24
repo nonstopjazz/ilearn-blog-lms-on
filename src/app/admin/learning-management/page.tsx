@@ -142,6 +142,14 @@ export default function AdminLearningManagementPage() {
   const [editingAssignment, setEditingAssignment] = useState<any>(null);
   const [deletingAssignmentId, setDeletingAssignmentId] = useState<string | null>(null);
 
+  // 學生作業管理狀態
+  const [isManagingTasks, setIsManagingTasks] = useState(false);
+  const [managingTasksStudent, setManagingTasksStudent] = useState<Student | null>(null);
+  const [studentTasks, setStudentTasks] = useState<any[]>([]);
+  const [loadingStudentTasks, setLoadingStudentTasks] = useState(false);
+  const [editingDailyTask, setEditingDailyTask] = useState<any>(null);
+  const [dailyCompletionChanges, setDailyCompletionChanges] = useState<{[date: string]: boolean}>({});
+
   // 載入數據
   useEffect(() => {
     loadStudentsData();
@@ -412,6 +420,196 @@ export default function AdminLearningManagementPage() {
       alert('寄送報告失敗: ' + error.message);
     } finally {
       setIsSendingReport(false);
+    }
+  };
+
+  // 管理學生作業
+  const handleManageTasks = async (student: Student) => {
+    setManagingTasksStudent(student);
+    setIsManagingTasks(true);
+    setLoadingStudentTasks(true);
+
+    try {
+      const response = await fetch(`/api/admin/student-tasks?student_id=${student.id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setStudentTasks(result.data || []);
+      } else {
+        throw new Error(result.error || '載入作業失敗');
+      }
+    } catch (error: any) {
+      alert('載入學生作業失敗: ' + error.message);
+      setIsManagingTasks(false);
+    } finally {
+      setLoadingStudentTasks(false);
+    }
+  };
+
+  // 開始編輯每日作業
+  const handleEditDailyTask = (task: any) => {
+    setEditingDailyTask(task);
+    // 初始化 dailyCompletionChanges 為現有的完成記錄
+    const existingCompletion: {[date: string]: boolean} = {};
+    if (task.daily_completion && Array.isArray(task.daily_completion)) {
+      task.daily_completion.forEach((record: any) => {
+        existingCompletion[record.date] = record.completed;
+      });
+    }
+    setDailyCompletionChanges(existingCompletion);
+  };
+
+  // 切換某一天的完成狀態
+  const toggleDayCompletion = (date: string) => {
+    setDailyCompletionChanges(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }));
+  };
+
+  // 快捷操作：全選
+  const selectAllDays = () => {
+    if (!editingDailyTask) return;
+    const changes: {[date: string]: boolean} = {};
+    generateDateList(editingDailyTask).forEach(date => {
+      changes[date] = true;
+    });
+    setDailyCompletionChanges(changes);
+  };
+
+  // 快捷操作：全不選
+  const deselectAllDays = () => {
+    if (!editingDailyTask) return;
+    const changes: {[date: string]: boolean} = {};
+    generateDateList(editingDailyTask).forEach(date => {
+      changes[date] = false;
+    });
+    setDailyCompletionChanges(changes);
+  };
+
+  // 快捷操作：標記本週
+  const selectThisWeek = () => {
+    if (!editingDailyTask) return;
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = 週日
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 計算到週一的偏移
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset);
+
+    const changes = {...dailyCompletionChanges};
+    const dates = generateDateList(editingDailyTask);
+
+    dates.forEach(date => {
+      const dateObj = new Date(date);
+      if (dateObj >= monday && dateObj <= today) {
+        changes[date] = true;
+      }
+    });
+
+    setDailyCompletionChanges(changes);
+  };
+
+  // 快捷操作：最近 N 天
+  const selectRecentDays = (days: number) => {
+    if (!editingDailyTask) return;
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setDate(today.getDate() - days + 1);
+
+    const changes = {...dailyCompletionChanges};
+    const dates = generateDateList(editingDailyTask);
+
+    dates.forEach(date => {
+      const dateObj = new Date(date);
+      if (dateObj >= cutoffDate && dateObj <= today) {
+        changes[date] = true;
+      }
+    });
+
+    setDailyCompletionChanges(changes);
+  };
+
+  // 生成日期列表（從 assigned_date 到目標天數或今天）
+  const generateDateList = (task: any): string[] => {
+    const dates: string[] = [];
+    const startDate = new Date(task.assigned_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const totalDays = task.daily_total_days || 7;
+
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+
+      // 只顯示到今天為止的日期
+      if (currentDate > today) break;
+
+      dates.push(currentDate.toISOString().split('T')[0]);
+    }
+
+    return dates;
+  };
+
+  // 計算連續天數
+  const calculateStreak = (completionMap: {[date: string]: boolean}, dates: string[]): number => {
+    let streak = 0;
+    // 從最新的日期開始往回算
+    for (let i = dates.length - 1; i >= 0; i--) {
+      if (completionMap[dates[i]]) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+
+  // 儲存每日作業完成記錄
+  const saveDailyTaskCompletion = async () => {
+    if (!editingDailyTask) return;
+
+    try {
+      // 轉換為 daily_completion 格式
+      const dailyCompletion = Object.entries(dailyCompletionChanges).map(([date, completed]) => ({
+        date,
+        completed
+      }));
+
+      // 計算完成天數
+      const completedDays = Object.values(dailyCompletionChanges).filter(v => v).length;
+
+      // 計算連續天數
+      const dates = generateDateList(editingDailyTask);
+      const streak = calculateStreak(dailyCompletionChanges, dates);
+
+      const response = await fetch(`/api/admin/student-tasks/${editingDailyTask.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          daily_completion: dailyCompletion,
+          daily_completed_days: completedDays,
+          daily_streak: streak,
+          status: completedDays >= (editingDailyTask.daily_total_days || 0) ? 'completed' : 'in_progress'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('儲存成功！');
+        setEditingDailyTask(null);
+        // 重新載入作業列表
+        if (managingTasksStudent) {
+          handleManageTasks(managingTasksStudent);
+        }
+      } else {
+        throw new Error(result.error || '儲存失敗');
+      }
+    } catch (error: any) {
+      alert('儲存失敗: ' + error.message);
     }
   };
 
@@ -1188,6 +1386,14 @@ export default function AdminLearningManagementPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => handleManageTasks(student)}
+                              title="管理作業"
+                            >
+                              <ClipboardList className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 setReportStudent(student);
                                 setSendReportDialogOpen(true);
@@ -1751,6 +1957,237 @@ export default function AdminLearningManagementPage() {
         } : undefined}
         loading={false}
       />
+
+      {/* 學生作業管理對話框 */}
+      <Dialog open={isManagingTasks} onOpenChange={setIsManagingTasks}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>管理作業 - {managingTasksStudent?.name}</DialogTitle>
+            <DialogDescription>查看和管理學生的所有作業</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {loadingStudentTasks ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                <p className="text-muted-foreground">載入中...</p>
+              </div>
+            ) : studentTasks.length === 0 ? (
+              <div className="text-center py-8">
+                <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">此學生目前沒有作業</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {studentTasks.map((task) => (
+                  <Card key={task.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xl">
+                              {task.task_type === 'daily' ? '📅' : '📝'}
+                            </span>
+                            <h4 className="font-semibold">{task.task_description}</h4>
+                            <Badge variant={task.task_type === 'daily' ? 'default' : 'secondary'}>
+                              {task.task_type === 'daily' ? '每日任務' : '一次性任務'}
+                            </Badge>
+                            {task.category && (
+                              <Badge variant="outline">{task.category}</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
+                            {task.task_type === 'daily' && task.daily_total_days > 0 && (
+                              <> · 目標: {task.daily_total_days} 天</>
+                            )}
+                            {task.task_type === 'onetime' && task.due_date && (
+                              <> · 截止: {new Date(task.due_date).toLocaleDateString('zh-TW')}</>
+                            )}
+                          </p>
+                        </div>
+
+                        {task.task_type === 'daily' && (
+                          <div className="flex flex-col items-end gap-2">
+                            {task.daily_streak > 0 && (
+                              <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                                <Trophy className="w-4 h-4 text-orange-600" />
+                                <span className="text-sm font-bold text-orange-600">連續 {task.daily_streak} 天</span>
+                              </div>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditDailyTask(task)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              登記完成記錄
+                            </Button>
+                          </div>
+                        )}
+
+                        {task.task_type === 'onetime' && (
+                          <Badge variant={
+                            task.status === 'completed' ? 'default' :
+                            task.status === 'in_progress' ? 'secondary' :
+                            task.status === 'overdue' ? 'destructive' : 'outline'
+                          }>
+                            {task.status === 'completed' ? '已完成' :
+                             task.status === 'in_progress' ? '進行中' :
+                             task.status === 'overdue' ? '逾期' : '待處理'}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {task.task_type === 'daily' && (
+                        <div className="ml-7">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">完成進度</span>
+                            <span className="text-sm font-bold text-blue-600">
+                              {task.daily_completed_days || 0}/{task.daily_total_days || 0} 天
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-muted rounded-full h-2.5">
+                              <div
+                                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all"
+                                style={{
+                                  width: `${task.daily_total_days > 0 ? Math.round((task.daily_completed_days / task.daily_total_days) * 100) : 0}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold min-w-[3rem] text-right">
+                              {task.daily_total_days > 0 ? Math.round((task.daily_completed_days / task.daily_total_days) * 100) : 0}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsManagingTasks(false)}>
+              關閉
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 每日作業追蹤對話框 */}
+      <Dialog open={!!editingDailyTask} onOpenChange={(open) => !open && setEditingDailyTask(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>登記每日作業完成記錄</DialogTitle>
+            <DialogDescription>
+              {editingDailyTask?.task_description}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingDailyTask && (
+            <div className="space-y-4">
+              {/* 統計資訊 */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {Object.values(dailyCompletionChanges).filter(v => v).length}/{editingDailyTask.daily_total_days || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">已完成天數</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {calculateStreak(dailyCompletionChanges, generateDateList(editingDailyTask))}
+                  </div>
+                  <div className="text-xs text-muted-foreground">連續天數</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {editingDailyTask.daily_total_days > 0 ? Math.round((Object.values(dailyCompletionChanges).filter(v => v).length / editingDailyTask.daily_total_days) * 100) : 0}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">完成率</div>
+                </div>
+              </div>
+
+              {/* 快捷操作 */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={selectAllDays}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  全選
+                </Button>
+                <Button variant="outline" size="sm" onClick={deselectAllDays}>
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  全不選
+                </Button>
+                <Button variant="outline" size="sm" onClick={selectThisWeek}>
+                  <Calendar className="h-4 w-4 mr-1" />
+                  本週
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => selectRecentDays(3)}>
+                  最近 3 天
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => selectRecentDays(7)}>
+                  最近 7 天
+                </Button>
+              </div>
+
+              {/* 日期複選框列表 */}
+              <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
+                {generateDateList(editingDailyTask).map((date) => {
+                  const dateObj = new Date(date);
+                  const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+                  const dayName = dayNames[dateObj.getDay()];
+                  const isToday = date === new Date().toISOString().split('T')[0];
+
+                  return (
+                    <div
+                      key={date}
+                      className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-muted transition-colors ${
+                        isToday ? 'bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-500' : ''
+                      }`}
+                    >
+                      <Checkbox
+                        id={`date-${date}`}
+                        checked={dailyCompletionChanges[date] || false}
+                        onCheckedChange={() => toggleDayCompletion(date)}
+                      />
+                      <label
+                        htmlFor={`date-${date}`}
+                        className="flex-1 cursor-pointer select-none"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">
+                            {dateObj.toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' })} ({dayName})
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {isToday && (
+                              <Badge variant="secondary">今天</Badge>
+                            )}
+                            {dailyCompletionChanges[date] && (
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDailyTask(null)}>
+              取消
+            </Button>
+            <Button onClick={saveDailyTaskCompletion}>
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              儲存變更
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
