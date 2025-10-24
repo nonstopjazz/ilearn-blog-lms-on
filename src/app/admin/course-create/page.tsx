@@ -536,7 +536,8 @@ const CourseCreateEditPage: React.FC = () => {
       
     } catch (error) {
       console.error('儲存課程失敗:', error);
-      setMessage(`❌ 儲存失敗：${error.message || '網路錯誤'}`);
+      const errorMessage = error instanceof Error ? error.message : '網路錯誤';
+      setMessage(`❌ 儲存失敗：${errorMessage}`);
       setTimeout(() => setMessage(''), 5000);
     } finally {
       setSaving(false);
