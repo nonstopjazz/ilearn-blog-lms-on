@@ -1,6 +1,6 @@
 // src/lib/api-auth.ts
 import { createClient } from '@supabase/supabase-js';
-import { isAdmin, getUserRole, hasPermission, Permission } from '@/lib/security-config';
+import { isAdmin, hasPermission, Permission } from '@/lib/security-config';
 
 // 定義 API context 型別
 interface ApiContext {

@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // 登入函數
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, _password: string) => {
     try {
       // 這裡應該呼叫你的 API
       // const { data, error } = await supabase.auth.signInWithPassword({
