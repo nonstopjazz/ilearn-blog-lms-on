@@ -1,4 +1,5 @@
 'use client';
+import { User } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -52,7 +53,7 @@ interface BlogDetailPageProps {
 const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ params }) => {
   const router = useRouter();
   const resolvedParams = use(params);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);

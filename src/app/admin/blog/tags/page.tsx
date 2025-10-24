@@ -1,4 +1,5 @@
 'use client';
+import { User } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,7 @@ interface Tag {
 
 export default function BlogTagsPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);

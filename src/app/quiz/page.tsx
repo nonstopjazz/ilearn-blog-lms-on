@@ -1,4 +1,5 @@
 'use client';
+import { User } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { Clock, FileText, Users, Award, ChevronRight, BookOpen } from 'lucide-react';
@@ -29,7 +30,7 @@ interface QuizSet {
 
 const QuizListPage: React.FC = () => {
   // 🔧 修復：使用 Supabase Auth 用戶狀態管理
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   
   const [quizSets, setQuizSets] = useState<QuizSet[]>([]);

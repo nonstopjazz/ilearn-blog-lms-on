@@ -1,4 +1,5 @@
 'use client';
+import { User } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -22,7 +23,7 @@ interface Course {
 }
 
 export default function Homepage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
