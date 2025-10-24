@@ -57,7 +57,9 @@ import {
   CheckCircle2,
   FileText,
   Mail,
-  Loader2
+  Loader2,
+  ClipboardList,
+  Calendar
 } from 'lucide-react';
 import { LearningReport } from '@/components/LearningReport';
 import { Checkbox } from '@/components/ui/checkbox';
