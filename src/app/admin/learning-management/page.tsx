@@ -172,7 +172,7 @@ export default function AdminLearningManagementPage() {
         // 如果 API 失敗，顯示空列表而不是假資料
         setStudents([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入學生資料時發生錯誤:', error);
       setStudents([]);
     } finally {
@@ -192,7 +192,7 @@ export default function AdminLearningManagementPage() {
         console.error('載入考試類型失敗:', data.error);
         setExamTypes([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入考試類型時發生錯誤:', error);
       setExamTypes([]);
     } finally {
@@ -212,7 +212,7 @@ export default function AdminLearningManagementPage() {
         console.error('載入作業列表失敗:', data.error);
         setAssignments([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入作業列表時發生錯誤:', error);
       setAssignments([]);
     } finally {
@@ -261,7 +261,7 @@ export default function AdminLearningManagementPage() {
         console.error('載入學生課程失敗:', data.error);
         setStudentCourses([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入學生課程時發生錯誤:', error);
       setStudentCourses([]);
     } finally {
@@ -335,15 +335,15 @@ export default function AdminLearningManagementPage() {
         console.error('[DEBUG] API 回傳失敗:', result);
         throw new Error(result.error || '新增記錄失敗');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[DEBUG] 整體錯誤:', error);
 
-      let errorMessage = error.message;
+      let errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       // 提供更詳細的錯誤訊息
-      if (error.message.includes('Failed to execute \'json\' on \'Response\'')) {
+      if (error instanceof Error ? error.message : 'Unknown error'.includes('Failed to execute \'json\' on \'Response\'')) {
         errorMessage = '伺服器回應格式錯誤，可能是伺服器內部錯誤';
-      } else if (error.message.includes('HTTP 500')) {
+      } else if (error instanceof Error ? error.message : 'Unknown error'.includes('HTTP 500')) {
         errorMessage = '伺服器內部錯誤，請檢查伺服器日誌';
       }
 
@@ -375,7 +375,7 @@ export default function AdminLearningManagementPage() {
         throw new Error(result.error || '無法載入報告資料');
       }
     } catch (error: any) {
-      alert('載入報告失敗: ' + error.message);
+      alert('載入報告失敗: ' + error instanceof Error ? error.message : 'Unknown error');
       setIsViewingReport(false);
     } finally {
       setLoadingReport(false);
@@ -419,7 +419,7 @@ export default function AdminLearningManagementPage() {
         throw new Error(result.error || '寄送失敗');
       }
     } catch (error: any) {
-      alert('寄送報告失敗: ' + error.message);
+      alert('寄送報告失敗: ' + error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsSendingReport(false);
     }
@@ -441,7 +441,7 @@ export default function AdminLearningManagementPage() {
         throw new Error(result.error || '載入作業失敗');
       }
     } catch (error: any) {
-      alert('載入學生作業失敗: ' + error.message);
+      alert('載入學生作業失敗: ' + error instanceof Error ? error.message : 'Unknown error');
       setIsManagingTasks(false);
     } finally {
       setLoadingStudentTasks(false);
@@ -611,7 +611,7 @@ export default function AdminLearningManagementPage() {
         throw new Error(result.error || '儲存失敗');
       }
     } catch (error: any) {
-      alert('儲存失敗: ' + error.message);
+      alert('儲存失敗: ' + error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -652,7 +652,7 @@ export default function AdminLearningManagementPage() {
       }
     } catch (error: any) {
       console.error('[handleSubmitAssignment] 錯誤:', error);
-      alert('操作失敗: ' + error.message);
+      alert('操作失敗: ' + error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   };
@@ -678,7 +678,7 @@ export default function AdminLearningManagementPage() {
         throw new Error(result.error || '刪除失敗');
       }
     } catch (error: any) {
-      alert('刪除失敗: ' + error.message);
+      alert('刪除失敗: ' + error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setDeletingAssignmentId(null);
     }
@@ -1705,7 +1705,7 @@ export default function AdminLearningManagementPage() {
                       throw new Error(result.error || '更新失敗');
                     }
                   } catch (error: any) {
-                    alert('保存失敗: ' + error.message);
+                    alert('保存失敗: ' + error instanceof Error ? error.message : 'Unknown error');
                   }
                 }}
               >
@@ -1743,7 +1743,7 @@ export default function AdminLearningManagementPage() {
                       setReportData(result.data);
                     }
                   } catch (error: any) {
-                    alert('載入報告失敗: ' + error.message);
+                    alert('載入報告失敗: ' + error instanceof Error ? error.message : 'Unknown error');
                   } finally {
                     setLoadingReport(false);
                   }
@@ -1904,7 +1904,7 @@ export default function AdminLearningManagementPage() {
                       throw new Error(result.error);
                     }
                   } catch (error: any) {
-                    alert('載入報告失敗: ' + error.message);
+                    alert('載入報告失敗: ' + error instanceof Error ? error.message : 'Unknown error');
                   } finally {
                     setLoadingReport(false);
                   }

@@ -655,9 +655,9 @@ const LessonEditor: React.FC<{
 
       await loadLessons();
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('儲存課程單元失敗:', error);
-      setMessage(`儲存失敗: ${error.message}`);
+      setMessage(`儲存失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -676,7 +676,7 @@ const LessonEditor: React.FC<{
         .eq('id', lessonId);
 
       if (error) {
-        throw new Error(`刪除失敗: ${error.message}`);
+        throw new Error(`刪除失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
 
       console.log('✅ 課程單元刪除成功');
@@ -684,9 +684,9 @@ const LessonEditor: React.FC<{
       
       await loadLessons();
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('刪除課程單元失敗:', error);
-      setMessage(`刪除失敗: ${error.message}`);
+      setMessage(`刪除失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
