@@ -705,7 +705,7 @@ const LessonEditor: React.FC<{
   }, [courseId]);
 
   // 清除訊息 - 使用 useRef 避免重複觸發
-  const messageTimerRef = useRef<NodeJS.Timeout>();
+  const messageTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   
   useEffect(() => {
     if (message) {
