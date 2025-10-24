@@ -230,11 +230,13 @@ export function withPermission(permission: Permission) {
 
 /**
  * 簡單的 API Key 驗證（用於內部 API 調用）
+ * 安全增強：移除開發環境自動繞過，強制驗證 API Key
  */
 export async function verifyApiKey(request: Request) {
-  // 開發環境或沒有設定 API_KEY 時，允許所有請求
-  if (!process.env.API_KEY || process.env.NODE_ENV === 'development') {
-    return { valid: true };
+  // 檢查 API_KEY 是否已設定
+  if (!process.env.API_KEY) {
+    console.error('[Security] API_KEY environment variable is not configured');
+    return { valid: false, error: 'API authentication is not configured' };
   }
 
   const apiKey = request.headers.get('x-api-key');
@@ -244,6 +246,7 @@ export async function verifyApiKey(request: Request) {
   }
 
   if (apiKey !== process.env.API_KEY) {
+    console.warn('[Security] Invalid API key attempt from:', request.headers.get('x-forwarded-for') || 'unknown');
     return { valid: false, error: 'Invalid API key' };
   }
 

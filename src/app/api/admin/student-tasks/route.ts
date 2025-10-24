@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
+import { verifyApiKey } from '@/lib/api-auth';
 
 // POST - 新增學生任務
 export async function POST(request: NextRequest) {
   try {
+    // 安全增強：新增 API Key 驗證
+    const authResult = await verifyApiKey(request);
+    if (!authResult.valid) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: 401 }
+      );
+    }
+
     const supabase = getSupabase();
     const body = await request.json();
 
@@ -95,6 +105,15 @@ export async function POST(request: NextRequest) {
 // GET - 取得學生任務列表
 export async function GET(request: NextRequest) {
   try {
+    // 安全增強：新增 API Key 驗證
+    const authResult = await verifyApiKey(request);
+    if (!authResult.valid) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: 401 }
+      );
+    }
+
     const supabase = getSupabase();
     const { searchParams } = new URL(request.url);
 
