@@ -5,10 +5,10 @@ import { ApiResponse } from '@/types/learning-management';
 // GET - 獲取特定作業詳情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assignmentId = params.id;
+    const { id: assignmentId } = await params;
 
     const result = await sql`
       SELECT
@@ -90,10 +90,10 @@ export async function GET(
 // PUT - 更新作業
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assignmentId = params.id;
+    const { id: assignmentId } = await params;
     const body = await request.json();
 
     const {
@@ -168,10 +168,10 @@ export async function PUT(
 // DELETE - 刪除作業
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assignmentId = params.id;
+    const { id: assignmentId } = await params;
 
     // 首先檢查作業是否存在
     const checkResult = await sql`

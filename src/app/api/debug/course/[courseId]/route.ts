@@ -4,10 +4,10 @@ import { videoData } from '@/lib/video-data'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const { courseId } = params
+    const { courseId } = await params
     
     console.log('=== 調試課程單元API ===')
     console.log('請求的 courseId:', courseId)

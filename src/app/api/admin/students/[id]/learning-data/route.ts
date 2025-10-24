@@ -55,10 +55,10 @@ function calculateDateRange(range: string) {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const studentId = params.id;
+    const { id: studentId } = await params;
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || 'week';
     const customStart = searchParams.get('start');
