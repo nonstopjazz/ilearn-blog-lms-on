@@ -13,7 +13,7 @@ export async function createNotification({
   type?: 'success' | 'warning' | 'error' | 'info';
   actionUrl?: string;
   actionText?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }) {
   try {
     const response = await fetch('/api/notifications', {

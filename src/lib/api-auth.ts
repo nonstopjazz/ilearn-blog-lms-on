@@ -2,6 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { isAdmin, getUserRole, hasPermission, Permission } from '@/lib/security-config';
 
+// 定義 API context 型別
+interface ApiContext {
+  params?: Record<string, string | string[]>;
+  [key: string]: unknown;
+}
+
 // 延遲初始化 Supabase 客戶端
 function getSupabaseClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -167,8 +173,8 @@ export async function requirePermission(request: Request, permission: Permission
 /**
  * API 路由包裝器，自動處理認證和權限檢查
  */
-export function withAuth(handler: (request: Request, context: any) => Promise<Response>) {
-  return async (request: Request, context: any) => {
+export function withAuth(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+  return async (request: Request, context: ApiContext) => {
     const auth = await requireAuth(request);
     if (!auth.success) {
       return auth.response!;
@@ -187,8 +193,8 @@ export function withAuth(handler: (request: Request, context: any) => Promise<Re
 /**
  * 管理員 API 路由包裝器
  */
-export function withAdminAuth(handler: (request: Request, context: any) => Promise<Response>) {
-  return async (request: Request, context: any) => {
+export function withAdminAuth(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+  return async (request: Request, context: ApiContext) => {
     const auth = await requireAdmin(request);
     if (!auth.success) {
       return auth.response!;
@@ -209,8 +215,8 @@ export function withAdminAuth(handler: (request: Request, context: any) => Promi
  * 權限檢查 API 路由包裝器
  */
 export function withPermission(permission: Permission) {
-  return function(handler: (request: Request, context: any) => Promise<Response>) {
-    return async (request: Request, context: any) => {
+  return function(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+    return async (request: Request, context: ApiContext) => {
       const auth = await requirePermission(request, permission);
       if (!auth.success) {
         return auth.response!;
