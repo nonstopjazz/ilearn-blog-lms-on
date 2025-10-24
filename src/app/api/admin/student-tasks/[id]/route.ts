@@ -4,12 +4,12 @@ import { getSupabase } from '@/lib/supabase';
 // PATCH - 更新學生任務
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabase();
     const body = await request.json();
-    const taskId = params.id;
+    const { id: taskId } = await params;
 
     const updateData: any = {};
 
@@ -78,11 +78,11 @@ export async function PATCH(
 // DELETE - 刪除學生任務
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabase();
-    const taskId = params.id;
+    const { id: taskId } = await params;
 
     const { error } = await supabase
       .from('student_tasks')
