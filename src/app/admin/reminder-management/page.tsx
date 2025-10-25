@@ -312,11 +312,12 @@ export default function AdminReminderManagementPage() {
         setMessage(`測試失敗: ${data.error}`);
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('測試提醒失敗:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤';
       setTestResult({
         success: false,
-        message: '測試失敗：' + error.message
+        message: `測試失敗：${errorMessage}`
       });
     } finally {
       setTestLoading(false);
@@ -407,9 +408,10 @@ export default function AdminReminderManagementPage() {
       } else {
         setMessage('更新失敗：' + (data.error || '未知錯誤'));
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('儲存設定失敗:', error);
-      setMessage('儲存失敗：' + error.message);
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+      setMessage(`儲存失敗：${errorMessage}`);
     } finally {
       setSaving(false);
     }
