@@ -90,7 +90,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const supabase = createSupabaseServerClient()
+    const supabase = createSupabaseClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -209,7 +209,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const supabase = createSupabaseServerClient()
+    const supabase = createSupabaseClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
