@@ -63,10 +63,11 @@ export async function POST(req: NextRequest) {
       message: `成功刪除 ${fake_course_ids.length} 門假課程`
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('清理假課程 API 錯誤:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return NextResponse.json(
-      { error: `伺服器內部錯誤: ${error.message}` },
+      { error: `伺服器內部錯誤: ${errorMessage}` },
       { status: 500 }
     );
   }
