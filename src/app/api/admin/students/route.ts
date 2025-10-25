@@ -42,9 +42,9 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     : 0;
 
   const lastActivity = [
-    ...(vocabStats?.map(v => v.session_date) || []),
-    ...(examStats?.map(e => e.exam_date) || []),
-    ...(assignmentStats?.map(a => a.submission_date?.split('T')[0]) || [])
+    ...(vocabStats?.map((v: any) => v.session_date) || []),
+    ...(examStats?.map((e: any) => e.exam_date) || []),
+    ...(assignmentStats?.map((a: any) => a.submission_date?.split('T')[0]) || [])
   ].sort().pop() || 'N/A';
 
   return {
