@@ -36,7 +36,7 @@ async function generateReportPDF(reportData: any): Promise<Buffer> {
       }
     });
 
-    return pdf;
+    return Buffer.from(pdf);
   } finally {
     await browser.close();
   }
