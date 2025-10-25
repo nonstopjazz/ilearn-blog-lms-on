@@ -329,7 +329,7 @@ ${generateSuggestions(data)}
       sessions_count: vocabulary.sessions.length,
       total_words: vocabulary.total_words,
       avg_accuracy: vocabulary.avg_accuracy,
-      daily_breakdown: vocabulary.sessions.map(s => ({
+      daily_breakdown: vocabulary.sessions.map((s: any) => ({
         date: s.session_date,
         words: s.words_learned,
         accuracy: s.accuracy_rate
