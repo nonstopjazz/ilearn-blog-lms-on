@@ -851,7 +851,7 @@ export default function AdminReminderManagementPage() {
                           <div className="flex items-center">
                             {getTypeIcon(reminder.reminder_type)}
                             <span className="ml-2 text-sm">
-                              {REMINDER_TYPES[reminder.reminder_type]?.name || reminder.reminder_type}
+                              {REMINDER_TYPES[reminder.reminder_type as keyof typeof REMINDER_TYPES]?.name || reminder.reminder_type}
                             </span>
                           </div>
                         </td>
