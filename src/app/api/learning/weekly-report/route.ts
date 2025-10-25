@@ -338,14 +338,14 @@ ${generateSuggestions(data)}
     exams: {
       count: exams.records.length,
       avg_score: exams.avg_score,
-      records: exams.records.map(e => ({
+      records: exams.records.map((e: any) => ({
         name: e.exam_name,
         type: e.exam_type,
         score: e.percentage_score || e.total_score,
         date: e.exam_date
       }))
     },
-    projects: projects.active.map(p => ({
+    projects: projects.active.map((p: any) => ({
       name: p.project_name,
       type: p.project_type,
       progress: p.progress_percentage,
