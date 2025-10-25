@@ -62,9 +62,10 @@ export default function CourseSettingsIndexPage() {
         console.error(errorText);
         setError(errorText);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入課程失敗:', error);
-      setError(`載入課程失敗: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+      setError(`載入課程失敗: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
