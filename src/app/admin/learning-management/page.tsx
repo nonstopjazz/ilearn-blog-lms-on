@@ -1544,8 +1544,8 @@ export default function AdminLearningManagementPage() {
                     <Label>學生狀態</Label>
                     <Select
                       value={editingStudent.status}
-                      onValueChange={(value: 'active' | 'inactive') =>
-                        setEditingStudent(prev => prev ? {...prev, status: value} : null)
+                      onValueChange={(value) =>
+                        setEditingStudent(prev => prev ? {...prev, status: value as 'active' | 'inactive'} : null)
                       }
                     >
                       <SelectTrigger>
