@@ -523,7 +523,7 @@ export default function AdminReminderManagementPage() {
   });
 
   const getTypeIcon = (type: string) => {
-    const IconComponent = REMINDER_TYPES[type]?.icon || Bell;
+    const IconComponent = REMINDER_TYPES[type as keyof typeof REMINDER_TYPES]?.icon || Bell;
     return <IconComponent className="w-4 h-4" />;
   };
 
