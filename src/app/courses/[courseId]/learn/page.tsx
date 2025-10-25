@@ -576,7 +576,15 @@ export default function CourseLearnPage() {
   // 格式化時間
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
-    return `${minutes} 分鐘`
+    const remainingSeconds = seconds % 60
+
+    if (minutes > 0 && remainingSeconds > 0) {
+      return `${minutes} 分 ${remainingSeconds} 秒`
+    } else if (minutes > 0) {
+      return `${minutes} 分鐘`
+    } else {
+      return `${seconds} 秒`
+    }
   }
 
   // 🎨 改善的附件列表渲染函數

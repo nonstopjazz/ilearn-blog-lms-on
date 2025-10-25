@@ -123,7 +123,15 @@ export default function LayoutMatchedLearnPage() {
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
-    return `${minutes} 分鐘`
+    const remainingSeconds = seconds % 60
+
+    if (minutes > 0 && remainingSeconds > 0) {
+      return `${minutes} 分 ${remainingSeconds} 秒`
+    } else if (minutes > 0) {
+      return `${minutes} 分鐘`
+    } else {
+      return `${seconds} 秒`
+    }
   }
 
   const getLessonProgress = (lessonId: string) => {
