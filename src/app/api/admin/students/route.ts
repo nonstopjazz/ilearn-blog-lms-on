@@ -32,13 +32,13 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     .eq('is_published', true);
 
   // 計算統計數據
-  const totalWords = vocabStats?.reduce((sum, v) => sum + (v.words_learned || 0), 0) || 0;
+  const totalWords = vocabStats?.reduce((sum: number, v) => sum + (v.words_learned || 0), 0) || 0;
   const avgAccuracy = vocabStats && vocabStats.length > 0
-    ? vocabStats.reduce((sum, v) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
+    ? vocabStats.reduce((sum: number, v) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
     : 0;
 
   const avgExamScore = examStats && examStats.length > 0
-    ? examStats.reduce((sum, e) => sum + (e.percentage_score || 0), 0) / examStats.length
+    ? examStats.reduce((sum: number, e) => sum + (e.percentage_score || 0), 0) / examStats.length
     : 0;
 
   const lastActivity = [
