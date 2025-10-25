@@ -306,7 +306,7 @@ ${exams.records.map((e: any) =>
 
 【進行中的專案】
 ${projects.active.length > 0 ?
-  projects.active.map(p =>
+  projects.active.map((p: any) =>
     `- ${p.project_name}：進度 ${p.progress_percentage || 0}%`
   ).join('\n') :
   '無進行中的專案'}
