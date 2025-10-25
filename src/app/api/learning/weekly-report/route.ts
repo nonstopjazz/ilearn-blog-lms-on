@@ -299,7 +299,7 @@ ${vocabulary.sessions.map((s: any) =>
 ${exams.records.length > 0 ?
   `- 本週考試：${exams.records.length}次
 - 平均分數：${exams.avg_score?.toFixed(1) || 'N/A'}分
-${exams.records.map(e =>
+${exams.records.map((e: any) =>
   `  • ${e.exam_name}: ${e.percentage_score || e.total_score || 'N/A'}分`
 ).join('\n')}` :
   '本週無考試記錄'}
