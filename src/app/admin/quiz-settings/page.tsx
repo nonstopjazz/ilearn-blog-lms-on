@@ -395,8 +395,8 @@ const QuizSettingsPage: React.FC = () => {
                           <input
                             type="number"
                             value={selectedQuiz.time_limit || ''}
-                            onChange={(e) => updateSelectedQuiz({ 
-                              time_limit: e.target.value ? parseInt(e.target.value) : null 
+                            onChange={(e) => updateSelectedQuiz({
+                              time_limit: e.target.value ? parseInt(e.target.value) : undefined
                             })}
                             placeholder="無限制"
                             min="1"
