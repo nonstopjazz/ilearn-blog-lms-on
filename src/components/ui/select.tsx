@@ -44,13 +44,14 @@ export function Select({ value, defaultValue = "", onValueChange, children }: Se
   )
 }
 
-export function SelectTrigger({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+export function SelectTrigger({ children, className = "", disabled = false }: { children: React.ReactNode; className?: string; disabled?: boolean }) {
   const { value, open, setOpen } = React.useContext(SelectContext)
 
   return (
     <button
       type="button"
       onClick={() => setOpen(!open)}
+      disabled={disabled}
       className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       {children}
