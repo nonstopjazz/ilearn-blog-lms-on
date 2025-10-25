@@ -73,12 +73,14 @@ export async function GET(
       }
     })
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('調試API錯誤:', error)
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤'
+    const errorStack = error instanceof Error ? error.stack : undefined
     return NextResponse.json({
       success: false,
-      error: error.message,
-      stack: error.stack
+      error: errorMessage,
+      stack: errorStack
     }, { status: 500 })
   }
 }
