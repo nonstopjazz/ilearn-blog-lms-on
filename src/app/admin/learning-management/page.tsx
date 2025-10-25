@@ -954,9 +954,8 @@ export default function AdminLearningManagementPage() {
                           ...prev,
                           data: { ...prev.data, exam_type: value }
                         }))}
-                        disabled={loadingExamTypes}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger disabled={loadingExamTypes}>
                           <SelectValue placeholder={loadingExamTypes ? "載入中..." : "選擇考試類型"} />
                         </SelectTrigger>
                         <SelectContent>
