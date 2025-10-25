@@ -390,10 +390,10 @@ export async function POST(request: NextRequest) {
     // 生成 Email HTML（簡潔版，提示查看附件）
     const htmlContent = generateEmailHTML(report_data);
 
-    // 準備 PDF 附件 - 轉為數字陣列（Resend 正確格式）
+    // 準備 PDF 附件
     const attachments = [{
       filename: `學習報告_${student.name}_${new Date().toISOString().split('T')[0]}.pdf`,
-      content: Array.from(pdfBuffer)
+      content: pdfBuffer
     }];
 
     // 發送郵件
