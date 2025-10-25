@@ -276,6 +276,22 @@ export default function AdminLearningManagementPage() {
       return;
     }
 
+    // 針對不同記錄類型的欄位驗證
+    if (newRecordForm.recordType === 'task') {
+      if (!newRecordForm.data.task_description || !newRecordForm.data.task_description.trim()) {
+        alert('請填寫任務內容');
+        return;
+      }
+      if (!newRecordForm.data.task_type) {
+        alert('請選擇任務類型');
+        return;
+      }
+      if (newRecordForm.data.task_type === 'onetime' && !newRecordForm.data.due_date) {
+        alert('一次性任務需要設定截止日期');
+        return;
+      }
+    }
+
     setIsSubmittingRecord(true);
     let response;
 
@@ -785,6 +801,7 @@ export default function AdminLearningManagementPage() {
                         };
                       } else if (value === 'task') {
                         defaultData = {
+                          task_description: '',
                           task_type: 'onetime',
                           priority: 'normal'
                         };
