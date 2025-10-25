@@ -105,10 +105,11 @@ export async function POST(req: NextRequest) {
       message: '申請提交成功，請等待審核'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('課程申請 API 錯誤:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return NextResponse.json(
-      { error: `伺服器內部錯誤: ${error.message}` },
+      { error: `伺服器內部錯誤: ${errorMessage}` },
       { status: 500 }
     );
   }
