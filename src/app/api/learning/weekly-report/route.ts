@@ -291,7 +291,7 @@ function generateWeeklyReport(data: any) {
 - 學習次數：${vocabulary.sessions.length}次
 - 總學習單字：${vocabulary.total_words}個
 - 平均正確率：${vocabulary.avg_accuracy.toFixed(1)}%
-${vocabulary.sessions.map(s =>
+${vocabulary.sessions.map((s: any) =>
   `  • ${s.session_date}: 編號 ${s.start_number}-${s.end_number}，正確率 ${s.accuracy_rate || 'N/A'}%`
 ).join('\n')}
 
