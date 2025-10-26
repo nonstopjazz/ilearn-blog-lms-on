@@ -2,24 +2,39 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // 臨時：暫時忽略 ESLint 警告以完成部署
+  // TODO: 系統化修復約 300 個代碼質量問題後重新啟用
   eslint: {
-    // 在生產環境建置時忽略 ESLint 錯誤
     ignoreDuringBuilds: true,
   },
+  // 臨時：暫時忽略 TypeScript 錯誤以完成部署
+  // TODO: 系統化修復所有 TypeScript 型別錯誤後重新啟用
   typescript: {
-    // 在生產環境建置時忽略 TypeScript 錯誤
     ignoreBuildErrors: true,
   },
+  // 安全增強：限制允許的圖片來源，防止 SSRF 攻擊
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'ilearn-blog-lms-on.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'bunnycdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.bunny.net',
       },
     ],
   },
-  // 關閉開發環境的錯誤覆蓋層（Error Overlay）中的某些警告
-  reactStrictMode: false, // 暫時關閉嚴格模式以避免誤報
+  // 安全增強：啟用 React 嚴格模式以偵測潛在問題
+  reactStrictMode: true,
 };
 
 export default nextConfig;

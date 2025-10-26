@@ -33,6 +33,6 @@ export const supabase = new Proxy({} as SupabaseClient, {
     if (!_legacySupabaseInstance) {
       _legacySupabaseInstance = getSupabase()
     }
-    return (_legacySupabaseInstance as any)[prop]
+    return (_legacySupabaseInstance as Record<string, unknown>)[prop]
   }
 })

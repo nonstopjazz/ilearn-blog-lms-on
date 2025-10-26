@@ -1,6 +1,12 @@
 // src/lib/api-auth.ts
 import { createClient } from '@supabase/supabase-js';
-import { isAdmin, getUserRole, hasPermission, Permission } from '@/lib/security-config';
+import { isAdmin, hasPermission, Permission } from '@/lib/security-config';
+
+// 定義 API context 型別
+interface ApiContext {
+  params?: Record<string, string | string[]>;
+  [key: string]: unknown;
+}
 
 // 延遲初始化 Supabase 客戶端
 function getSupabaseClient() {
@@ -167,8 +173,8 @@ export async function requirePermission(request: Request, permission: Permission
 /**
  * API 路由包裝器，自動處理認證和權限檢查
  */
-export function withAuth(handler: (request: Request, context: any) => Promise<Response>) {
-  return async (request: Request, context: any) => {
+export function withAuth(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+  return async (request: Request, context: ApiContext) => {
     const auth = await requireAuth(request);
     if (!auth.success) {
       return auth.response!;
@@ -187,8 +193,8 @@ export function withAuth(handler: (request: Request, context: any) => Promise<Re
 /**
  * 管理員 API 路由包裝器
  */
-export function withAdminAuth(handler: (request: Request, context: any) => Promise<Response>) {
-  return async (request: Request, context: any) => {
+export function withAdminAuth(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+  return async (request: Request, context: ApiContext) => {
     const auth = await requireAdmin(request);
     if (!auth.success) {
       return auth.response!;
@@ -209,8 +215,8 @@ export function withAdminAuth(handler: (request: Request, context: any) => Promi
  * 權限檢查 API 路由包裝器
  */
 export function withPermission(permission: Permission) {
-  return function(handler: (request: Request, context: any) => Promise<Response>) {
-    return async (request: Request, context: any) => {
+  return function(handler: (request: Request, context: ApiContext) => Promise<Response>) {
+    return async (request: Request, context: ApiContext) => {
       const auth = await requirePermission(request, permission);
       if (!auth.success) {
         return auth.response!;
@@ -230,11 +236,13 @@ export function withPermission(permission: Permission) {
 
 /**
  * 簡單的 API Key 驗證（用於內部 API 調用）
+ * 安全增強：移除開發環境自動繞過，強制驗證 API Key
  */
 export async function verifyApiKey(request: Request) {
-  // 開發環境或沒有設定 API_KEY 時，允許所有請求
-  if (!process.env.API_KEY || process.env.NODE_ENV === 'development') {
-    return { valid: true };
+  // 檢查 API_KEY 是否已設定
+  if (!process.env.API_KEY) {
+    console.error('[Security] API_KEY environment variable is not configured');
+    return { valid: false, error: 'API authentication is not configured' };
   }
 
   const apiKey = request.headers.get('x-api-key');
@@ -244,6 +252,7 @@ export async function verifyApiKey(request: Request) {
   }
 
   if (apiKey !== process.env.API_KEY) {
+    console.warn('[Security] Invalid API key attempt from:', request.headers.get('x-forwarded-for') || 'unknown');
     return { valid: false, error: 'Invalid API key' };
   }
 

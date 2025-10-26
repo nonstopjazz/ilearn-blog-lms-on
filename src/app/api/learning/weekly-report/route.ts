@@ -291,7 +291,7 @@ function generateWeeklyReport(data: any) {
 - 學習次數：${vocabulary.sessions.length}次
 - 總學習單字：${vocabulary.total_words}個
 - 平均正確率：${vocabulary.avg_accuracy.toFixed(1)}%
-${vocabulary.sessions.map(s =>
+${vocabulary.sessions.map((s: any) =>
   `  • ${s.session_date}: 編號 ${s.start_number}-${s.end_number}，正確率 ${s.accuracy_rate || 'N/A'}%`
 ).join('\n')}
 
@@ -299,14 +299,14 @@ ${vocabulary.sessions.map(s =>
 ${exams.records.length > 0 ?
   `- 本週考試：${exams.records.length}次
 - 平均分數：${exams.avg_score?.toFixed(1) || 'N/A'}分
-${exams.records.map(e =>
+${exams.records.map((e: any) =>
   `  • ${e.exam_name}: ${e.percentage_score || e.total_score || 'N/A'}分`
 ).join('\n')}` :
   '本週無考試記錄'}
 
 【進行中的專案】
 ${projects.active.length > 0 ?
-  projects.active.map(p =>
+  projects.active.map((p: any) =>
     `- ${p.project_name}：進度 ${p.progress_percentage || 0}%`
   ).join('\n') :
   '無進行中的專案'}
@@ -329,7 +329,7 @@ ${generateSuggestions(data)}
       sessions_count: vocabulary.sessions.length,
       total_words: vocabulary.total_words,
       avg_accuracy: vocabulary.avg_accuracy,
-      daily_breakdown: vocabulary.sessions.map(s => ({
+      daily_breakdown: vocabulary.sessions.map((s: any) => ({
         date: s.session_date,
         words: s.words_learned,
         accuracy: s.accuracy_rate
@@ -338,14 +338,14 @@ ${generateSuggestions(data)}
     exams: {
       count: exams.records.length,
       avg_score: exams.avg_score,
-      records: exams.records.map(e => ({
+      records: exams.records.map((e: any) => ({
         name: e.exam_name,
         type: e.exam_type,
         score: e.percentage_score || e.total_score,
         date: e.exam_date
       }))
     },
-    projects: projects.active.map(p => ({
+    projects: projects.active.map((p: any) => ({
       name: p.project_name,
       type: p.project_type,
       progress: p.progress_percentage,

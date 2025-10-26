@@ -1,4 +1,5 @@
 'use client';
+import { User } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,7 +28,7 @@ interface Category {
 
 export default function BlogCategoriesPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

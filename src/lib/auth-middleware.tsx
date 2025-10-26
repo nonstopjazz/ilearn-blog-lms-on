@@ -21,7 +21,7 @@ export default function AuthMiddleware({
   requireAuth = true,
   fallbackPath = '/auth'
 }: AuthMiddlewareProps) {
-  const { user, loading, error, isAuthenticated, isAdmin } = useAuth();
+  const { loading, error, isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 

@@ -198,10 +198,11 @@ END $$;
       message: 'Database migration completed successfully'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Migration API] Migration error:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
     return NextResponse.json(
-      { success: false, error: 'Migration failed: ' + error.message },
+      { success: false, error: `Migration failed: ${errorMessage}` },
       { status: 500 }
     );
   }

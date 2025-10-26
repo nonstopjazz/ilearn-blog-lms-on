@@ -1,14 +1,15 @@
 'use client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   Search,
   Filter,
   Calendar,
@@ -37,7 +38,7 @@ interface BlogPost {
 
 const BlogAdminList: React.FC = () => {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,13 +136,13 @@ const BlogAdminList: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges = {
+    const badges: Record<string, string> = {
       draft: 'bg-yellow-100 text-yellow-800',
       published: 'bg-green-100 text-green-800',
       archived: 'bg-gray-100 text-gray-800'
     };
-    
-    const labels = {
+
+    const labels: Record<string, string> = {
       draft: '草稿',
       published: '已發布',
       archived: '已封存'

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
 import Navbar from '@/components/Navbar';
 import { 
   Save, 
@@ -35,8 +36,8 @@ const BlogAdminEdit: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const blogId = params.id as string;
-  
-  const [user, setUser] = useState(null);
+
+  const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

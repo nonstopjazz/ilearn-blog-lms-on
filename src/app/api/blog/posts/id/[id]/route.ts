@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
-    const supabase = createSupabaseServerClient()
+    const { id } = await params
+    const supabase = createSupabaseClient()
     
     // 查詢文章詳情
     const { data: post, error } = await supabase
@@ -86,11 +86,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
-    const supabase = createSupabaseServerClient()
+    const { id } = await params
+    const supabase = createSupabaseClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -205,11 +205,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
-    const supabase = createSupabaseServerClient()
+    const { id } = await params
+    const supabase = createSupabaseClient()
     
     // 檢查用戶權限
     const { data: { user }, error: authError } = await supabase.auth.getUser()

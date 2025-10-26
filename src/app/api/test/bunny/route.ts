@@ -50,12 +50,13 @@ export async function GET(request: NextRequest) {
     try {
       videoInfo = await bunnyAPI.getVideo(testVideoId)
       console.log('影片資訊獲取成功:', videoInfo.title || '無標題')
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('影片資訊獲取失敗:', error)
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤'
       return NextResponse.json({
         success: false,
         error: '無法獲取測試影片資訊',
-        details: error.message,
+        details: errorMessage,
         video_id: testVideoId
       }, { status: 500 })
     }
@@ -96,13 +97,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Bunny.net 測試失敗:', error)
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤'
+    const errorStack = error instanceof Error ? error.stack : undefined
     return NextResponse.json({
       success: false,
       error: 'Bunny.net 測試失敗',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
     }, { status: 500 })
   }
 }

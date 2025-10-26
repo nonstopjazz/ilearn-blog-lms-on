@@ -78,7 +78,7 @@ export default function AdminRequestsPage() {
       } else {
         console.error('載入申請失敗:', result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('載入申請失敗:', error);
     } finally {
       setLoading(false);
@@ -119,9 +119,9 @@ export default function AdminRequestsPage() {
       } else {
         throw new Error(result.error || '操作失敗');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('處理申請失敗:', error);
-      alert(`操作失敗: ${error.message}`);
+      alert(`操作失敗: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setActionLoading(null);
     }

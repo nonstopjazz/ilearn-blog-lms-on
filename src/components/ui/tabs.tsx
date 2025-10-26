@@ -52,7 +52,7 @@ const TabsList = React.forwardRef<
   >
     {React.Children.map(children, child => {
       if (React.isValidElement(child)) {
-        return React.cloneElement(child as any, {
+        return React.cloneElement(child as React.ReactElement<{ selectedValue?: string; onValueChange?: (value: string) => void }>, {
           selectedValue,
           onValueChange
         })

@@ -254,9 +254,9 @@ type Partial<T> = {
 ]
 
 // 全域資料存儲
-let blogPosts: BlogPost[] = [...initialPosts]
+const blogPosts: BlogPost[] = [...initialPosts]
 
-let blogTags: BlogTag[] = [
+const blogTags: BlogTag[] = [
   { id: '1', name: 'Next.js', slug: 'nextjs', color: '#000000' },
   { id: '2', name: 'React', slug: 'react', color: '#61DAFB' },
   { id: '3', name: 'TypeScript', slug: 'typescript', color: '#3178C6' },
@@ -267,7 +267,7 @@ let blogTags: BlogTag[] = [
   { id: '8', name: '資料庫', slug: 'database', color: '#96CEB4' }
 ]
 
-let blogCategories: BlogCategory[] = [
+const blogCategories: BlogCategory[] = [
   { id: '1', name: 'Web開發', slug: 'web-dev', color: '#3B82F6', post_count: 5 },
   { id: '2', name: 'React', slug: 'react', color: '#10B981', post_count: 3 },
   { id: '3', name: 'TypeScript', slug: 'typescript', color: '#8B5CF6', post_count: 4 },

@@ -70,7 +70,7 @@ export default function LayoutMatchedLearnPage() {
         setLessons(data.lessons || [])
         // 設置第一個未完成的課程或第一個課程為當前課程
         const lessonsData = data.lessons || []
-        const firstIncompleteLesson = lessonsData.find(lesson => {
+        const firstIncompleteLesson = lessonsData.find((lesson: any) => {
           return !lesson.user_progress || lesson.user_progress.progress_percentage < 100
         })
         setCurrentLesson(firstIncompleteLesson || lessonsData[0] || null)
@@ -123,7 +123,15 @@ export default function LayoutMatchedLearnPage() {
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
-    return `${minutes} 分鐘`
+    const remainingSeconds = seconds % 60
+
+    if (minutes > 0 && remainingSeconds > 0) {
+      return `${minutes} 分 ${remainingSeconds} 秒`
+    } else if (minutes > 0) {
+      return `${minutes} 分鐘`
+    } else {
+      return `${seconds} 秒`
+    }
   }
 
   const getLessonProgress = (lessonId: string) => {

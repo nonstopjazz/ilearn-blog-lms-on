@@ -635,7 +635,7 @@ const LessonEditor: React.FC<{
           .eq('id', lesson.id);
 
         if (error) {
-          throw new Error(`更新失敗: ${error.message}`);
+          throw new Error(`更新失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
         
         console.log('✅ 課程單元更新成功:', lesson.title);
@@ -646,7 +646,7 @@ const LessonEditor: React.FC<{
           .insert([lessonData]);
 
         if (error) {
-          throw new Error(`新增失敗: ${error.message}`);
+          throw new Error(`新增失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
         }
         
         console.log('✅ 課程單元新增成功:', lesson.title);
@@ -655,9 +655,9 @@ const LessonEditor: React.FC<{
 
       await loadLessons();
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('儲存課程單元失敗:', error);
-      setMessage(`儲存失敗: ${error.message}`);
+      setMessage(`儲存失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -676,7 +676,7 @@ const LessonEditor: React.FC<{
         .eq('id', lessonId);
 
       if (error) {
-        throw new Error(`刪除失敗: ${error.message}`);
+        throw new Error(`刪除失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
 
       console.log('✅ 課程單元刪除成功');
@@ -684,9 +684,9 @@ const LessonEditor: React.FC<{
       
       await loadLessons();
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('刪除課程單元失敗:', error);
-      setMessage(`刪除失敗: ${error.message}`);
+      setMessage(`刪除失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -705,7 +705,7 @@ const LessonEditor: React.FC<{
   }, [courseId]);
 
   // 清除訊息 - 使用 useRef 避免重複觸發
-  const messageTimerRef = useRef<NodeJS.Timeout>();
+  const messageTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   
   useEffect(() => {
     if (message) {
@@ -800,7 +800,7 @@ const LessonEditor: React.FC<{
         ]);
 
       if (error) {
-        throw new Error(`排序失敗: ${error.message}`);
+        throw new Error(`排序失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
 
       console.log('✅ 課程順序更新成功');
@@ -810,7 +810,7 @@ const LessonEditor: React.FC<{
       
     } catch (error) {
       console.error('更新順序失敗:', error);
-      setMessage(`排序失敗: ${error.message}`);
+      setMessage(`排序失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -1360,15 +1360,15 @@ const CourseSettingsPage: React.FC = () => {
       //   .from('course_reviews')
       //   .select('rating')
       //   .eq('course_id', courseId);
-      const reviews = null;
-      
+      const reviews: Array<{ rating: number }> = [];
+
       // 計算統計數據
       const totalEnrollments = enrollments?.length || 0;
       const activeStudents = enrollments?.filter(e => e.status === 'approved').length || 0;
-      
+
       // 計算平均評分
       let averageRating = 0;
-      if (reviews && reviews.length > 0) {
+      if (reviews.length > 0) {
         const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
         averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
       }
@@ -1507,14 +1507,14 @@ const CourseSettingsPage: React.FC = () => {
         .eq('id', courseId);
 
       if (error) {
-        throw new Error(`儲存失敗: ${error.message}`);
+        throw new Error(`儲存失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
 
       setMessage('設定已儲存成功！');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('儲存設定失敗:', error);
-      setMessage(`儲存失敗: ${error.message}`);
+      setMessage(`儲存失敗: ${error instanceof Error ? error.message : "Unknown error"}`);
       setTimeout(() => setMessage(''), 3000);
     } finally {
       setSaving(false);

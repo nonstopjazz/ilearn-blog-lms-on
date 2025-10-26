@@ -29,7 +29,7 @@ export const signUp = async (email: string, password: string, fullName: string) 
     }
 
     return { user: authData.user, error: null }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { user: null, error: error.message }
   }
 }
@@ -45,7 +45,7 @@ export const signIn = async (email: string, password: string) => {
     if (error) throw error
 
     return { user: data.user, error: null }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { user: null, error: error.message }
   }
 }
@@ -56,7 +56,7 @@ export const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     return { error: null }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { error: error.message }
   }
 }
@@ -67,7 +67,7 @@ export const getCurrentUser = async () => {
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error) throw error
     return { user, error: null }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { user: null, error: error.message }
   }
 }
@@ -83,7 +83,7 @@ export const getUserProfile = async (userId: string) => {
 
     if (error) throw error
     return { profile: data, error: null }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { profile: null, error: error.message }
   }
 }

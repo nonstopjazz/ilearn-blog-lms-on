@@ -3,10 +3,10 @@ import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const supabase = createSupabaseClient()
 
     // Query post by slug with relations
@@ -97,10 +97,10 @@ export async function GET(
 // PUT - Update post
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const body = await request.json()
     const supabase = createSupabaseAdminClient()
 
@@ -181,10 +181,10 @@ export async function PUT(
 // DELETE - Delete post
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const supabase = createSupabaseAdminClient()
 
     // Find post by slug

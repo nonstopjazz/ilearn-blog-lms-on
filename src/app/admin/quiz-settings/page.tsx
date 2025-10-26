@@ -395,8 +395,8 @@ const QuizSettingsPage: React.FC = () => {
                           <input
                             type="number"
                             value={selectedQuiz.time_limit || ''}
-                            onChange={(e) => updateSelectedQuiz({ 
-                              time_limit: e.target.value ? parseInt(e.target.value) : null 
+                            onChange={(e) => updateSelectedQuiz({
+                              time_limit: e.target.value ? parseInt(e.target.value) : undefined
                             })}
                             placeholder="無限制"
                             min="1"
@@ -537,8 +537,8 @@ const QuizSettingsPage: React.FC = () => {
                           <input
                             type="datetime-local"
                             value={formatDateTime(selectedQuiz.available_from)}
-                            onChange={(e) => updateSelectedQuiz({ 
-                              available_from: e.target.value ? new Date(e.target.value).toISOString() : null 
+                            onChange={(e) => updateSelectedQuiz({
+                              available_from: e.target.value ? new Date(e.target.value).toISOString() : undefined
                             })}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
@@ -555,8 +555,8 @@ const QuizSettingsPage: React.FC = () => {
                           <input
                             type="datetime-local"
                             value={formatDateTime(selectedQuiz.available_until)}
-                            onChange={(e) => updateSelectedQuiz({ 
-                              available_until: e.target.value ? new Date(e.target.value).toISOString() : null 
+                            onChange={(e) => updateSelectedQuiz({
+                              available_until: e.target.value ? new Date(e.target.value).toISOString() : undefined
                             })}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />

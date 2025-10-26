@@ -1,6 +1,5 @@
 // src/lib/auth-utils.js
-import { createClient } from '@supabase/supabase-js';
-import { getSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseClient } from '@/lib/supabase-server';
 
 /**
  * 從請求中獲取當前用戶
@@ -11,15 +10,15 @@ export async function getCurrentUser(request) {
   try {
     // 從 Authorization header 獲取 token
     const authHeader = request.headers.get('Authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return { user: null, error: null }; // 未登入，但不是錯誤
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
+
     // 獲取 Supabase 客戶端
-    const supabase = getSupabaseClient();
+    const supabase = createSupabaseClient();
     if (!supabase) {
       return { user: null, error: 'Supabase 初始化失敗' };
     }

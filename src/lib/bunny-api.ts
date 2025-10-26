@@ -296,7 +296,7 @@ export class BunnyAPI {
   async testVideoPlayback(): Promise<{
     success: boolean;
     message: string;
-    data?: any;
+    data?: unknown;
   }> {
     if (!this.isServerSide) {
       return {
@@ -355,7 +355,7 @@ export function generateBunnyPlayUrl(videoId: string): string {
   return bunnyAPI.getDirectPlayURL(videoId);
 }
 
-export function generateBunnyEmbedUrl(videoId: string, options?: any): string {
+export function generateBunnyEmbedUrl(videoId: string, options?: Record<string, unknown>): string {
   return bunnyAPI.getEmbedURL(videoId, options);
 }
 
@@ -363,7 +363,7 @@ export function generateBunnyEmbedUrl(videoId: string, options?: any): string {
 export async function testBunnyConnection(): Promise<{
   success: boolean;
   message: string;
-  data?: any;
+  data?: unknown;
 }> {
   return bunnyAPI.testVideoPlayback();
 }

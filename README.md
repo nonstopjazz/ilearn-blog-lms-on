@@ -44,4 +44,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ### 當前課程 ID 範圍
 - course_001 ~ course_003：原始課程
 - course_011 ~ course_015：轉換後課程
-- 下一個新課程：course_016
+- 下一個新課程：course_016# Deployment trigger - Sat Oct 25 14:28:31 UTC 2025

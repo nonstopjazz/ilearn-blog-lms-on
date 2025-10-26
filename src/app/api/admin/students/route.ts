@@ -32,19 +32,19 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
     .eq('is_published', true);
 
   // 計算統計數據
-  const totalWords = vocabStats?.reduce((sum, v) => sum + (v.words_learned || 0), 0) || 0;
+  const totalWords = vocabStats?.reduce((sum: number, v: any) => sum + (v.words_learned || 0), 0) || 0;
   const avgAccuracy = vocabStats && vocabStats.length > 0
-    ? vocabStats.reduce((sum, v) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
+    ? vocabStats.reduce((sum: number, v: any) => sum + (v.accuracy_rate || 0), 0) / vocabStats.length
     : 0;
 
   const avgExamScore = examStats && examStats.length > 0
-    ? examStats.reduce((sum, e) => sum + (e.percentage_score || 0), 0) / examStats.length
+    ? examStats.reduce((sum: number, e: any) => sum + (e.percentage_score || 0), 0) / examStats.length
     : 0;
 
   const lastActivity = [
-    ...(vocabStats?.map(v => v.session_date) || []),
-    ...(examStats?.map(e => e.exam_date) || []),
-    ...(assignmentStats?.map(a => a.submission_date?.split('T')[0]) || [])
+    ...(vocabStats?.map((v: any) => v.session_date) || []),
+    ...(examStats?.map((e: any) => e.exam_date) || []),
+    ...(assignmentStats?.map((a: any) => a.submission_date?.split('T')[0]) || [])
   ].sort().pop() || 'N/A';
 
   return {
@@ -234,7 +234,10 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (vocabError) throw vocabError;
+        if (vocabError) {
+          console.error('[Admin Students API] Vocabulary insert error:', vocabError);
+          throw vocabError;
+        }
         result = vocabResult;
         break;
 
@@ -279,7 +282,10 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (examError) throw examError;
+        if (examError) {
+          console.error('[Admin Students API] Exam insert error:', examError);
+          throw examError;
+        }
         result = examResult;
         break;
 
@@ -299,7 +305,10 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (assignError) throw assignError;
+        if (assignError) {
+          console.error('[Admin Students API] Assignment insert error:', assignError);
+          throw assignError;
+        }
         result = assignResult;
         break;
 
@@ -320,22 +329,35 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        const insertData = {
+          student_id: validStudentId,
+          task_description: data.task_description,
+          task_type: data.task_type,
+          due_date: data.due_date || null,
+          category: data.category || null,
+          priority: data.priority || 'normal',
+          daily_total_days: data.daily_total_days || null,
+          estimated_duration: data.estimated_duration || null
+        };
+
+        console.log('[Admin Students API] Inserting task with data:', insertData);
+
         const { data: taskResult, error: taskError } = await supabase
           .from('student_tasks')
-          .insert([{
-            student_id: validStudentId,
-            task_description: data.task_description,
-            task_type: data.task_type,
-            due_date: data.due_date || null,
-            category: data.category || null,
-            priority: data.priority || 'normal',
-            daily_total_days: data.daily_total_days || null,
-            estimated_duration: data.estimated_duration || null
-          }])
+          .insert([insertData])
           .select()
           .single();
 
-        if (taskError) throw taskError;
+        if (taskError) {
+          console.error('[Admin Students API] Task insert error:', {
+            error: taskError,
+            message: taskError.message,
+            details: taskError.details,
+            hint: taskError.hint,
+            code: taskError.code
+          });
+          throw taskError;
+        }
         result = taskResult;
         break;
 
@@ -357,13 +379,45 @@ export async function POST(request: NextRequest) {
     // 提供更詳細的錯誤訊息以便除錯
     const errorMessage = error?.message || 'Internal server error';
     const errorDetails = error?.details || error?.hint || '';
-    console.error('[Admin Students API] Error details:', errorDetails);
+    const errorCode = error?.code || '';
+
+    console.error('[Admin Students API] Error details:', {
+      message: errorMessage,
+      details: errorDetails,
+      code: errorCode,
+      fullError: error
+    });
+
+    // 根據錯誤類型提供更具體的錯誤訊息
+    let userFriendlyError = 'Internal server error';
+
+    if (errorCode === '42P01') {
+      userFriendlyError = '數據表不存在，請聯繫管理員';
+    } else if (errorCode === '23503') {
+      userFriendlyError = '學生ID無效或不存在';
+    } else if (errorCode === '23505') {
+      userFriendlyError = '記錄已存在';
+    } else if (errorMessage.includes('duplicate key')) {
+      userFriendlyError = '記錄已存在';
+    } else if (errorMessage.includes('violates foreign key')) {
+      userFriendlyError = '學生ID無效或不存在';
+    } else if (errorMessage.includes('permission denied') || errorMessage.includes('insufficient_privilege')) {
+      userFriendlyError = '權限不足，請聯繫管理員';
+    } else if (errorDetails) {
+      userFriendlyError = `資料庫錯誤: ${errorDetails}`;
+    } else if (errorMessage && errorMessage !== 'Internal server error') {
+      userFriendlyError = `操作失敗: ${errorMessage}`;
+    }
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
-        debug: process.env.NODE_ENV === 'development' ? { message: errorMessage, details: errorDetails } : undefined
+        error: userFriendlyError,
+        debug: process.env.NODE_ENV === 'development' ? {
+          message: errorMessage,
+          details: errorDetails,
+          code: errorCode
+        } : undefined
       },
       { status: 500 }
     );

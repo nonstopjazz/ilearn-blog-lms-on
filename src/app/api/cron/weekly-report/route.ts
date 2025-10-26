@@ -7,7 +7,7 @@ import { headers } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
     // 驗證請求來源（用於 Vercel Cron）
-    const authHeader = headers().get('authorization');
+    const authHeader = (await headers()).get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
