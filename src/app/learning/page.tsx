@@ -1178,6 +1178,38 @@ const Dashboard = () => {
     [vocabularySessions, vocabularyTimeRange]
   );
 
+  // 根據時間範圍過濾學生任務
+  const filteredStudentTasks = useMemo(() => {
+    if (!studentTasks || studentTasks.length === 0) return [];
+
+    const now = new Date();
+    let cutoffDate = new Date();
+
+    switch (assignmentTimeRange) {
+      case 'week':
+        cutoffDate.setDate(now.getDate() - 14); // 2週
+        break;
+      case 'month':
+        cutoffDate.setMonth(now.getMonth() - 1); // 1個月
+        break;
+      case 'quarter':
+        cutoffDate.setMonth(now.getMonth() - 3); // 3個月
+        break;
+      case 'semester':
+        cutoffDate.setMonth(now.getMonth() - 6); // 6個月
+        break;
+      case 'all':
+        return studentTasks; // 顯示全部
+      default:
+        cutoffDate.setMonth(now.getMonth() - 1); // 預設1個月
+    }
+
+    return studentTasks.filter(task => {
+      const taskDate = new Date(task.assigned_date || task.created_at);
+      return taskDate >= cutoffDate;
+    });
+  }, [studentTasks, assignmentTimeRange]);
+
   // 處理甘特圖任務點擊
   const handleTaskClick = (task: GanttTask) => {
     console.log('點擊任務:', task);
@@ -1402,22 +1434,36 @@ const Dashboard = () => {
                     <CardTitle>作業進度追蹤</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">每堂課交代的作業完成情況</p>
                   </div>
-                  {taskStats.max_streak > 0 && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                      <Trophy className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">最高連續 {taskStats.max_streak} 天</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {taskStats.max_streak > 0 && (
+                      <div className="flex items-center gap-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                        <Trophy className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        <span className="text-sm font-bold text-orange-600 dark:text-orange-400">最高連續 {taskStats.max_streak} 天</span>
+                      </div>
+                    )}
+                    <Select value={assignmentTimeRange} onValueChange={setAssignmentTimeRange}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="week">最近2週</SelectItem>
+                        <SelectItem value="month">最近1個月</SelectItem>
+                        <SelectItem value="quarter">最近3個月</SelectItem>
+                        <SelectItem value="semester">最近半年</SelectItem>
+                        <SelectItem value="all">全部資料</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
               {loadingStudentTasks ? (
                 <div className="text-center py-8 text-muted-foreground">載入中...</div>
-              ) : studentTasks.length === 0 ? (
+              ) : filteredStudentTasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
               ) : (
                 <div className="space-y-3">
-                  {studentTasks.map((task, index) => {
+                  {filteredStudentTasks.map((task, index) => {
                     // 計算進度百分比
                     let progress = 0;
                     if (task.task_type === 'daily' && task.daily_total_days > 0) {
@@ -1583,6 +1629,18 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold">作業管理</h2>
                 <p className="text-muted-foreground">每堂課交代的作業任務與完成追蹤</p>
               </div>
+              <Select value={assignmentTimeRange} onValueChange={setAssignmentTimeRange}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">最近2週</SelectItem>
+                  <SelectItem value="month">最近1個月</SelectItem>
+                  <SelectItem value="quarter">最近3個月</SelectItem>
+                  <SelectItem value="semester">最近半年</SelectItem>
+                  <SelectItem value="all">全部資料</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 統計卡片 */}
@@ -1644,11 +1702,11 @@ const Dashboard = () => {
               <CardContent>
                 {loadingStudentTasks ? (
                   <div className="text-center py-8 text-muted-foreground">載入中...</div>
-                ) : studentTasks.length === 0 ? (
+                ) : filteredStudentTasks.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
                 ) : (
                   <div className="space-y-3">
-                    {studentTasks.map((task, index) => {
+                    {filteredStudentTasks.map((task, index) => {
                       // 計算進度百分比
                       let progress = 0;
                       if (task.task_type === 'daily' && task.daily_total_days > 0) {
