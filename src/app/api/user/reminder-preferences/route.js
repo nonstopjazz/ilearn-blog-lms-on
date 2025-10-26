@@ -47,7 +47,30 @@ export async function GET(request) {
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
 
-    // 查詢管理員設定的提醒規則
+    // 首先查詢用戶選修的課程
+    const { data: enrolledCourses, error: enrollError } = await supabase
+      .from('course_requests')
+      .select('course_id')
+      .eq('user_id', userId)
+      .eq('status', 'approved');
+
+    if (enrollError) {
+      console.error('查詢用戶選修課程錯誤:', enrollError);
+      return NextResponse.json({ error: '查詢失敗' }, { status: 500 });
+    }
+
+    // 如果用戶沒有選修任何課程，直接返回空陣列
+    if (!enrolledCourses || enrolledCourses.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // 提取用戶選修的課程 ID
+    const enrolledCourseIds = enrolledCourses.map(e => e.course_id);
+
+    // 查詢管理員設定的提醒規則（只查詢用戶選修的課程）
     let adminQuery = supabase
       .from('admin_course_reminders')
       .select(`
@@ -57,7 +80,8 @@ export async function GET(request) {
           title
         )
       `)
-      .eq('is_enabled', true);
+      .eq('is_enabled', true)
+      .in('course_id', enrolledCourseIds); // 只查詢用戶選修的課程
 
     if (courseId) {
       adminQuery = adminQuery.eq('course_id', courseId);
