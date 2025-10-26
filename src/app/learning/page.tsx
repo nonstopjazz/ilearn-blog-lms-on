@@ -1016,6 +1016,27 @@ const Dashboard = () => {
     }
   };
 
+  // 計算年度週次的輔助函數
+  const getWeekOfYear = (date: Date) => {
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.ceil((days + startOfYear.getDay() + 1) / 7);
+  };
+
+  // 格式化日期範圍
+  const formatDateRange = (weekStart: Date) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+
+    const formatDate = (d: Date) => {
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      return `${month}/${day}`;
+    };
+
+    return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+  };
+
   // 數據聚合函數：從 exams 聚合成績趨勢數據
   const aggregateGradeData = (examsList: any[], timeRange: string) => {
     if (!examsList || examsList.length === 0) return [];
@@ -1061,8 +1082,11 @@ const Dashboard = () => {
       const weekKey = weekStart.toISOString().split('T')[0];
 
       if (!weekMap.has(weekKey)) {
+        const weekNum = getWeekOfYear(weekStart);
+        const dateRange = formatDateRange(weekStart);
         weekMap.set(weekKey, {
-          name: `第${Array.from(weekMap.keys()).length + 1}週`,
+          name: `第${weekNum}週`,
+          dateRange: dateRange,
           date: weekKey,
           examsByType: {}
         });
@@ -1080,7 +1104,10 @@ const Dashboard = () => {
 
     // 計算每週各類型考試的平均分數
     const result = Array.from(weekMap.values()).map(week => {
-      const weekData: any = { name: week.name };
+      const weekData: any = {
+        name: week.name,
+        dateRange: week.dateRange // 保留日期範圍信息供 Tooltip 使用
+      };
 
       Object.keys(week.examsByType).forEach(examType => {
         const examsOfType = week.examsByType[examType];
@@ -1141,8 +1168,11 @@ const Dashboard = () => {
       const weekKey = weekStart.toISOString().split('T')[0];
 
       if (!weekMap.has(weekKey)) {
+        const weekNum = getWeekOfYear(weekStart);
+        const dateRange = formatDateRange(weekStart);
         weekMap.set(weekKey, {
-          name: `第${Array.from(weekMap.keys()).length + 1}週`,
+          name: `第${weekNum}週`,
+          dateRange: dateRange,
           date: weekKey,
           totalWords: 0,
           correctWords: 0,
@@ -1159,6 +1189,7 @@ const Dashboard = () => {
     // 轉換為圖表數據格式
     const result = Array.from(weekMap.values()).map(week => ({
       name: week.name,
+      dateRange: week.dateRange, // 保留日期範圍信息供 Tooltip 使用
       已教單字: week.totalWords,
       答對單字: week.correctWords,
       答錯單字: week.totalWords - week.correctWords
@@ -1331,8 +1362,39 @@ const Dashboard = () => {
                         <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                          contentStyle={{
+                            backgroundColor: "rgba(255, 255, 255, 0.98)",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "12px",
+                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                            backdropFilter: "blur(8px)"
+                          }}
+                          cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                           position={{ y: 0 }}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div style={{
+                                  backgroundColor: "rgba(255, 255, 255, 0.98)",
+                                  border: "1px solid hsl(var(--border))",
+                                  borderRadius: "12px",
+                                  padding: "14px 16px",
+                                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                                  backdropFilter: "blur(8px)"
+                                }}>
+                                  <p style={{ fontWeight: 600, marginBottom: "4px", color: "#1f2937", fontSize: "15px" }}>{data.name}</p>
+                                  <p style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "8px" }}>{data.dateRange}</p>
+                                  {payload.map((entry: any, index: number) => (
+                                    <p key={index} style={{ fontSize: "14px", color: entry.color, marginBottom: "4px", fontWeight: 500 }}>
+                                      {entry.name}：{entry.value} 分
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
                         {examTypes.map((type, index) => (
                           <Line
@@ -1406,7 +1468,8 @@ const Dashboard = () => {
                                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
                                 backdropFilter: "blur(8px)"
                               }}>
-                                <p style={{ fontWeight: 600, marginBottom: "8px", color: "#1f2937", fontSize: "15px" }}>{data.name}</p>
+                                <p style={{ fontWeight: 600, marginBottom: "4px", color: "#1f2937", fontSize: "15px" }}>{data.name}</p>
+                                <p style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "8px" }}>{data.dateRange}</p>
                                 <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>已教單字：{data.已教單字} 個</p>
                                 <p style={{ fontSize: "14px", color: "rgb(59, 130, 246)", marginBottom: "4px", fontWeight: 500 }}>答對：{data.答對單字} 個</p>
                                 <p style={{ fontSize: "14px", color: "rgb(239, 68, 68)", marginBottom: "4px", fontWeight: 500 }}>答錯：{data.答錯單字} 個</p>
