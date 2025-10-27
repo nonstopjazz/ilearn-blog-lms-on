@@ -53,6 +53,7 @@ const Dashboard = () => {
   const [assignmentTimeRange, setAssignmentTimeRange] = useState('month');
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
+  const [selectedExamTypes, setSelectedExamTypes] = useState<string[]>([]);
 
   // 作業數據狀態（保留，因為沒有對應的詳細頁籤）
   const [assignmentsByWeek, setAssignmentsByWeek] = useState<any[]>([]);
@@ -901,26 +902,33 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (data.success) {
-        setExamTypes(data.data || []);
+        const types = data.data || [];
+        setExamTypes(types);
+        // 初始化時全部選中
+        setSelectedExamTypes(types.map((t: any) => t.name));
       } else {
         console.error('載入考試類型失敗:', data.error);
         // 如果API失敗，使用預設類型（向後兼容）
-        setExamTypes([
+        const defaultTypes = [
           { name: 'quiz', display_name: '小考', color: 'rgb(59, 130, 246)' },
           { name: 'class_test', display_name: '隨堂考', color: 'rgb(168, 85, 247)' },
           { name: 'vocabulary_test', display_name: '單字測驗', color: 'rgb(34, 197, 94)' },
           { name: 'speaking_eval', display_name: '口說評量', color: 'rgb(251, 146, 60)' },
-        ]);
+        ];
+        setExamTypes(defaultTypes);
+        setSelectedExamTypes(defaultTypes.map(t => t.name));
       }
     } catch (error) {
       console.error('載入考試類型時發生錯誤:', error);
       // 使用預設類型（向後兼容）
-      setExamTypes([
+      const defaultTypes = [
         { name: 'quiz', display_name: '小考', color: 'rgb(59, 130, 246)' },
         { name: 'class_test', display_name: '隨堂考', color: 'rgb(168, 85, 247)' },
         { name: 'vocabulary_test', display_name: '單字測驗', color: 'rgb(34, 197, 94)' },
         { name: 'speaking_eval', display_name: '口說評量', color: 'rgb(251, 146, 60)' },
-      ]);
+      ];
+      setExamTypes(defaultTypes);
+      setSelectedExamTypes(defaultTypes.map(t => t.name));
     } finally {
       setLoadingExamTypes(false);
     }
@@ -1035,6 +1043,19 @@ const Dashboard = () => {
     };
 
     return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+  };
+
+  // 切換考試類型選擇
+  const toggleExamType = (examTypeName: string) => {
+    setSelectedExamTypes(prev => {
+      if (prev.includes(examTypeName)) {
+        // 如果已選中，取消選擇
+        return prev.filter(t => t !== examTypeName);
+      } else {
+        // 如果未選中，新增選擇
+        return [...prev, examTypeName];
+      }
+    });
   };
 
   // 數據聚合函數：從 exams 聚合成績趨勢數據
@@ -1331,23 +1352,49 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>成績趨勢分析</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">各類考試成績趨勢追蹤</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>成績趨勢分析</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">各類考試成績趨勢追蹤</p>
+                      </div>
+                      <Select value={gradeTimeRange} onValueChange={setGradeTimeRange}>
+                        <SelectTrigger className="w-[130px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="week">最近2週</SelectItem>
+                          <SelectItem value="month">最近1個月</SelectItem>
+                          <SelectItem value="quarter">最近3個月</SelectItem>
+                          <SelectItem value="semester">最近半年</SelectItem>
+                          <SelectItem value="all">全部資料</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select value={gradeTimeRange} onValueChange={setGradeTimeRange}>
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="week">最近2週</SelectItem>
-                        <SelectItem value="month">最近1個月</SelectItem>
-                        <SelectItem value="quarter">最近3個月</SelectItem>
-                        <SelectItem value="semester">最近半年</SelectItem>
-                        <SelectItem value="all">全部資料</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground mr-2">考試類型：</span>
+                      {examTypes.map(type => (
+                        <label
+                          key={type.name}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer transition-colors hover:bg-accent"
+                          style={{
+                            borderColor: selectedExamTypes.includes(type.name) ? type.color : 'hsl(var(--border))',
+                            backgroundColor: selectedExamTypes.includes(type.name) ? `${type.color}15` : 'transparent'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedExamTypes.includes(type.name)}
+                            onChange={() => toggleExamType(type.name)}
+                            className="w-4 h-4 rounded border-gray-300"
+                            style={{ accentColor: type.color }}
+                          />
+                          <span className="text-sm font-medium" style={{ color: selectedExamTypes.includes(type.name) ? type.color : 'hsl(var(--foreground))' }}>
+                            {type.display_name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1396,18 +1443,20 @@ const Dashboard = () => {
                             return null;
                           }}
                         />
-                        {examTypes.map((type, index) => (
-                          <Line
-                            key={type.name}
-                            type="monotone"
-                            dataKey={type.name}
-                            name={type.display_name}
-                            stroke={type.color}
-                            strokeWidth={2.5}
-                            dot={{ fill: type.color, r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        ))}
+                        {examTypes
+                          .filter(type => selectedExamTypes.includes(type.name))
+                          .map((type, index) => (
+                            <Line
+                              key={type.name}
+                              type="monotone"
+                              dataKey={type.name}
+                              name={type.display_name}
+                              stroke={type.color}
+                              strokeWidth={2.5}
+                              dot={{ fill: type.color, r: 4 }}
+                              activeDot={{ r: 6 }}
+                            />
+                          ))}
                       </LineChart>
                     </ResponsiveContainer>
                   )}
