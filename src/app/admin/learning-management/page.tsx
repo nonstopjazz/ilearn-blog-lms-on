@@ -1418,6 +1418,14 @@ export default function AdminLearningManagementPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => window.open(`/learning?student_id=${student.id}`, '_blank')}
+                              title="查看學習頁面"
+                            >
+                              <TrendingUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 setReportStudent(student);
                                 setSendReportDialogOpen(true);

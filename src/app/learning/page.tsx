@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +43,7 @@ import {
 import Navbar from '@/components/Navbar';
 
 const Dashboard = () => {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -54,6 +56,11 @@ const Dashboard = () => {
   const [examTypes, setExamTypes] = useState<any[]>([]);
   const [loadingExamTypes, setLoadingExamTypes] = useState(false);
   const [selectedExamTypes, setSelectedExamTypes] = useState<string[]>([]);
+
+  // Admin 查看其他學生的功能
+  const [viewingStudentId, setViewingStudentId] = useState<string | null>(null);
+  const [viewingStudentInfo, setViewingStudentInfo] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 作業數據狀態（保留，因為沒有對應的詳細頁籤）
   const [assignmentsByWeek, setAssignmentsByWeek] = useState<any[]>([]);
@@ -552,6 +559,11 @@ const Dashboard = () => {
     }
   ];
 
+  // 輔助函數：取得當前查看的學生 ID（admin 查看其他學生或自己的資料）
+  const getEffectiveStudentId = () => {
+    return viewingStudentId || currentUser?.id;
+  };
+
   // 檢查認證狀態
   useEffect(() => {
     checkAuth();
@@ -566,6 +578,40 @@ const Dashboard = () => {
       if (user) {
         setIsAuthenticated(true);
         setCurrentUser(user);
+
+        // 檢查是否是 admin
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        const userIsAdmin = profile?.role === 'admin';
+        setIsAdmin(userIsAdmin);
+
+        // 處理 student_id 參數（僅 admin 可用）
+        const studentIdParam = searchParams.get('student_id');
+        if (studentIdParam && userIsAdmin) {
+          setViewingStudentId(studentIdParam);
+
+          // 載入被查看學生的資訊
+          const { data: studentInfo } = await supabase
+            .from('users')
+            .select('id, name, email')
+            .eq('id', studentIdParam)
+            .single();
+
+          if (studentInfo) {
+            setViewingStudentInfo(studentInfo);
+          } else {
+            // 學生不存在
+            alert('找不到該學生');
+            setViewingStudentId(null);
+          }
+        } else if (studentIdParam && !userIsAdmin) {
+          // 非 admin 嘗試查看其他學生
+          alert('您沒有權限查看其他學生的學習頁面');
+        }
       } else {
         setIsAuthenticated(false);
         setCurrentUser(null);
@@ -604,7 +650,7 @@ const Dashboard = () => {
       // 未登入：使用 mock 數據
       loadMockData();
     }
-  }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange]);
+  }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange, viewingStudentId]);
 
   // 當切換到課程頁籤時載入課程數據
   useEffect(() => {
@@ -618,13 +664,14 @@ const Dashboard = () => {
 
   // 載入作業數據（API）- 專案作業用
   const loadAssignments = async () => {
-    if (!isAuthenticated || !currentUser) return;
+    const effectiveStudentId = getEffectiveStudentId();
+    if (!isAuthenticated || !effectiveStudentId) return;
 
     setLoadingAssignments(true);
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/assignments/progress?student_id=${currentUser.id}&range=${assignmentTimeRange}`,
+        `/api/learning/assignments/progress?student_id=${effectiveStudentId}&range=${assignmentTimeRange}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -677,13 +724,14 @@ const Dashboard = () => {
 
   // 載入甘特圖專案作業數據（API）
   const loadGanttAssignments = async () => {
-    if (!isAuthenticated || !currentUser) return;
+    const effectiveStudentId = getEffectiveStudentId();
+    if (!isAuthenticated || !effectiveStudentId) return;
 
     try {
       console.log('[loadGanttAssignments] 開始載入甘特圖作業資料...');
 
       // 從新的學生專屬 API 載入專案作業（只包含進行中和已完成）
-      const response = await fetch(`/api/assignments/student?student_id=${currentUser.id}&status=in_progress,completed`);
+      const response = await fetch(`/api/assignments/student?student_id=${effectiveStudentId}&status=in_progress,completed`);
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -723,13 +771,14 @@ const Dashboard = () => {
 
   // 載入學生任務數據（API）- 作業管理用
   const loadStudentTasks = async () => {
-    if (!isAuthenticated || !currentUser) return;
+    const effectiveStudentId = getEffectiveStudentId();
+    if (!isAuthenticated || !effectiveStudentId) return;
 
     setLoadingStudentTasks(true);
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/tasks?student_id=${currentUser.id}`,
+        `/api/learning/tasks?student_id=${effectiveStudentId}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -778,13 +827,14 @@ const Dashboard = () => {
 
   // 載入考試成績列表數據（API）
   const loadExamsData = async () => {
-    if (!isAuthenticated || !currentUser) return;
+    const effectiveStudentId = getEffectiveStudentId();
+    if (!isAuthenticated || !effectiveStudentId) return;
 
     setLoadingExams(true);
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/exams/list?student_id=${currentUser.id}`,
+        `/api/learning/exams/list?student_id=${effectiveStudentId}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -809,13 +859,14 @@ const Dashboard = () => {
 
   // 載入單字學習記錄數據（API）
   const loadVocabularySessionsData = async () => {
-    if (!isAuthenticated || !currentUser) return;
+    const effectiveStudentId = getEffectiveStudentId();
+    if (!isAuthenticated || !effectiveStudentId) return;
 
     setLoadingVocabularySessions(true);
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/vocabulary/sessions?student_id=${currentUser.id}`,
+        `/api/learning/vocabulary/sessions?student_id=${effectiveStudentId}`,
         {
           headers: {
             'x-api-key': apiKey
@@ -1324,6 +1375,32 @@ const Dashboard = () => {
     <>
       <Navbar />
       <div className="container mx-auto p-6 space-y-6">
+        {/* Admin 查看學生提示 */}
+        {isAdmin && viewingStudentId && viewingStudentInfo && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 p-4 rounded">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Eye className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    管理員模式：正在查看學生學習頁面
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    學生：{viewingStudentInfo.name} ({viewingStudentInfo.email})
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/learning'}
+              >
+                返回我的頁面
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* 頁面標題 */}
         <div className="flex items-center justify-between">
           <div>
