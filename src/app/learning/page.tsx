@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -42,7 +42,7 @@ import {
 } from 'recharts';
 import Navbar from '@/components/Navbar';
 
-const Dashboard = () => {
+const DashboardContent = () => {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -2882,6 +2882,22 @@ const Dashboard = () => {
         </Tabs>
       </div>
     </>
+  );
+};
+
+// Wrapper component with Suspense for useSearchParams
+const Dashboard = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">載入中...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 };
 
