@@ -1219,16 +1219,68 @@ const Dashboard = () => {
     return result;
   };
 
-  // 使用 useMemo 優化效能，只在依賴項改變時重新計算
-  const aggregatedGradeData = useMemo(() =>
-    aggregateGradeData(exams, gradeTimeRange),
-    [exams, gradeTimeRange]
-  );
+  // 為未登入用戶生成假資料（固定資料，避免每次渲染都變化）
+  const getMockGradeData = () => {
+    // 固定的假資料，模擬8週的成績
+    const mockScores = [
+      { quiz: 88, class_test: 85, vocabulary_test: 92, speaking_eval: 87 },
+      { quiz: 90, class_test: 88, vocabulary_test: 89, speaking_eval: 85 },
+      { quiz: 85, class_test: 91, vocabulary_test: 94, speaking_eval: 90 },
+      { quiz: 92, class_test: 89, vocabulary_test: 90, speaking_eval: 88 },
+      { quiz: 87, class_test: 93, vocabulary_test: 91, speaking_eval: 92 },
+      { quiz: 91, class_test: 90, vocabulary_test: 95, speaking_eval: 89 },
+      { quiz: 89, class_test: 92, vocabulary_test: 88, speaking_eval: 91 },
+      { quiz: 93, class_test: 91, vocabulary_test: 93, speaking_eval: 90 }
+    ];
 
-  const aggregatedVocabularyData = useMemo(() =>
-    aggregateVocabularyData(vocabularySessions, vocabularyTimeRange),
-    [vocabularySessions, vocabularyTimeRange]
-  );
+    return mockScores.map((scores, i) => {
+      const weekData: any = {
+        name: `第${i + 1}週`,
+        dateRange: `${i * 7 + 1}/1 - ${i * 7 + 7}/1`
+      };
+      Object.keys(scores).forEach(key => {
+        weekData[key] = scores[key as keyof typeof scores];
+      });
+      return weekData;
+    });
+  };
+
+  const getMockVocabularyData = () => {
+    // 固定的假資料，模擬8週的單字學習
+    const mockData = [
+      { 已教單字: 25, 答對單字: 20 },
+      { 已教單字: 28, 答對單字: 24 },
+      { 已教單字: 22, 答對單字: 19 },
+      { 已教單字: 30, 答對單字: 26 },
+      { 已教單字: 26, 答對單字: 22 },
+      { 已教單字: 32, 答對單字: 28 },
+      { 已教單字: 27, 答對單字: 24 },
+      { 已教單字: 29, 答對單字: 26 }
+    ];
+
+    return mockData.map((data, i) => ({
+      name: `第${i + 1}週`,
+      dateRange: `${i * 7 + 1}/1 - ${i * 7 + 7}/1`,
+      已教單字: data.已教單字,
+      答對單字: data.答對單字,
+      答錯單字: data.已教單字 - data.答對單字
+    }));
+  };
+
+  // 使用 useMemo 優化效能，只在依賴項改變時重新計算
+  const aggregatedGradeData = useMemo(() => {
+    if (!isAuthenticated || !currentUser) {
+      return getMockGradeData();
+    }
+    return aggregateGradeData(exams, gradeTimeRange);
+  }, [exams, gradeTimeRange, isAuthenticated, currentUser]);
+
+  const aggregatedVocabularyData = useMemo(() => {
+    if (!isAuthenticated || !currentUser) {
+      return getMockVocabularyData();
+    }
+    return aggregateVocabularyData(vocabularySessions, vocabularyTimeRange);
+  }, [vocabularySessions, vocabularyTimeRange, isAuthenticated, currentUser]);
 
   // 根據時間範圍過濾學生任務
   const filteredStudentTasks = useMemo(() => {
@@ -1521,7 +1573,7 @@ const Dashboard = () => {
                                 <p style={{ fontSize: "13px", color: "#9ca3af", marginBottom: "8px" }}>{data.dateRange}</p>
                                 <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>已教單字：{data.已教單字} 個</p>
                                 <p style={{ fontSize: "14px", color: "rgb(59, 130, 246)", marginBottom: "4px", fontWeight: 500 }}>答對：{data.答對單字} 個</p>
-                                <p style={{ fontSize: "14px", color: "rgb(239, 68, 68)", marginBottom: "4px", fontWeight: 500 }}>答錯：{data.答錯單字} 個</p>
+                                <p style={{ fontSize: "14px", color: "rgb(34, 197, 94)", marginBottom: "4px", fontWeight: 500 }}>答錯：{data.答錯單字} 個</p>
                                 <p style={{ fontSize: "14px", color: "rgb(16, 185, 129)", fontWeight: 600 }}>正確率：{Math.round((data.答對單字 / data.已教單字) * 100)}%</p>
                               </div>
                             );
@@ -1530,7 +1582,7 @@ const Dashboard = () => {
                         }}
                       />
                       <Bar dataKey="答對單字" stackId="a" fill="rgb(59, 130, 246)" radius={[0, 0, 0, 0]} name="答對單字" />
-                      <Bar dataKey="答錯單字" stackId="a" fill="rgb(239, 68, 68)" radius={[4, 4, 0, 0]} name="答錯單字" />
+                      <Bar dataKey="答錯單字" stackId="a" fill="rgb(34, 197, 94)" radius={[4, 4, 0, 0]} name="答錯單字" />
                     </BarChart>
                   </ResponsiveContainer>
                   )}
