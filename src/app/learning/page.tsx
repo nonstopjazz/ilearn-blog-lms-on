@@ -598,13 +598,34 @@ const DashboardContent = () => {
 
           // 使用 API 載入被查看學生的資訊（繞過 RLS）
           try {
-            const response = await fetch(`/api/admin/students/info?student_id=${studentIdParam}`);
+            // 取得 session token 用於 API 認證
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session?.access_token) {
+              console.error('無法取得 session token');
+              alert('認證失敗，請重新登入');
+              window.location.href = '/learning';
+              return;
+            }
+
+            console.log('[Learning Page] Calling /api/admin/students/info with student_id:', studentIdParam);
+
+            const response = await fetch(`/api/admin/students/info?student_id=${studentIdParam}`, {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+
+            console.log('[Learning Page] API response status:', response.status);
+
             const result = await response.json();
+            console.log('[Learning Page] API response data:', result);
 
             if (result.success && result.data) {
               setViewingStudentInfo(result.data);
             } else {
               // 學生不存在
+              console.error('[Learning Page] Student not found or API error:', result);
               alert('找不到該學生');
               setViewingStudentId(null);
               // 重定向回自己的頁面
