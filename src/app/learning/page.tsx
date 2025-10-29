@@ -596,20 +596,24 @@ const DashboardContent = () => {
           // Admin 查看其他學生
           setViewingStudentId(studentIdParam);
 
-          // 載入被查看學生的資訊
-          const { data: studentInfo } = await supabase
-            .from('users')
-            .select('id, name, email')
-            .eq('id', studentIdParam)
-            .single();
+          // 使用 API 載入被查看學生的資訊（繞過 RLS）
+          try {
+            const response = await fetch(`/api/admin/students/info?student_id=${studentIdParam}`);
+            const result = await response.json();
 
-          if (studentInfo) {
-            setViewingStudentInfo(studentInfo);
-          } else {
-            // 學生不存在
-            alert('找不到該學生');
-            setViewingStudentId(null);
-            // 重定向回自己的頁面
+            if (result.success && result.data) {
+              setViewingStudentInfo(result.data);
+            } else {
+              // 學生不存在
+              alert('找不到該學生');
+              setViewingStudentId(null);
+              // 重定向回自己的頁面
+              window.location.href = '/learning';
+              return;
+            }
+          } catch (error) {
+            console.error('載入學生資訊失敗:', error);
+            alert('載入學生資訊失敗');
             window.location.href = '/learning';
             return;
           }
