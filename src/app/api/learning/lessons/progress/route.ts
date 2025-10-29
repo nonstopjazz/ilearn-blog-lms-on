@@ -5,13 +5,17 @@ import { verifyApiKey } from '@/lib/api-auth';
 // GET - 取得上課進度列表
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: 401 }
-      );
+    // 驗證 API 金鑰（可選）
+    if (process.env.API_KEY) {
+      const authResult = await verifyApiKey(request);
+      if (!authResult.valid) {
+        return NextResponse.json(
+          { success: false, error: authResult.error },
+          { status: 401 }
+        );
+      }
+    } else {
+      console.warn('[Lessons Progress API] API_KEY not configured, skipping API key verification');
     }
 
     const supabase = getSupabase();
