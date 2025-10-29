@@ -27,7 +27,8 @@ import {
   FileText,
   Download,
   Video,
-  PlayCircle
+  PlayCircle,
+  Eye
 } from 'lucide-react';
 import {
   LineChart,
@@ -592,6 +593,7 @@ const DashboardContent = () => {
         // 處理 student_id 參數（僅 admin 可用）
         const studentIdParam = searchParams.get('student_id');
         if (studentIdParam && userIsAdmin) {
+          // Admin 查看其他學生
           setViewingStudentId(studentIdParam);
 
           // 載入被查看學生的資訊
@@ -607,10 +609,15 @@ const DashboardContent = () => {
             // 學生不存在
             alert('找不到該學生');
             setViewingStudentId(null);
+            // 重定向回自己的頁面
+            window.location.href = '/learning';
+            return;
           }
         } else if (studentIdParam && !userIsAdmin) {
-          // 非 admin 嘗試查看其他學生
+          // 非 admin 嘗試查看其他學生 - 直接重定向
           alert('您沒有權限查看其他學生的學習頁面');
+          window.location.href = '/learning';
+          return;
         }
       } else {
         setIsAuthenticated(false);
