@@ -72,21 +72,53 @@ export async function GET(request: NextRequest) {
     }
 
     // 使用 service role 查詢學生資料（繞過 RLS）
-    const { data: studentInfo, error } = await supabase
+    // 先嘗試從 users 表查詢
+    const { data: userInfo, error: userError } = await supabase
       .from('users')
       .select('id, name, email, role')
       .eq('id', studentId)
       .single();
 
-    console.log('[Admin Students Info API] Student query result:', studentInfo, 'Error:', error);
+    console.log('[Admin Students Info API] User table query result:', userInfo, 'Error:', userError);
 
-    if (error) {
-      console.error('[Admin Students Info API] Query error:', error);
+    // 如果 users 表有完整資料，直接返回
+    if (!userError && userInfo) {
+      return NextResponse.json({
+        success: true,
+        data: userInfo
+      });
+    }
+
+    // 如果 users 表沒有或資料不完整，從 course_requests 查詢
+    console.log('[Admin Students Info API] Trying course_requests table...');
+
+    const { data: courseRequest, error: requestError } = await supabase
+      .from('course_requests')
+      .select('user_id, user_info')
+      .eq('user_id', studentId)
+      .eq('status', 'approved')
+      .limit(1)
+      .single();
+
+    console.log('[Admin Students Info API] Course request query result:', courseRequest, 'Error:', requestError);
+
+    if (requestError || !courseRequest) {
+      console.error('[Admin Students Info API] Student not found in both tables');
       return NextResponse.json(
         { success: false, error: 'Student not found' },
         { status: 404 }
       );
     }
+
+    // 從 course_requests.user_info 提取學生資料
+    const studentInfo = {
+      id: courseRequest.user_id,
+      name: courseRequest.user_info?.name || '未知學生',
+      email: courseRequest.user_info?.email || 'no-email@example.com',
+      role: 'student' // course_requests 中的都是學生
+    };
+
+    console.log('[Admin Students Info API] Final student info:', studentInfo);
 
     return NextResponse.json({
       success: true,
