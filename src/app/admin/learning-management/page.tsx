@@ -2030,6 +2030,11 @@ export default function AdminLearningManagementPage() {
                             {task.category && (
                               <Badge variant="outline">{task.category}</Badge>
                             )}
+                            {/* 可見性狀態指示器 */}
+                            <Badge variant={task.visible_to_student ? 'default' : 'secondary'} className="gap-1">
+                              <Eye className="h-3 w-3" />
+                              {task.visible_to_student ? '學生可見' : '學生不可見'}
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
@@ -2050,26 +2055,88 @@ export default function AdminLearningManagementPage() {
                                 <span className="text-sm font-bold text-orange-600">連續 {task.daily_streak} 天</span>
                               </div>
                             )}
-                            <Button
-                              size="sm"
-                              onClick={() => handleEditDailyTask(task)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              登記完成記錄
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(`/api/admin/student-tasks/${task.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ visible_to_student: !task.visible_to_student })
+                                    });
+                                    const result = await response.json();
+                                    if (result.success) {
+                                      // 重新載入作業列表
+                                      if (managingTasksStudent) {
+                                        handleManageTasks(managingTasksStudent);
+                                      }
+                                    } else {
+                                      throw new Error(result.error);
+                                    }
+                                  } catch (error: unknown) {
+                                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                                    alert(`切換可見性失敗: ${errorMessage}`);
+                                  }
+                                }}
+                                title={task.visible_to_student ? '隱藏作業（學生將看不到）' : '顯示作業（學生可以看到）'}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                {task.visible_to_student ? '隱藏' : '顯示'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleEditDailyTask(task)}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                登記完成記錄
+                              </Button>
+                            </div>
                           </div>
                         )}
 
                         {task.task_type === 'onetime' && (
-                          <Badge variant={
-                            task.status === 'completed' ? 'default' :
-                            task.status === 'in_progress' ? 'secondary' :
-                            task.status === 'overdue' ? 'destructive' : 'outline'
-                          }>
-                            {task.status === 'completed' ? '已完成' :
-                             task.status === 'in_progress' ? '進行中' :
-                             task.status === 'overdue' ? '逾期' : '待處理'}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={
+                              task.status === 'completed' ? 'default' :
+                              task.status === 'in_progress' ? 'secondary' :
+                              task.status === 'overdue' ? 'destructive' : 'outline'
+                            }>
+                              {task.status === 'completed' ? '已完成' :
+                               task.status === 'in_progress' ? '進行中' :
+                               task.status === 'overdue' ? '逾期' : '待處理'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(`/api/admin/student-tasks/${task.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ visible_to_student: !task.visible_to_student })
+                                  });
+                                  const result = await response.json();
+                                  if (result.success) {
+                                    // 重新載入作業列表
+                                    if (managingTasksStudent) {
+                                      handleManageTasks(managingTasksStudent);
+                                    }
+                                  } else {
+                                    throw new Error(result.error);
+                                  }
+                                } catch (error: unknown) {
+                                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                                  alert(`切換可見性失敗: ${errorMessage}`);
+                                }
+                              }}
+                              title={task.visible_to_student ? '隱藏作業（學生將看不到）' : '顯示作業（學生可以看到）'}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              {task.visible_to_student ? '隱藏' : '顯示'}
+                            </Button>
+                          </div>
                         )}
                       </div>
 

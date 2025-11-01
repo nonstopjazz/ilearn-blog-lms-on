@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       status: 'assigned',
       category: category || null,
       priority: priority || 'normal',
-      estimated_duration: estimated_duration || null
+      estimated_duration: estimated_duration || null,
+      visible_to_student: false  // 預設不顯示給學生，需要管理員登記完成狀況後才顯示
     };
 
     // 一次性任務需要截止日期
