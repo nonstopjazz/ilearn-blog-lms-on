@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       category: category || null,
       priority: priority || 'normal',
       estimated_duration: estimated_duration || null,
-      visible_to_student: false  // 預設不顯示給學生，需要管理員登記完成狀況後才顯示
+      review_status: 'pending'  // 預設為待檢查，學生可以看到作業但知道老師尚未檢查
     };
 
     // 一次性任務需要截止日期

@@ -24,7 +24,7 @@ export async function PATCH(
       'daily_completed_days',
       'daily_completion',
       'actual_duration',
-      'visible_to_student'
+      'review_status'
     ];
 
     // 只更新提供的欄位
