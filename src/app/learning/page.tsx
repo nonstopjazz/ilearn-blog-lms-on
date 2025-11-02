@@ -295,6 +295,31 @@ const DashboardContent = () => {
     return 'D';
   };
 
+  // 輔助函數：取得顯示名稱
+  const getDisplayName = () => {
+    // 如果是 admin 查看其他學生
+    if (viewingStudentInfo?.name) {
+      return viewingStudentInfo.name;
+    }
+
+    // 當前登入用戶
+    if (currentUser) {
+      // 優先使用 user_metadata 中的名稱
+      const name = currentUser.user_metadata?.name ||
+                   currentUser.user_metadata?.full_name;
+
+      if (name) return name;
+
+      // 如果沒有名稱，從 email 提取
+      if (currentUser.email) {
+        return currentUser.email.split('@')[0];
+      }
+    }
+
+    // 最後才顯示「學生」
+    return '學生';
+  };
+
   // 當前學生資訊（從登入狀態取得）
   const currentStudent = currentUser ? {
     id: currentUser.id,
@@ -1552,19 +1577,29 @@ const DashboardContent = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* 學生資料卡片 */}
               <Card className="overflow-hidden">
-                <CardContent className="p-6">
+                <CardContent className="pt-8 px-6 pb-6">
                   <div className="flex flex-col items-center space-y-4">
                     {/* 學生頭像 */}
                     <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white shadow-lg">
-                        <User className="w-12 h-12" />
+                      <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+                        <img
+                          src="/images/student-avatar.png"
+                          alt="學生頭像"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // 如果圖片載入失敗，顯示預設圖標
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <User className="w-12 h-12 text-white hidden" />
                       </div>
                       {/* 可以在這裡添加上傳照片的按鈕 */}
                     </div>
                     {/* 學生姓名 */}
                     <div className="text-center">
                       <h3 className="text-xl font-bold text-blue-500">
-                        {viewingStudentInfo?.name || currentUser?.name || '學生'}
+                        {getDisplayName()}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         {viewingStudentInfo?.email || currentUser?.email || ''}
@@ -1984,7 +2019,7 @@ const DashboardContent = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
-                  <span className="text-blue-500">{viewingStudentInfo?.name || currentUser?.name || '學生'}</span>
+                  <span className="text-blue-500">{getDisplayName()}</span>
                   {' '}作業管理
                 </h2>
                 <p className="text-muted-foreground">每堂課交代的作業任務與完成追蹤</p>
@@ -2298,7 +2333,7 @@ const DashboardContent = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
-                  <span className="text-blue-500">{viewingStudentInfo?.name || currentUser?.name || '學生'}</span>
+                  <span className="text-blue-500">{getDisplayName()}</span>
                   {' '}專案作業
                 </h2>
                 <p className="text-muted-foreground">甘特圖形式管理學習作業進度</p>
@@ -2724,7 +2759,7 @@ const DashboardContent = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
-                  <span className="text-blue-500">{viewingStudentInfo?.name || currentUser?.name || '學生'}</span>
+                  <span className="text-blue-500">{getDisplayName()}</span>
                   {' '}課程學習
                 </h2>
                 <p className="text-muted-foreground">追蹤您已選修課程的學習進度</p>

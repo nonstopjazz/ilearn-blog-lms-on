@@ -231,7 +231,7 @@ const DHtmlxGanttChart: React.FC<DHtmlxGanttChartProps> = ({
     <Card className={cn("w-full", className)}>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between">
-          <span>專業甘特圖 - {studentName}</span>
+          <span>專案作業</span>
           <span className="text-sm font-normal text-muted-foreground">
             {year} 年度
           </span>
