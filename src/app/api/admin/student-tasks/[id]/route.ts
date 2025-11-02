@@ -23,7 +23,8 @@ export async function PATCH(
       'daily_streak',
       'daily_completed_days',
       'daily_completion',
-      'actual_duration'
+      'actual_duration',
+      'review_status'
     ];
 
     // 只更新提供的欄位

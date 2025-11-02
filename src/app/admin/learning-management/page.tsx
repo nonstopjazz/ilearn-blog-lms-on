@@ -2030,6 +2030,11 @@ export default function AdminLearningManagementPage() {
                             {task.category && (
                               <Badge variant="outline">{task.category}</Badge>
                             )}
+                            {/* 檢查狀態指示器 */}
+                            <Badge variant={task.review_status === 'reviewed' ? 'default' : 'secondary'} className="gap-1">
+                              <Eye className="h-3 w-3" />
+                              {task.review_status === 'reviewed' ? '已檢查' : '待檢查'}
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}

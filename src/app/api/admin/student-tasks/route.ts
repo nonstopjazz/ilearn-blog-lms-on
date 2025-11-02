@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       status: 'assigned',
       category: category || null,
       priority: priority || 'normal',
-      estimated_duration: estimated_duration || null
+      estimated_duration: estimated_duration || null,
+      review_status: 'pending'  // 預設為待檢查，學生可以看到作業但知道老師尚未檢查
     };
 
     // 一次性任務需要截止日期

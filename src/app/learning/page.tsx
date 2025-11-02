@@ -2075,16 +2075,55 @@ const DashboardContent = () => {
                         progress = task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 0;
                       }
 
+                      // 根據 review_status 決定樣式
+                      const getTaskStyle = () => {
+                        if (task.task_type === 'daily') {
+                          if (task.review_status === 'pending') {
+                            // 待檢查 - 灰色/藍色
+                            return {
+                              bgClass: 'bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20',
+                              borderClass: 'border-gray-400',
+                              statusBadge: { text: '待檢查', bgClass: 'bg-gray-500' }
+                            };
+                          } else {
+                            // 已檢查 - 根據完成度
+                            const completionRate = task.daily_total_days > 0 ? (task.daily_completed_days / task.daily_total_days) : 0;
+                            if (completionRate >= 0.8) {
+                              return {
+                                bgClass: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+                                borderClass: 'border-green-500',
+                                statusBadge: { text: '表現優良', bgClass: 'bg-green-500' }
+                              };
+                            } else if (completionRate >= 0.5) {
+                              return {
+                                bgClass: 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20',
+                                borderClass: 'border-yellow-500',
+                                statusBadge: { text: '需加強', bgClass: 'bg-yellow-500' }
+                              };
+                            } else {
+                              return {
+                                bgClass: 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20',
+                                borderClass: 'border-red-500',
+                                statusBadge: { text: '待改進', bgClass: 'bg-red-500' }
+                              };
+                            }
+                          }
+                        }
+                        return { bgClass: '', borderClass: '', statusBadge: { text: '', bgClass: '' } };
+                      };
+
+                      const taskStyle = getTaskStyle();
+
                       return task.task_type === 'daily' ? (
                         // 每日任務樣式
-                        <div key={task.id} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-l-4 border-blue-500">
+                        <div key={task.id} className={`p-4 ${taskStyle.bgClass} rounded-lg border-l-4 ${taskStyle.borderClass}`}>
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xl">📅</span>
                                 <h4 className="font-semibold text-foreground">{task.task_description}</h4>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
-                                  每日任務
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${taskStyle.statusBadge.bgClass} text-white`}>
+                                  {taskStyle.statusBadge.text}
                                 </span>
                                 {task.category && (
                                   <Badge variant="outline" className="text-xs">{task.category}</Badge>
@@ -2128,26 +2167,56 @@ const DashboardContent = () => {
                         </div>
                       ) : (
                         // 一次性任務樣式
-                        <div key={task.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border-l-4 border-purple-500">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xl">📝</span>
-                                <h4 className="font-semibold text-foreground">{task.task_description}</h4>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  task.status === 'completed' ? 'bg-green-500 text-white' :
-                                  task.status === 'in_progress' ? 'bg-yellow-500 text-white' :
-                                  task.status === 'overdue' ? 'bg-red-500 text-white' :
-                                  'bg-purple-500 text-white'
-                                }`}>
-                                  {task.status === 'completed' ? '已完成' :
-                                   task.status === 'in_progress' ? '進行中' :
-                                   task.status === 'overdue' ? '逾期' : '待處理'}
-                                </span>
-                                {task.category && (
-                                  <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                                )}
-                              </div>
+                        (() => {
+                          // 根據 review_status 和 status 決定樣式
+                          let bgClass, borderClass, statusText, statusBgClass;
+
+                          if (task.review_status === 'pending') {
+                            // 待檢查 - 灰色
+                            bgClass = 'bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20';
+                            borderClass = 'border-gray-400';
+                            statusText = '待檢查';
+                            statusBgClass = 'bg-gray-500';
+                          } else {
+                            // 已檢查 - 根據完成狀態
+                            if (task.status === 'completed') {
+                              bgClass = 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20';
+                              borderClass = 'border-green-500';
+                              statusText = '已完成';
+                              statusBgClass = 'bg-green-500';
+                            } else if (task.status === 'in_progress') {
+                              bgClass = 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20';
+                              borderClass = 'border-yellow-500';
+                              statusText = '部分完成';
+                              statusBgClass = 'bg-yellow-500';
+                            } else if (task.status === 'overdue') {
+                              bgClass = 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20';
+                              borderClass = 'border-red-500';
+                              statusText = '逾期';
+                              statusBgClass = 'bg-red-500';
+                            } else {
+                              // assigned
+                              bgClass = 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20';
+                              borderClass = 'border-red-400';
+                              statusText = '未完成';
+                              statusBgClass = 'bg-red-400';
+                            }
+                          }
+
+                          return (
+                            <div key={task.id} className={`p-4 ${bgClass} rounded-lg border-l-4 ${borderClass}`}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xl">📝</span>
+                                    <h4 className="font-semibold text-foreground">{task.task_description}</h4>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBgClass} text-white`}>
+                                      {statusText}
+                                    </span>
+                                    {task.category && (
+                                      <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                                    )}
+                                  </div>
                               <p className="text-sm text-muted-foreground ml-7">
                                 交代日期: {new Date(task.assigned_date).toLocaleDateString('zh-TW')}
                               </p>
@@ -2214,6 +2283,8 @@ const DashboardContent = () => {
                             </div>
                           </div>
                         </div>
+                          );
+                        })()
                       );
                     })}
                   </div>
