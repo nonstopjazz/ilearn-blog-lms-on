@@ -476,6 +476,29 @@ export default function AdminLearningManagementPage() {
     }
   };
 
+  // 重新載入學生作業數據（不改變對話框狀態）
+  const reloadStudentTasks = async () => {
+    if (!managingTasksStudent) return;
+
+    setLoadingStudentTasks(true);
+
+    try {
+      const response = await fetch(`/api/admin/student-tasks?student_id=${managingTasksStudent.id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setStudentTasks(result.data || []);
+      } else {
+        throw new Error(result.error || '載入作業失敗');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('重新載入學生作業失敗:', errorMessage);
+    } finally {
+      setLoadingStudentTasks(false);
+    }
+  };
+
   // 開始編輯每日作業
   const handleEditDailyTask = (task: any) => {
     setEditingDailyTask(task);
@@ -631,10 +654,8 @@ export default function AdminLearningManagementPage() {
       if (result.success) {
         alert('儲存成功！');
         setEditingDailyTask(null);
-        // 重新載入作業列表
-        if (managingTasksStudent) {
-          handleManageTasks(managingTasksStudent);
-        }
+        // 重新載入作業列表（不改變對話框狀態）
+        await reloadStudentTasks();
       } else {
         throw new Error(result.error || '儲存失敗');
       }
@@ -695,10 +716,8 @@ export default function AdminLearningManagementPage() {
       if (result.success) {
         alert('儲存成功！');
         setEditingOnetimeTask(null);
-        // 重新載入作業列表
-        if (managingTasksStudent) {
-          handleManageTasks(managingTasksStudent);
-        }
+        // 重新載入作業列表（不改變對話框狀態）
+        await reloadStudentTasks();
       } else {
         throw new Error(result.error || '儲存失敗');
       }
