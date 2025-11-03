@@ -152,6 +152,15 @@ export default function AdminLearningManagementPage() {
   const [editingDailyTask, setEditingDailyTask] = useState<any>(null);
   const [dailyCompletionChanges, setDailyCompletionChanges] = useState<{[date: string]: boolean}>({});
 
+  // 一次性作業編輯狀態
+  const [editingOnetimeTask, setEditingOnetimeTask] = useState<any>(null);
+  const [onetimeTaskForm, setOnetimeTaskForm] = useState({
+    status: 'assigned',
+    score: '',
+    teacher_feedback: '',
+    completion_date: ''
+  });
+
   // 載入數據
   useEffect(() => {
     loadStudentsData();
@@ -622,6 +631,70 @@ export default function AdminLearningManagementPage() {
       if (result.success) {
         alert('儲存成功！');
         setEditingDailyTask(null);
+        // 重新載入作業列表
+        if (managingTasksStudent) {
+          handleManageTasks(managingTasksStudent);
+        }
+      } else {
+        throw new Error(result.error || '儲存失敗');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`儲存失敗: ${errorMessage}`);
+    }
+  };
+
+  // 開始編輯一次性作業
+  const handleEditOnetimeTask = (task: any) => {
+    setEditingOnetimeTask(task);
+    // 初始化表單為現有的作業資料
+    setOnetimeTaskForm({
+      status: task.status || 'assigned',
+      score: task.score?.toString() || '',
+      teacher_feedback: task.teacher_feedback || '',
+      completion_date: task.completion_date || ''
+    });
+  };
+
+  // 儲存一次性作業變更
+  const saveOnetimeTaskChanges = async () => {
+    if (!editingOnetimeTask) return;
+
+    try {
+      const updateData: any = {
+        status: onetimeTaskForm.status,
+      };
+
+      // 如果填寫了分數，加入
+      if (onetimeTaskForm.score) {
+        updateData.score = parseFloat(onetimeTaskForm.score);
+      }
+
+      // 如果填寫了教師評語，加入
+      if (onetimeTaskForm.teacher_feedback) {
+        updateData.teacher_feedback = onetimeTaskForm.teacher_feedback;
+      }
+
+      // 如果填寫了完成日期，加入；如果狀態為 completed 且未填寫，使用今天
+      if (onetimeTaskForm.completion_date) {
+        updateData.completion_date = onetimeTaskForm.completion_date;
+      } else if (onetimeTaskForm.status === 'completed') {
+        updateData.completion_date = new Date().toISOString().split('T')[0];
+      }
+
+      const response = await fetch(`/api/admin/student-tasks/${editingOnetimeTask.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('儲存成功！');
+        setEditingOnetimeTask(null);
         // 重新載入作業列表
         if (managingTasksStudent) {
           handleManageTasks(managingTasksStudent);
@@ -2066,15 +2139,24 @@ export default function AdminLearningManagementPage() {
                         )}
 
                         {task.task_type === 'onetime' && (
-                          <Badge variant={
-                            task.status === 'completed' ? 'default' :
-                            task.status === 'in_progress' ? 'secondary' :
-                            task.status === 'overdue' ? 'destructive' : 'outline'
-                          }>
-                            {task.status === 'completed' ? '已完成' :
-                             task.status === 'in_progress' ? '進行中' :
-                             task.status === 'overdue' ? '逾期' : '待處理'}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={
+                              task.status === 'completed' ? 'default' :
+                              task.status === 'in_progress' ? 'secondary' :
+                              task.status === 'overdue' ? 'destructive' : 'outline'
+                            }>
+                              {task.status === 'completed' ? '已完成' :
+                               task.status === 'in_progress' ? '進行中' :
+                               task.status === 'overdue' ? '逾期' : '待處理'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditOnetimeTask(task)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              編輯作業
+                            </Button>
+                          </div>
                         )}
                       </div>
 
@@ -2222,6 +2304,127 @@ export default function AdminLearningManagementPage() {
               取消
             </Button>
             <Button onClick={saveDailyTaskCompletion}>
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              儲存變更
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 一次性作業編輯對話框 */}
+      <Dialog open={!!editingOnetimeTask} onOpenChange={(open) => !open && setEditingOnetimeTask(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>編輯一次性作業</DialogTitle>
+            <DialogDescription>
+              {editingOnetimeTask?.task_description}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingOnetimeTask && (
+            <div className="space-y-6">
+              {/* 作業狀態 */}
+              <div className="space-y-2">
+                <Label htmlFor="task-status">作業狀態</Label>
+                <Select
+                  value={onetimeTaskForm.status}
+                  onValueChange={(value) => setOnetimeTaskForm(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger id="task-status">
+                    <SelectValue placeholder="選擇作業狀態" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="assigned">待處理</SelectItem>
+                    <SelectItem value="in_progress">進行中</SelectItem>
+                    <SelectItem value="completed">已完成</SelectItem>
+                    <SelectItem value="overdue">逾期</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 分數 */}
+              <div className="space-y-2">
+                <Label htmlFor="task-score">分數 (選填)</Label>
+                <Input
+                  id="task-score"
+                  type="number"
+                  min="0"
+                  max={editingOnetimeTask.max_score || 100}
+                  step="0.5"
+                  placeholder={`滿分 ${editingOnetimeTask.max_score || 100}`}
+                  value={onetimeTaskForm.score}
+                  onChange={(e) => setOnetimeTaskForm(prev => ({ ...prev, score: e.target.value }))}
+                />
+              </div>
+
+              {/* 教師評語 */}
+              <div className="space-y-2">
+                <Label htmlFor="teacher-feedback">教師評語 (選填)</Label>
+                <Textarea
+                  id="teacher-feedback"
+                  placeholder="輸入對學生的評語與建議..."
+                  rows={4}
+                  value={onetimeTaskForm.teacher_feedback}
+                  onChange={(e) => setOnetimeTaskForm(prev => ({ ...prev, teacher_feedback: e.target.value }))}
+                />
+              </div>
+
+              {/* 完成日期 */}
+              <div className="space-y-2">
+                <Label htmlFor="completion-date">完成日期 (選填)</Label>
+                <Input
+                  id="completion-date"
+                  type="date"
+                  value={onetimeTaskForm.completion_date}
+                  onChange={(e) => setOnetimeTaskForm(prev => ({ ...prev, completion_date: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  若未填寫且狀態設為「已完成」，系統將自動使用今天的日期
+                </p>
+              </div>
+
+              {/* 作業資訊摘要 */}
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <h4 className="font-semibold text-sm">作業資訊</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">指派日期：</span>
+                    <span className="font-medium ml-1">
+                      {new Date(editingOnetimeTask.assigned_date).toLocaleDateString('zh-TW')}
+                    </span>
+                  </div>
+                  {editingOnetimeTask.due_date && (
+                    <div>
+                      <span className="text-muted-foreground">截止日期：</span>
+                      <span className="font-medium ml-1">
+                        {new Date(editingOnetimeTask.due_date).toLocaleDateString('zh-TW')}
+                      </span>
+                    </div>
+                  )}
+                  {editingOnetimeTask.category && (
+                    <div>
+                      <span className="text-muted-foreground">分類：</span>
+                      <span className="font-medium ml-1">{editingOnetimeTask.category}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">優先級：</span>
+                    <Badge variant="outline" className="ml-1">
+                      {editingOnetimeTask.priority === 'urgent' ? '緊急' :
+                       editingOnetimeTask.priority === 'high' ? '高' :
+                       editingOnetimeTask.priority === 'normal' ? '普通' : '低'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingOnetimeTask(null)}>
+              取消
+            </Button>
+            <Button onClick={saveOnetimeTaskChanges}>
               <CheckCircle2 className="h-4 w-4 mr-1" />
               儲存變更
             </Button>
