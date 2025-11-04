@@ -1423,6 +1423,30 @@ const DashboardContent = () => {
     });
   }, [studentTasks, assignmentTimeRange]);
 
+  // 將作業按日期分組
+  const groupedStudentTasks = useMemo(() => {
+    if (!filteredStudentTasks || filteredStudentTasks.length === 0) return [];
+
+    // 按日期分組
+    const groups: { [key: string]: any[] } = {};
+
+    filteredStudentTasks.forEach(task => {
+      const dateKey = task.assigned_date || task.created_at.split('T')[0];
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(task);
+    });
+
+    // 轉換為陣列並按日期排序（最新的在前）
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+      .map(date => ({
+        date,
+        tasks: groups[date]
+      }));
+  }, [filteredStudentTasks]);
+
   // 計算本週作業數量和作業完成率
   const weeklyStats = useMemo(() => {
     if (!isAuthenticated || !currentUser) {
@@ -1854,8 +1878,30 @@ const DashboardContent = () => {
               ) : filteredStudentTasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
               ) : (
-                <div className="space-y-3">
-                  {filteredStudentTasks.map((task, index) => {
+                <div className="space-y-6">
+                  {groupedStudentTasks.map((group) => (
+                    <div key={group.date} className="space-y-3">
+                      {/* 日期分組標題 */}
+                      <div className="flex items-center gap-3 pb-2 border-b-2 border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">📅</span>
+                          <h3 className="text-lg font-bold text-foreground">
+                            {new Date(group.date).toLocaleDateString('zh-TW', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              weekday: 'short'
+                            })}
+                          </h3>
+                        </div>
+                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-semibold">
+                          {group.tasks.length} 個作業
+                        </span>
+                      </div>
+
+                      {/* 該日期的作業列表 */}
+                      <div className="space-y-3">
+                        {group.tasks.map((task, index) => {
                     // 計算進度百分比
                     let progress = 0;
                     if (task.task_type === 'daily' && task.daily_total_days > 0) {
@@ -2007,7 +2053,10 @@ const DashboardContent = () => {
                         </div>
                       </div>
                     );
-                  })}
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
               </CardContent>
@@ -2100,8 +2149,30 @@ const DashboardContent = () => {
                 ) : filteredStudentTasks.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">目前沒有作業</div>
                 ) : (
-                  <div className="space-y-3">
-                    {filteredStudentTasks.map((task, index) => {
+                  <div className="space-y-6">
+                    {groupedStudentTasks.map((group) => (
+                      <div key={group.date} className="space-y-3">
+                        {/* 日期分組標題 */}
+                        <div className="flex items-center gap-3 pb-2 border-b-2 border-blue-200 dark:border-blue-800">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">📅</span>
+                            <h3 className="text-lg font-bold text-foreground">
+                              {new Date(group.date).toLocaleDateString('zh-TW', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                weekday: 'short'
+                              })}
+                            </h3>
+                          </div>
+                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-semibold">
+                            {group.tasks.length} 個作業
+                          </span>
+                        </div>
+
+                        {/* 該日期的作業列表 */}
+                        <div className="space-y-3">
+                          {group.tasks.map((task, index) => {
                       // 計算進度百分比
                       let progress = 0;
                       if (task.task_type === 'daily' && task.daily_total_days > 0) {
@@ -2321,7 +2392,10 @@ const DashboardContent = () => {
                           );
                         })()
                       );
-                    })}
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
