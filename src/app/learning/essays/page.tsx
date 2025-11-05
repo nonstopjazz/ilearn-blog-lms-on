@@ -23,6 +23,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Navbar from '@/components/Navbar';
 
 interface Essay {
   id: string;
@@ -158,8 +159,10 @@ export default function EssayListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -368,5 +371,6 @@ export default function EssayListPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

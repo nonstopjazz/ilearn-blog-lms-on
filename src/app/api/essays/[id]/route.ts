@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 // GET - 獲取單個作文詳情
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = await createSupabaseServerClient();
     const { id: essayId } = await params;
 
     // 獲取當前用戶
@@ -76,7 +76,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = await createSupabaseServerClient();
     const body = await request.json();
     const { id: essayId } = await params;
 
@@ -205,7 +205,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = await createSupabaseServerClient();
     const { id: essayId } = await params;
 
     // 獲取當前用戶

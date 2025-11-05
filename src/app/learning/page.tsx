@@ -1653,7 +1653,7 @@ const DashboardContent = () => {
 
               {/* 我的作文卡片 */}
               <Card
-                className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 border-2 hover:border-purple-500"
+                className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 hover:border-purple-500"
                 onClick={() => window.location.href = '/learning/essays'}
               >
                 <CardContent className="pt-6 px-6 pb-6">
