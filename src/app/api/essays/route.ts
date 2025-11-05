@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 // GET - 獲取作文列表
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await createSupabaseServerClient();
     const searchParams = request.nextUrl.searchParams;
 
     // 獲取查詢參數
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 // POST - 建立新的作文提交記錄
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await createSupabaseServerClient();
     const body = await request.json();
 
     // 獲取當前用戶
