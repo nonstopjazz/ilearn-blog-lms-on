@@ -35,20 +35,54 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
+        get(name: string) {
+          return request.cookies.get(name)?.value
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
+        set(name: string, value: string, options: any) {
+          // 更新 request cookies
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          // 重新建立 response 以包含更新的 cookies
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          // 設定 response cookies
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          // 更新 request cookies
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          // 重新建立 response 以包含更新的 cookies
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          // 設定 response cookies
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
           })
         },
       },
     }
   )
 
-  // 刷新 session（如果存在）
+  // 刷新 session（如果存在）- 這會觸發 cookie 更新
   await supabase.auth.getUser()
 
   // ===== 安全檢查 =====

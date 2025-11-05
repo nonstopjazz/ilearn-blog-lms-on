@@ -37,7 +37,6 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
     setLoading(true)
     try {
       const params = new URLSearchParams({
-        user_id: userId,
         limit: '20'
       })
 
@@ -110,7 +109,6 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          user_id: userId,
           mark_all_read: true
         })
       })

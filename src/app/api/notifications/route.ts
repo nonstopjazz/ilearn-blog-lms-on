@@ -1,9 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabase-server';
 
-// 創建通知
+// 創建通知（僅限管理員或系統內部使用）
 export async function POST(req: NextRequest) {
   try {
+    // POST 使用 admin client，但需要驗證管理員權限
+    const authSupabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: '未授權' },
+        { status: 401 }
+      );
+    }
+
+    // 檢查是否為管理員
+    const { data: userInfo } = await authSupabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userInfo?.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: 403 }
+      );
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { user_id, title, message, type = 'info', action_url, action_text, metadata } = body;
@@ -53,25 +78,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 獲取通知列表
+// 獲取通知列表（僅返回當前用戶的通知）
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // 使用 server client 進行認證
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (authError || !user) {
       return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
+        { success: false, error: '未授權' },
+        { status: 401 }
       );
     }
+
+    // 只能查詢當前用戶的通知，不能查別人的
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get('limit') || '50');
 
     const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)  // 使用認證用戶的 ID，而非 URL 參數
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -97,19 +125,29 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 更新通知狀態
+// 更新通知狀態（僅能更新自己的通知）
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();
-    const body = await req.json();
-    const { notification_id, user_id, read, mark_all_read } = body;
+    // 使用 server client 進行認證
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (mark_all_read && user_id) {
-      // 標記用戶所有通知為已讀
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: '未授權' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { notification_id, read, mark_all_read } = body;
+
+    if (mark_all_read) {
+      // 標記當前用戶所有通知為已讀
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('user_id', user_id)
+        .eq('user_id', user.id)  // 只更新當前用戶的
         .eq('read', false);
 
       if (error) {
@@ -138,10 +176,12 @@ export async function PATCH(req: NextRequest) {
       updateData.read = read;
     }
 
+    // 只能更新自己的通知
     const { data, error } = await supabase
       .from('notifications')
       .update(updateData)
       .eq('id', notification_id)
+      .eq('user_id', user.id)  // 確保是當前用戶的通知
       .select()
       .single();
 
@@ -150,6 +190,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: '更新通知失敗' },
         { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { success: false, error: '找不到通知或無權限' },
+        { status: 404 }
       );
     }
 
@@ -167,10 +214,20 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// 刪除通知
+// 刪除通知（僅能刪除自己的通知）
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();
+    // 使用 server client 進行認證
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: '未授權' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { notification_id } = body;
 
@@ -181,10 +238,12 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // 只能刪除自己的通知
     const { error } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', notification_id);
+      .eq('id', notification_id)
+      .eq('user_id', user.id);  // 確保是當前用戶的通知
 
     if (error) {
       console.error('刪除通知失敗:', error);
