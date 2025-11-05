@@ -1,6 +1,7 @@
 // src/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import {
   getClientIP,
   checkRateLimit,
@@ -16,27 +17,57 @@ const RATE_LIMITED_PATHS = {
   '/api/admin': 'API_REQUESTS'
 } as const;
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || 'unknown';
-  
+
+  // 建立 response（後續可能被修改）
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  // ===== Supabase Session 刷新（最優先處理） =====
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  // 刷新 session（如果存在）
+  await supabase.auth.getUser()
+
+  // ===== 安全檢查 =====
   // 排除清除 IP 的路徑
   if (pathname === '/api/security/clear-ip') {
-    return NextResponse.next();
+    return response;
   }
-  
+
   // 檢查是否為可疑 IP
   if (isSuspiciousIP(ip)) {
     logSecurityEvent(ip, 'blocked_request', false, userAgent);
-    
+
     return new NextResponse(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Access denied',
         message: 'Your IP has been temporarily blocked due to suspicious activity',
         code: 'IP_BLOCKED'
-      }), 
-      { 
+      }),
+      {
         status: 429,
         headers: {
           'Content-Type': 'application/json',
@@ -45,25 +76,25 @@ export function middleware(request: NextRequest) {
       }
     );
   }
-  
+
   // 檢查是否需要速率限制
   for (const [path, limitType] of Object.entries(RATE_LIMITED_PATHS)) {
     if (pathname.startsWith(path)) {
       const { allowed, resetTime, remainingAttempts } = checkRateLimit(ip, limitType);
-      
+
       if (!allowed) {
         logSecurityEvent(ip, `rate_limited_${limitType.toLowerCase()}`, false, userAgent);
-        
+
         const waitTime = resetTime ? Math.ceil((resetTime - Date.now()) / 1000) : 900;
-        
+
         return new NextResponse(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Too many requests',
             message: `Rate limit exceeded. Please try again later.`,
             retryAfter: waitTime,
             code: 'RATE_LIMITED'
-          }), 
-          { 
+          }),
+          {
             status: 429,
             headers: {
               'Content-Type': 'application/json',
@@ -74,24 +105,23 @@ export function middleware(request: NextRequest) {
           }
         );
       }
-      
+
       // 添加速率限制資訊到 headers
-      const response = NextResponse.next();
       response.headers.set('X-RateLimit-Remaining', remainingAttempts?.toString() || '');
       if (resetTime) {
         response.headers.set('X-RateLimit-Reset', resetTime.toString());
       }
-      
+
       return response;
     }
   }
-  
+
   // 記錄一般請求（僅記錄 API 和認證相關請求）
   if (pathname.startsWith('/api/') || pathname.startsWith('/auth')) {
     logSecurityEvent(ip, 'api_request', true, userAgent);
   }
-  
-  return NextResponse.next();
+
+  return response;
 }
 
 export const config = {
