@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Essay {
   id: string;
@@ -40,14 +41,21 @@ interface Essay {
 
 export default function EssayListPage() {
   const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('date-desc');
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    fetchEssays();
-  }, []);
+    // 等待認證完成後再調用 API
+    if (!authLoading && isAuthenticated) {
+      fetchEssays();
+    } else if (!authLoading && !isAuthenticated) {
+      // 如果未登入，導向登入頁
+      router.push('/login');
+    }
+  }, [authLoading, isAuthenticated]);
 
   const fetchEssays = async () => {
     try {
@@ -147,12 +155,15 @@ export default function EssayListPage() {
         )
       : 0;
 
-  if (loading) {
+  // 顯示 loading：認證檢查中或資料載入中
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">載入中...</p>
+          <p className="text-muted-foreground">
+            {authLoading ? '認證檢查中...' : '載入中...'}
+          </p>
         </div>
       </div>
     );
