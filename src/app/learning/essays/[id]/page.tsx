@@ -57,19 +57,31 @@ export default function EssayDetailPage() {
   const [studentNotes, setStudentNotes] = useState('');
 
   useEffect(() => {
-    // 等待認證完成後再調用 API
+    // 等待認證完成後再調用 API，並加入延遲確保認證穩定
     if (!authLoading && isAuthenticated && essayId) {
-      fetchEssay();
+      // 延遲 300ms 確保認證狀態完全穩定
+      const timer = setTimeout(() => {
+        fetchEssay();
+      }, 300);
+
+      return () => clearTimeout(timer);
     } else if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [authLoading, isAuthenticated, essayId]);
 
-  const fetchEssay = async () => {
+  const fetchEssay = async (retryCount = 0) => {
     try {
       setLoading(true);
       const response = await fetch(`/api/essays/${essayId}`);
       const result = await response.json();
+
+      // 如果返回 401 且還沒重試過，等待後重試一次
+      if (!result.success && response.status === 401 && retryCount === 0) {
+        console.log('[Essay Detail] 收到 401，等待 500ms 後重試...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchEssay(1); // 重試一次
+      }
 
       if (!result.success) {
         throw new Error(result.error || '獲取作文失敗');

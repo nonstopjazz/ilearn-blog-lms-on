@@ -48,20 +48,32 @@ export default function EssayListPage() {
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    // 等待認證完成後再調用 API
+    // 等待認證完成後再調用 API，並加入延遲確保認證穩定
     if (!authLoading && isAuthenticated) {
-      fetchEssays();
+      // 延遲 300ms 確保認證狀態完全穩定
+      const timer = setTimeout(() => {
+        fetchEssays();
+      }, 300);
+
+      return () => clearTimeout(timer);
     } else if (!authLoading && !isAuthenticated) {
       // 如果未登入，導向登入頁
       router.push('/login');
     }
   }, [authLoading, isAuthenticated]);
 
-  const fetchEssays = async () => {
+  const fetchEssays = async (retryCount = 0) => {
     try {
       setLoading(true);
       const response = await fetch('/api/essays?limit=100&sort_by=created_at&order=desc');
       const result = await response.json();
+
+      // 如果返回 401 且還沒重試過，等待後重試一次
+      if (!result.success && response.status === 401 && retryCount === 0) {
+        console.log('[Essays List] 收到 401，等待 500ms 後重試...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchEssays(1); // 重試一次
+      }
 
       if (!result.success) {
         throw new Error(result.error || '獲取作文列表失敗');
