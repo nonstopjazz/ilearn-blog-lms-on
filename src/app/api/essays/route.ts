@@ -4,7 +4,12 @@ import { createSupabaseServerClient } from '@/lib/supabase-server';
 // GET - 獲取作文列表
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Essays API GET] 開始處理請求');
+    console.log('[Essays API GET] Cookies:', request.cookies.getAll().map(c => c.name));
+
     const supabase = await createSupabaseServerClient();
+    console.log('[Essays API GET] Supabase client created');
+
     const searchParams = request.nextUrl.searchParams;
 
     // 獲取查詢參數
@@ -16,10 +21,16 @@ export async function GET(request: NextRequest) {
 
     // 獲取當前用戶
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('[Essays API GET] getUser result:', {
+      hasUser: !!user,
+      userId: user?.id,
+      error: authError?.message
+    });
 
     if (authError || !user) {
+      console.error('[Essays API GET] Auth failed:', authError);
       return NextResponse.json(
-        { success: false, error: '未授權' },
+        { success: false, error: '未授權', debug: authError?.message },
         { status: 401 }
       );
     }

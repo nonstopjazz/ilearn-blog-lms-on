@@ -13,24 +13,32 @@ export async function createSupabaseServerClient() {
     throw new Error('Missing Supabase environment variables')
   }
 
+  console.log('[createSupabaseServerClient] Creating client');
+
   return createServerClient(url, key, {
     cookies: {
       get(name: string) {
-        return cookieStore.get(name)?.value
+        const value = cookieStore.get(name)?.value;
+        console.log('[API Cookie] get:', name, value ? 'exists' : 'missing');
+        return value;
       },
       set(name: string, value: string, options: any) {
+        console.log('[API Cookie] set:', name);
         try {
           cookieStore.set(name, value, options)
-        } catch {
+        } catch (e) {
+          console.log('[API Cookie] set failed:', e);
           // The `set` method was called from a Server Component.
           // This can be ignored if you have middleware refreshing
           // user sessions.
         }
       },
       remove(name: string, options: any) {
+        console.log('[API Cookie] remove:', name);
         try {
           cookieStore.set(name, '', options)
-        } catch {
+        } catch (e) {
+          console.log('[API Cookie] remove failed:', e);
           // The `remove` method was called from a Server Component.
           // This can be ignored if you have middleware refreshing
           // user sessions.
