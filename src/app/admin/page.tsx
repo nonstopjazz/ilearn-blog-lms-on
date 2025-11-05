@@ -284,6 +284,16 @@ export default function AdminDashboardPage() {
       icon: Bell,
       color: 'bg-amber-500',
       category: '提醒系統'
+    },
+
+    // 作文管理
+    {
+      title: '作文管理',
+      description: '批改和管理學生作文',
+      href: '/admin/essays',
+      icon: FileText,
+      color: 'bg-purple-500',
+      category: '作文管理'
     }
   ];
 
@@ -455,6 +465,7 @@ export default function AdminDashboardPage() {
                 {category === '用戶管理' && <Users className="w-5 h-5 mr-2 text-green-600" />}
                 {category === '內容管理' && <FileText className="w-5 h-5 mr-2 text-teal-600" />}
                 {category === '提醒系統' && <Bell className="w-5 h-5 mr-2 text-amber-600" />}
+                {category === '作文管理' && <FileText className="w-5 h-5 mr-2 text-purple-600" />}
                 {category}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
