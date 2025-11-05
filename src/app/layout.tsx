@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
-
-const inter = Inter({ subsets: ['latin'] })
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: '學習平台',
@@ -17,9 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW">
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <AuthProvider>
           {children}
+          <Toaster position="top-center" richColors />
         </AuthProvider>
       </body>
     </html>
