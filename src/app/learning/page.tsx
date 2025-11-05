@@ -1598,7 +1598,7 @@ const DashboardContent = () => {
           {/* 總覽頁籤 */}
           <TabsContent value="overview" className="space-y-6">
             {/* 統計卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* 學生資料卡片 */}
               <Card className="overflow-hidden">
                 <CardContent className="pt-8 px-6 pb-6">
@@ -1650,6 +1650,36 @@ const DashboardContent = () => {
                 icon={<CheckCircle className="w-5 h-5" />}
                 gradient="success"
               />
+
+              {/* 我的作文卡片 */}
+              <Card
+                className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 border-2 hover:border-purple-500"
+                onClick={() => window.location.href = '/learning/essays'}
+              >
+                <CardContent className="pt-6 px-6 pb-6">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg">
+                      <FileText className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-lg font-bold text-purple-600">我的作文</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        查看作文批改結果
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = '/learning/essays';
+                      }}
+                    >
+                      前往查看
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* 圖表區域 */}
