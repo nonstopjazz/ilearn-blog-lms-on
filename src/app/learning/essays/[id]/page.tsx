@@ -30,8 +30,10 @@ interface Essay {
   essay_topic?: string;
   essay_topic_detail?: string;
   status: 'submitted' | 'grading' | 'graded' | 'revised' | 'draft';
-  image_url: string;
+  submission_type: 'image' | 'text';
+  image_url?: string;
   image_thumbnail_url?: string;
+  essay_content?: string;
   student_notes?: string;
   teacher_comment?: string;
   overall_comment?: string;
@@ -49,7 +51,7 @@ export default function EssayDetailPage() {
   const router = useRouter();
   const params = useParams();
   const essayId = params.id as string;
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [essay, setEssay] = useState<Essay | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,31 +59,23 @@ export default function EssayDetailPage() {
   const [studentNotes, setStudentNotes] = useState('');
 
   useEffect(() => {
-    // 等待認證完成後再調用 API，並加入延遲確保認證穩定
-    if (!authLoading && isAuthenticated && essayId) {
-      // 延遲 300ms 確保認證狀態完全穩定
-      const timer = setTimeout(() => {
-        fetchEssay();
-      }, 300);
-
-      return () => clearTimeout(timer);
+    if (!authLoading && user && essayId) {
+      fetchEssay();
     } else if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [authLoading, isAuthenticated, essayId]);
+  }, [authLoading, user, isAuthenticated, essayId]);
 
-  const fetchEssay = async (retryCount = 0) => {
+  const fetchEssay = async () => {
+    if (!user?.id) {
+      toast.error('請先登入');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await fetch(`/api/essays/${essayId}`);
+      const response = await fetch(`/api/essays/${essayId}?user_id=${user.id}`);
       const result = await response.json();
-
-      // 如果返回 401 且還沒重試過，等待後重試一次
-      if (!result.success && response.status === 401 && retryCount === 0) {
-        console.log('[Essay Detail] 收到 401，等待 500ms 後重試...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return fetchEssay(1); // 重試一次
-      }
 
       if (!result.success) {
         throw new Error(result.error || '獲取作文失敗');
@@ -99,7 +93,7 @@ export default function EssayDetailPage() {
   };
 
   const handleSaveNotes = async () => {
-    if (!essay) return;
+    if (!essay || !user?.id) return;
 
     try {
       setIsSaving(true);
@@ -110,6 +104,7 @@ export default function EssayDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          user_id: user.id,
           student_notes: studentNotes,
         }),
       });
@@ -233,19 +228,36 @@ export default function EssayDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Side - Essay Image */}
+          {/* Left Side - Essay Content */}
           <Card className="p-6 h-fit lg:sticky lg:top-6">
             <div className="flex items-center gap-2 mb-4">
-              <ImageIcon className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-semibold">作文圖片</h2>
+              <FileText className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-semibold">
+                {essay.submission_type === 'image' ? '作文圖片' : '作文內容'}
+              </h2>
             </div>
-            <div className="rounded-lg overflow-hidden border bg-muted">
-              <img
-                src={essay.image_url}
-                alt={essay.essay_title}
-                className="w-full h-auto"
-              />
-            </div>
+
+            {essay.submission_type === 'image' && essay.image_url ? (
+              <div className="rounded-lg overflow-hidden border bg-muted">
+                <img
+                  src={essay.image_url}
+                  alt={essay.essay_title}
+                  className="w-full h-auto"
+                />
+              </div>
+            ) : essay.submission_type === 'text' && essay.essay_content ? (
+              <div className="rounded-lg border bg-muted p-6">
+                <div className="prose prose-slate max-w-none">
+                  <pre className="whitespace-pre-wrap font-serif text-base leading-relaxed text-foreground">
+                    {essay.essay_content}
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-muted p-6 text-center text-muted-foreground">
+                無作文內容
+              </div>
+            )}
 
             {/* Student Notes */}
             <div className="mt-6">

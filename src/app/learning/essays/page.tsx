@@ -254,10 +254,7 @@ export default function EssayListPage() {
               <Card
                 key={essay.id}
                 className="group hover:shadow-lg transition-all duration-300 hover:border-primary cursor-pointer overflow-hidden"
-                onClick={() =>
-                  essay.status === 'graded' &&
-                  router.push(`/learning/essays/${essay.id}`)
-                }
+                onClick={() => router.push(`/learning/essays/${essay.id}`)}
               >
                 {/* 圖片預覽 */}
                 {essay.image_thumbnail_url || essay.image_url ? (
@@ -339,21 +336,19 @@ export default function EssayListPage() {
                 </div>
 
                 {/* Card Footer */}
-                {essay.status === 'graded' && (
-                  <div className="px-4 pb-4">
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/learning/essays/${essay.id}`);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                      查看詳情
-                    </Button>
-                  </div>
-                )}
+                <div className="px-4 pb-4">
+                  <Button
+                    variant={essay.status === 'graded' ? 'default' : 'outline'}
+                    className="w-full gap-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/learning/essays/${essay.id}`);
+                    }}
+                  >
+                    <Eye className="w-4 h-4" />
+                    {essay.status === 'graded' ? '查看批改結果' : '查看作文'}
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
