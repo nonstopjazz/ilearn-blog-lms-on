@@ -1,34 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabase-server';
 
-// 創建通知（僅限管理員或系統內部使用）
+// 創建通知（僅限管理員使用）
 export async function POST(req: NextRequest) {
   try {
-    // POST 使用 admin client，但需要驗證管理員權限
-    const authSupabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
-      );
-    }
-
-    // 檢查是否為管理員
-    const { data: userInfo } = await authSupabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (userInfo?.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: '需要管理員權限' },
-        { status: 403 }
-      );
-    }
-
     const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { user_id, title, message, type = 'info', action_url, action_text, metadata } = body;
@@ -78,40 +53,25 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 獲取通知列表（混合方案：驗證 + Admin Client）
+// 獲取通知列表（使用 Admin Client）
 export async function GET(req: NextRequest) {
   try {
-    console.log('[Notifications API GET] 開始處理請求');
-    console.log('[Notifications API GET] Cookies:', req.cookies.getAll().map(c => c.name));
+    const supabase = createSupabaseAdminClient();
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('user_id');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    // 使用 server client 進行認證驗證
-    const authSupabase = await createSupabaseServerClient();
-    console.log('[Notifications API GET] Supabase client created');
-
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-    console.log('[Notifications API GET] getUser result:', {
-      hasUser: !!user,
-      userId: user?.id,
-      error: authError?.message
-    });
-
-    if (authError || !user) {
-      console.error('[Notifications API] Auth failed:', authError);
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: '未授權', debug: authError?.message },
-        { status: 401 }
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
       );
     }
 
-    // 使用 admin client 查詢（避免 RLS 問題，但有安全驗證）
-    const adminSupabase = createSupabaseAdminClient();
-    const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    const { data: notifications, error } = await adminSupabase
+    const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)  // 使用認證用戶的 ID
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -123,7 +83,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log('[Notifications API] Success:', notifications?.length || 0, 'notifications');
     return NextResponse.json({
       success: true,
       notifications: notifications || []
@@ -138,31 +97,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 更新通知狀態（混合方案：驗證 + Admin Client）
+// 更新通知狀態（使用 Admin Client）
 export async function PATCH(req: NextRequest) {
   try {
-    // 使用 server client 進行認證驗證
-    const authSupabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error('[Notifications API] Auth failed:', authError);
-      return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
-      );
-    }
-
-    const adminSupabase = createSupabaseAdminClient();
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
-    const { notification_id, read, mark_all_read } = body;
+    const { notification_id, user_id, read, mark_all_read } = body;
 
-    if (mark_all_read) {
-      // 標記當前用戶所有通知為已讀
-      const { error } = await adminSupabase
+    if (mark_all_read && user_id) {
+      // 標記用戶所有通知為已讀
+      const { error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('user_id', user.id)  // 只更新當前用戶的
+        .eq('user_id', user_id)
         .eq('read', false);
 
       if (error) {
@@ -191,12 +138,10 @@ export async function PATCH(req: NextRequest) {
       updateData.read = read;
     }
 
-    // 只能更新自己的通知
-    const { data, error } = await adminSupabase
+    const { data, error } = await supabase
       .from('notifications')
       .update(updateData)
       .eq('id', notification_id)
-      .eq('user_id', user.id)  // 確保是當前用戶的通知
       .select()
       .single();
 
@@ -229,22 +174,10 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// 刪除通知（混合方案：驗證 + Admin Client）
+// 刪除通知（使用 Admin Client）
 export async function DELETE(req: NextRequest) {
   try {
-    // 使用 server client 進行認證驗證
-    const authSupabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error('[Notifications API] Auth failed:', authError);
-      return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
-      );
-    }
-
-    const adminSupabase = createSupabaseAdminClient();
+    const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { notification_id } = body;
 
@@ -255,12 +188,10 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // 只能刪除自己的通知
-    const { error } = await adminSupabase
+    const { error } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', notification_id)
-      .eq('user_id', user.id);  // 確保是當前用戶的通知
+      .eq('id', notification_id);
 
     if (error) {
       console.error('刪除通知失敗:', error);

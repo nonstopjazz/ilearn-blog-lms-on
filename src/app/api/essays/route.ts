@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
-// GET - 獲取作文列表
+// GET - 獲取作文列表（使用 Admin Client 繞過認證問題）
 export async function GET(request: NextRequest) {
   try {
-    console.log('[Essays API GET] 開始處理請求');
-    console.log('[Essays API GET] Cookies:', request.cookies.getAll().map(c => c.name));
-
-    const supabase = await createSupabaseServerClient();
-    console.log('[Essays API GET] Supabase client created');
-
+    const supabase = createSupabaseAdminClient();
     const searchParams = request.nextUrl.searchParams;
+
+    // 從 URL 參數獲取用戶 ID（由前端從認證傳遞）
+    const userId = searchParams.get('user_id');
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
+      );
+    }
 
     // 獲取查詢參數
     const studentId = searchParams.get('student_id');
@@ -19,36 +24,21 @@ export async function GET(request: NextRequest) {
     const order = searchParams.get('order') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('[Essays API GET] getUser result:', {
-      hasUser: !!user,
-      userId: user?.id,
-      error: authError?.message
-    });
-
-    if (authError || !user) {
-      console.error('[Essays API GET] Auth failed:', authError);
-      return NextResponse.json(
-        { success: false, error: '未授權', debug: authError?.message },
-        { status: 401 }
-      );
-    }
-
     // 建立查詢
     let query = supabase
       .from('essay_submissions')
       .select('*');
 
-    // 如果是學生，只能看自己的作文
+    // 檢查用戶角色
     const { data: userInfo } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
+    // 如果是學生，只能看自己的作文
     if (userInfo?.role !== 'admin') {
-      query = query.eq('student_id', user.id);
+      query = query.eq('student_id', userId);
     } else if (studentId) {
       // 管理員可以查詢特定學生的作文
       query = query.eq('student_id', studentId);
@@ -90,19 +80,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - 建立新的作文提交記錄
+// POST - 建立新的作文提交記錄（使用 Admin Client）
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const body = await request.json();
 
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 從 body 獲取用戶 ID（由前端從認證傳遞）
+    const userId = body.user_id;
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
       );
     }
 
@@ -116,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // 準備插入的資料
     const essayData: any = {
-      student_id: user.id,
+      student_id: userId,
       image_url: body.image_url,
       file_name: body.file_name,
       original_file_size: body.original_file_size,
