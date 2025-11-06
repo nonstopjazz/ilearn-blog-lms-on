@@ -24,6 +24,7 @@ import {
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Essay {
   id: string;
@@ -41,20 +42,28 @@ interface Essay {
 
 export default function AdminEssayListPage() {
   const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('date-desc');
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    fetchEssays();
-  }, []);
+    if (!authLoading && user) {
+      fetchEssays();
+    }
+  }, [authLoading, user]);
 
   const fetchEssays = async () => {
+    if (!user?.id) {
+      toast.error('請先登入');
+      return;
+    }
+
     try {
       setLoading(true);
       // Admin fetches all essays
-      const response = await fetch('/api/essays?limit=100&sort_by=created_at&order=desc');
+      const response = await fetch(`/api/essays?user_id=${user.id}&limit=100&sort_by=created_at&order=desc`);
       const result = await response.json();
 
       if (!result.success) {
@@ -261,9 +270,16 @@ export default function AdminEssayListPage() {
                 <div className="p-4 border-b bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-                        {essay.essay_title}
-                      </h3>
+                      <div className="flex items-start gap-2 mb-1">
+                        <img
+                          src="/images/essay-icon.png"
+                          alt="作文"
+                          className="w-6 h-6 mt-0.5 flex-shrink-0"
+                        />
+                        <h3 className="font-semibold text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                          {essay.essay_title}
+                        </h3>
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="w-3 h-3" />
                         <span>學生 ID: {essay.student_id.slice(0, 8)}...</span>
