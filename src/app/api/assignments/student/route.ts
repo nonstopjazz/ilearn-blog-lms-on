@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
       if (submission) {
         if (submission.status === 'completed' || submission.status === 'graded') {
           progress = 100;
+        } else if (submission.status === 'submitted') {
+          progress = 90; // 已提交但尚未批改
         } else if (submission.status === 'in_progress') {
           progress = 50; // 預設進行中為 50%，可以後續改為從 submission 中讀取
         }
@@ -80,6 +82,8 @@ export async function GET(request: NextRequest) {
       if (submission) {
         if (submission.status === 'completed' || submission.status === 'graded') {
           status = 'completed';
+        } else if (submission.status === 'submitted') {
+          status = 'in_progress'; // 已提交視為進行中（等待批改）
         } else if (submission.status === 'in_progress') {
           status = 'in_progress';
         } else if (row.due_date && new Date(row.due_date) < new Date()) {

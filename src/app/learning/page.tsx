@@ -788,8 +788,8 @@ const DashboardContent = () => {
     try {
       console.log('[loadGanttAssignments] 開始載入甘特圖作業資料...');
 
-      // 從新的學生專屬 API 載入專案作業（只包含進行中和已完成）
-      const response = await fetch(`/api/assignments/student?student_id=${effectiveStudentId}&status=in_progress,completed`);
+      // 從新的學生專屬 API 載入專案作業（顯示所有狀態）
+      const response = await fetch(`/api/assignments/student?student_id=${effectiveStudentId}`);
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -2434,18 +2434,12 @@ const DashboardContent = () => {
 
           {/* 專案作業頁籤 (原作業管理) */}
           <TabsContent value="assignments" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">
-                  <span className="text-blue-500">{getDisplayName()}</span>
-                  {' '}專案作業
-                </h2>
-                <p className="text-muted-foreground">甘特圖形式管理學習作業進度</p>
-              </div>
-              <Button onClick={() => setShowAssignmentDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                新增作業
-              </Button>
+            <div>
+              <h2 className="text-2xl font-bold">
+                <span className="text-blue-500">{getDisplayName()}</span>
+                {' '}專案作業
+              </h2>
+              <p className="text-muted-foreground">甘特圖形式管理學習作業進度</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
