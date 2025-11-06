@@ -96,24 +96,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 必填欄位驗證
-    if (!body.image_url || !body.file_name) {
+    // 提交類型驗證
+    const submissionType = body.submission_type || 'image';
+    if (!['image', 'text'].includes(submissionType)) {
       return NextResponse.json(
-        { success: false, error: '缺少必填欄位' },
+        { success: false, error: '無效的提交類型' },
         { status: 400 }
       );
+    }
+
+    // 根據提交類型驗證必填欄位
+    if (submissionType === 'image') {
+      if (!body.image_url || !body.file_name) {
+        return NextResponse.json(
+          { success: false, error: '圖片提交需要 image_url 和 file_name' },
+          { status: 400 }
+        );
+      }
+    } else if (submissionType === 'text') {
+      if (!body.essay_content || !body.essay_content.trim()) {
+        return NextResponse.json(
+          { success: false, error: '文字提交需要 essay_content' },
+          { status: 400 }
+        );
+      }
     }
 
     // 準備插入的資料
     const essayData: any = {
       student_id: userId,
-      image_url: body.image_url,
-      file_name: body.file_name,
-      original_file_size: body.original_file_size,
-      compressed_file_size: body.compressed_file_size,
-      mime_type: body.mime_type,
-      image_width: body.image_width,
-      image_height: body.image_height,
+      submission_type: submissionType,
       essay_title: body.essay_title || '未命名作文',
       essay_date: body.essay_date || new Date().toISOString().split('T')[0],
       student_notes: body.student_notes || null,
@@ -122,9 +134,25 @@ export async function POST(request: NextRequest) {
       task_id: body.task_id || null,
     };
 
-    // 如果有縮圖 URL
-    if (body.image_thumbnail_url) {
-      essayData.image_thumbnail_url = body.image_thumbnail_url;
+    // 圖片提交的額外欄位
+    if (submissionType === 'image') {
+      essayData.image_url = body.image_url;
+      essayData.file_name = body.file_name;
+      essayData.original_file_size = body.original_file_size;
+      essayData.compressed_file_size = body.compressed_file_size;
+      essayData.mime_type = body.mime_type;
+      essayData.image_width = body.image_width;
+      essayData.image_height = body.image_height;
+
+      // 如果有縮圖 URL
+      if (body.image_thumbnail_url) {
+        essayData.image_thumbnail_url = body.image_thumbnail_url;
+      }
+    }
+
+    // 文字提交的額外欄位
+    if (submissionType === 'text') {
+      essayData.essay_content = body.essay_content;
     }
 
     // 插入資料庫
