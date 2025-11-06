@@ -270,12 +270,7 @@ export default function EssayListPage() {
                 {/* Card Header with Status */}
                 <div className="p-4 border-b bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0 flex items-start gap-2">
-                      <img
-                        src="/images/essay-icon.png"
-                        alt="作文"
-                        className="w-6 h-6 mt-0.5 flex-shrink-0"
-                      />
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
                         {essay.essay_title}
                       </h3>
@@ -286,6 +281,15 @@ export default function EssayListPage() {
 
                 {/* Card Content */}
                 <div className="p-4 space-y-3">
+                  {/* Essay Icon - Centered and Large */}
+                  <div className="flex justify-center py-4">
+                    <img
+                      src="/images/essay-icon.png"
+                      alt="作文"
+                      className="w-24 h-24 object-contain"
+                    />
+                  </div>
+
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
                     <span>
