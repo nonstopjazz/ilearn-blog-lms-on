@@ -248,24 +248,13 @@ export default function AdminEssayListPage() {
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {sortedEssays.map((essay) => (
               <Card
                 key={essay.id}
                 className="group hover:shadow-lg transition-all duration-300 hover:border-primary cursor-pointer overflow-hidden"
                 onClick={() => router.push(`/admin/essays/${essay.id}/edit`)}
               >
-                {/* 圖片預覽 */}
-                {essay.image_thumbnail_url || essay.image_url ? (
-                  <div className="w-full h-48 overflow-hidden bg-muted">
-                    <img
-                      src={essay.image_thumbnail_url || essay.image_url}
-                      alt={essay.essay_title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                ) : null}
-
                 {/* Card Header with Status */}
                 <div className="p-4 border-b bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
@@ -289,7 +278,7 @@ export default function AdminEssayListPage() {
                     <img
                       src="/images/essay-icon.png"
                       alt="作文"
-                      className="w-24 h-24 object-contain"
+                      className="w-1/2 max-w-[120px] h-auto object-contain"
                     />
                   </div>
 
