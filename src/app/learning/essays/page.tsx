@@ -41,7 +41,7 @@ interface Essay {
 
 export default function EssayListPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('date-desc');
@@ -62,18 +62,15 @@ export default function EssayListPage() {
     }
   }, [authLoading, isAuthenticated]);
 
-  const fetchEssays = async (retryCount = 0) => {
+  const fetchEssays = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/essays?limit=100&sort_by=created_at&order=desc');
-      const result = await response.json();
-
-      // 如果返回 401 且還沒重試過，等待後重試一次
-      if (!result.success && response.status === 401 && retryCount === 0) {
-        console.log('[Essays List] 收到 401，等待 500ms 後重試...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return fetchEssays(1); // 重試一次
+      if (!user?.id) {
+        throw new Error('用戶信息缺失');
       }
+
+      setLoading(true);
+      const response = await fetch(`/api/essays?user_id=${user.id}&limit=100&sort_by=created_at&order=desc`);
+      const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error || '獲取作文列表失敗');
