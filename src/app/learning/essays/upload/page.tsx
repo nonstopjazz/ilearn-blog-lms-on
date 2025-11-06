@@ -148,7 +148,9 @@ export default function EssayUploadPage() {
 
         const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
         const fileExt = 'jpg'; // 壓縮後統一為 JPEG
-        const fileName = `${timestamp}_${essayTitle.replace(/\s+/g, '_')}.${fileExt}`;
+        // 使用時間戳 + 隨機數作為檔名，避免中文字符問題
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const fileName = `${timestamp}_${randomStr}.${fileExt}`;
 
         // 按照 學生ID/年/月 的結構儲存
         const year = new Date().getFullYear();
