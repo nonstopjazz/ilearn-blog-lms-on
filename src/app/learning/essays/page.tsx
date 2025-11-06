@@ -31,6 +31,7 @@ interface Essay {
   essay_title: string;
   essay_date: string;
   status: 'submitted' | 'grading' | 'graded' | 'revised' | 'draft';
+  submission_type: 'image' | 'text';
   total_score?: number;
   image_url: string;
   image_thumbnail_url?: string;
@@ -249,7 +250,7 @@ export default function EssayListPage() {
             )}
           </Card>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {sortedEssays.map((essay) => (
               <Card
                 key={essay.id}
@@ -260,7 +261,7 @@ export default function EssayListPage() {
                 <div className="p-4 border-b bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                      <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-3 group-hover:text-primary transition-colors min-h-[4.5rem]">
                         {essay.essay_title}
                       </h3>
                     </div>
@@ -279,15 +280,20 @@ export default function EssayListPage() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {new Date(essay.essay_date).toLocaleDateString('zh-TW', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        {new Date(essay.essay_date).toLocaleDateString('zh-TW', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 flex-shrink-0">
+                      {essay.submission_type === 'image' ? '圖片' : '文字'}
+                    </Badge>
                   </div>
 
                   {essay.status === 'graded' && essay.total_score !== undefined && (
