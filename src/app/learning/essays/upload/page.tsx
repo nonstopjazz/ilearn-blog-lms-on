@@ -7,16 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Upload, Send, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, Send, Loader2, Image as ImageIcon, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabase';
 import { compressImage, formatFileSize, isImageFile } from '@/lib/imageCompression';
 
+type SubmissionMode = 'image' | 'text';
+
 export default function EssayUploadPage() {
   const router = useRouter();
+  const [submissionMode, setSubmissionMode] = useState<SubmissionMode>('image');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [essayTitle, setEssayTitle] = useState('');
+  const [essayContent, setEssayContent] = useState(''); // 文字作文內容
   const [studentNotes, setStudentNotes] = useState('');
   const [essayDate, setEssayDate] = useState(new Date().toISOString().split('T')[0]);
   const [isUploading, setIsUploading] = useState(false);
@@ -83,8 +87,13 @@ export default function EssayUploadPage() {
 
   const handleSubmit = async () => {
     // 驗證
-    if (!selectedFile) {
+    if (submissionMode === 'image' && !selectedFile) {
       toast.error('請選擇圖片檔案');
+      return;
+    }
+
+    if (submissionMode === 'text' && !essayContent.trim()) {
+      toast.error('請輸入作文內容');
       return;
     }
 
@@ -106,53 +115,84 @@ export default function EssayUploadPage() {
         return;
       }
 
-      // 1. 壓縮圖片
-      toast.info('正在壓縮圖片...');
-      const compressionResult = await compressImage(selectedFile);
+      let requestData: any = {
+        user_id: user.id, // 傳遞用戶 ID 給 Admin Client API
+        submission_type: submissionMode,
+        essay_title: essayTitle.trim(),
+        essay_date: essayDate,
+        student_notes: studentNotes.trim() || null,
+        tags: ['作文'],
+        status: 'submitted',
+      };
 
-      setCompressionInfo({
-        originalSize: compressionResult.originalSize,
-        compressedSize: compressionResult.compressedSize,
-        ratio: compressionResult.compressionRatio,
-      });
+      // 圖片模式：壓縮並上傳圖片
+      if (submissionMode === 'image' && selectedFile) {
+        // 1. 壓縮圖片
+        toast.info('正在壓縮圖片...');
+        const compressionResult = await compressImage(selectedFile);
 
-      console.log('[Upload] 壓縮完成:', {
-        原始: formatFileSize(compressionResult.originalSize),
-        壓縮後: formatFileSize(compressionResult.compressedSize),
-        壓縮率: `${compressionResult.compressionRatio}%`,
-      });
-
-      // 2. 上傳到 Supabase Storage
-      toast.info('正在上傳圖片...');
-
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
-      const fileExt = 'jpg'; // 壓縮後統一為 JPEG
-      const fileName = `${timestamp}_${essayTitle.replace(/\s+/g, '_')}.${fileExt}`;
-
-      // 按照 學生ID/年/月 的結構儲存
-      const year = new Date().getFullYear();
-      const month = String(new Date().getMonth() + 1).padStart(2, '0');
-      const storagePath = `${user.id}/${year}/${month}/${fileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('essays')
-        .upload(storagePath, compressionResult.file, {
-          contentType: 'image/jpeg',
-          upsert: false,
+        setCompressionInfo({
+          originalSize: compressionResult.originalSize,
+          compressedSize: compressionResult.compressedSize,
+          ratio: compressionResult.compressionRatio,
         });
 
-      if (uploadError) {
-        console.error('[Upload] Storage error:', uploadError);
-        toast.error('上傳失敗: ' + uploadError.message);
-        return;
+        console.log('[Upload] 壓縮完成:', {
+          原始: formatFileSize(compressionResult.originalSize),
+          壓縮後: formatFileSize(compressionResult.compressedSize),
+          壓縮率: `${compressionResult.compressionRatio}%`,
+        });
+
+        // 2. 上傳到 Supabase Storage
+        toast.info('正在上傳圖片...');
+
+        const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+        const fileExt = 'jpg'; // 壓縮後統一為 JPEG
+        const fileName = `${timestamp}_${essayTitle.replace(/\s+/g, '_')}.${fileExt}`;
+
+        // 按照 學生ID/年/月 的結構儲存
+        const year = new Date().getFullYear();
+        const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        const storagePath = `${user.id}/${year}/${month}/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('essays')
+          .upload(storagePath, compressionResult.file, {
+            contentType: 'image/jpeg',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('[Upload] Storage error:', uploadError);
+          toast.error('上傳失敗: ' + uploadError.message);
+          return;
+        }
+
+        // 3. 獲取公開 URL
+        const { data: urlData } = supabase.storage
+          .from('essays')
+          .getPublicUrl(storagePath);
+
+        console.log('[Upload] 上傳成功:', urlData.publicUrl);
+
+        requestData = {
+          ...requestData,
+          image_url: urlData.publicUrl,
+          file_name: fileName,
+          original_file_size: compressionResult.originalSize,
+          compressed_file_size: compressionResult.compressedSize,
+          mime_type: 'image/jpeg',
+          image_width: compressionResult.width,
+          image_height: compressionResult.height,
+        };
       }
-
-      // 3. 獲取公開 URL
-      const { data: urlData } = supabase.storage
-        .from('essays')
-        .getPublicUrl(storagePath);
-
-      console.log('[Upload] 上傳成功:', urlData.publicUrl);
+      // 文字模式：直接提交文字內容
+      else if (submissionMode === 'text') {
+        requestData = {
+          ...requestData,
+          essay_content: essayContent.trim(),
+        };
+      }
 
       // 4. 建立資料庫記錄
       toast.info('正在建立記錄...');
@@ -162,20 +202,7 @@ export default function EssayUploadPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          image_url: urlData.publicUrl,
-          file_name: fileName,
-          original_file_size: compressionResult.originalSize,
-          compressed_file_size: compressionResult.compressedSize,
-          mime_type: 'image/jpeg',
-          image_width: compressionResult.width,
-          image_height: compressionResult.height,
-          essay_title: essayTitle.trim(),
-          essay_date: essayDate,
-          student_notes: studentNotes.trim() || null,
-          tags: ['作文'],
-          status: 'submitted',
-        }),
+        body: JSON.stringify(requestData),
       });
 
       const result = await response.json();
@@ -187,7 +214,7 @@ export default function EssayUploadPage() {
       console.log('[Upload] 記錄建立成功:', result.data);
 
       // 5. 成功提示並跳轉
-      toast.success('作文上傳成功！');
+      toast.success('作文提交成功！');
 
       setTimeout(() => {
         router.push('/learning/essays');
@@ -195,7 +222,7 @@ export default function EssayUploadPage() {
 
     } catch (error: any) {
       console.error('[Upload] Error:', error);
-      toast.error('上傳失敗: ' + (error.message || '未知錯誤'));
+      toast.error('提交失敗: ' + (error.message || '未知錯誤'));
     } finally {
       setIsUploading(false);
     }
@@ -205,12 +232,41 @@ export default function EssayUploadPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-foreground mb-2">上傳作文</h1>
-          <p className="text-muted-foreground">拍照或選擇作文圖片上傳</p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">提交作文</h1>
+          <p className="text-muted-foreground">選擇提交方式：上傳圖片或輸入文字</p>
         </div>
 
         <Card className="p-8">
-          {/* 圖片上傳區域 */}
+          {/* 提交模式切換 */}
+          <div className="mb-6 flex gap-2 p-1 bg-muted rounded-lg">
+            <button
+              onClick={() => setSubmissionMode('image')}
+              disabled={isUploading}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md font-medium transition-all ${
+                submissionMode === 'image'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ImageIcon className="w-5 h-5" />
+              上傳圖片
+            </button>
+            <button
+              onClick={() => setSubmissionMode('text')}
+              disabled={isUploading}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md font-medium transition-all ${
+                submissionMode === 'text'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText className="w-5 h-5" />
+              輸入文字
+            </button>
+          </div>
+
+          {/* 圖片上傳模式 */}
+          {submissionMode === 'image' && (
           <div className="space-y-6">
             <div>
               <Label htmlFor="file-upload" className="text-lg mb-2 block">
@@ -311,6 +367,76 @@ export default function EssayUploadPage() {
               />
             </div>
           </div>
+          )}
+
+          {/* 文字輸入模式 */}
+          {submissionMode === 'text' && (
+          <div className="space-y-6">
+            {/* 作文標題 */}
+            <div>
+              <Label htmlFor="essay-title-text" className="text-lg mb-2 block">
+                作文標題 <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="essay-title-text"
+                type="text"
+                placeholder="例如：我的暑假生活"
+                value={essayTitle}
+                onChange={(e) => setEssayTitle(e.target.value)}
+                disabled={isUploading}
+                className="text-base"
+              />
+            </div>
+
+            {/* 日期 */}
+            <div>
+              <Label htmlFor="essay-date-text" className="text-lg mb-2 block">
+                日期
+              </Label>
+              <Input
+                id="essay-date-text"
+                type="date"
+                value={essayDate}
+                onChange={(e) => setEssayDate(e.target.value)}
+                disabled={isUploading}
+                className="text-base"
+              />
+            </div>
+
+            {/* 作文內容 */}
+            <div>
+              <Label htmlFor="essay-content" className="text-lg mb-2 block">
+                作文內容 <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="essay-content"
+                placeholder="請輸入您的作文內容..."
+                className="min-h-[400px] text-base font-serif leading-relaxed"
+                value={essayContent}
+                onChange={(e) => setEssayContent(e.target.value)}
+                disabled={isUploading}
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                已輸入 {essayContent.length} 字
+              </p>
+            </div>
+
+            {/* 學生備註 */}
+            <div>
+              <Label htmlFor="student-notes-text" className="text-lg mb-2 block">
+                備註說明（選填）
+              </Label>
+              <Textarea
+                id="student-notes-text"
+                placeholder="可以寫下這篇作文的想法、遇到的困難，或想問老師的問題..."
+                className="min-h-[120px] text-base"
+                value={studentNotes}
+                onChange={(e) => setStudentNotes(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
+          </div>
+          )}
 
           {/* 按鈕 */}
           <div className="mt-8 flex justify-end gap-3">
@@ -323,13 +449,17 @@ export default function EssayUploadPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isUploading || !selectedFile}
+              disabled={
+                isUploading ||
+                (submissionMode === 'image' && !selectedFile) ||
+                (submissionMode === 'text' && !essayContent.trim())
+              }
               className="gap-2"
             >
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  上傳中...
+                  {submissionMode === 'image' ? '上傳中...' : '提交中...'}
                 </>
               ) : (
                 <>
