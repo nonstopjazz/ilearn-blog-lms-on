@@ -23,6 +23,15 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface ImageUrl {
+  url: string;
+  width?: number;
+  height?: number;
+  size?: number;
+  order: number;
+  annotation?: string;
+}
+
 interface Essay {
   id: string;
   student_id: string;
@@ -33,6 +42,7 @@ interface Essay {
   status: 'submitted' | 'grading' | 'graded' | 'revised' | 'draft';
   submission_type: 'image' | 'text';
   image_url?: string;
+  image_urls?: ImageUrl[];
   image_thumbnail_url?: string;
   essay_content?: string;
   student_notes?: string;
@@ -238,13 +248,46 @@ export default function EssayDetailPage() {
               </h2>
             </div>
 
-            {essay.submission_type === 'image' && essay.image_url ? (
-              <div className="rounded-lg overflow-hidden border bg-muted">
-                <img
-                  src={essay.image_url}
-                  alt={essay.essay_title}
-                  className="w-full h-auto"
-                />
+            {essay.submission_type === 'image' ? (
+              <div className="space-y-4">
+                {/* 多張圖片顯示 */}
+                {essay.image_urls && essay.image_urls.length > 0 ? (
+                  essay.image_urls
+                    .sort((a, b) => a.order - b.order)
+                    .map((imgData, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="rounded-lg overflow-hidden border bg-muted">
+                          <img
+                            src={imgData.url}
+                            alt={`${essay.essay_title} - 圖片 ${index + 1}`}
+                            className="w-full h-auto"
+                          />
+                        </div>
+                        {imgData.annotation && (
+                          <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 rounded border-l-4 border-primary">
+                            <ImageIcon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-muted-foreground">
+                              <span className="font-medium text-foreground">圖片 {index + 1}：</span>
+                              {imgData.annotation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                ) : essay.image_url ? (
+                  /* 單張圖片（向後兼容）*/
+                  <div className="rounded-lg overflow-hidden border bg-muted">
+                    <img
+                      src={essay.image_url}
+                      alt={essay.essay_title}
+                      className="w-full h-auto"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border bg-muted p-6 text-center text-muted-foreground">
+                    無作文圖片
+                  </div>
+                )}
               </div>
             ) : essay.submission_type === 'text' && essay.essay_content ? (
               <div className="rounded-lg border bg-muted p-6">
