@@ -30,15 +30,20 @@ export async function middleware(request: NextRequest) {
   });
 
   // ===== Supabase Session 刷新（最優先處理） =====
+  console.log('[Middleware]', pathname, '- Cookies:', request.cookies.getAll().map(c => c.name));
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          const value = request.cookies.get(name)?.value;
+          console.log('[Middleware Cookie] get:', name, value ? 'exists' : 'missing');
+          return value;
         },
         set(name: string, value: string, options: any) {
+          console.log('[Middleware Cookie] set:', name);
           // 更新 request cookies
           request.cookies.set({
             name,
@@ -59,6 +64,7 @@ export async function middleware(request: NextRequest) {
           })
         },
         remove(name: string, options: any) {
+          console.log('[Middleware Cookie] remove:', name);
           // 更新 request cookies
           request.cookies.set({
             name,
@@ -83,7 +89,12 @@ export async function middleware(request: NextRequest) {
   )
 
   // 刷新 session（如果存在）- 這會觸發 cookie 更新
-  await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser();
+  console.log('[Middleware] getUser result:', {
+    hasUser: !!user,
+    userId: user?.id,
+    error: error?.message
+  });
 
   // ===== 安全檢查 =====
   // 排除清除 IP 的路徑
