@@ -24,6 +24,7 @@ import {
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Essay {
   id: string;
@@ -41,20 +42,28 @@ interface Essay {
 
 export default function AdminEssayListPage() {
   const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('date-desc');
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    fetchEssays();
-  }, []);
+    if (!authLoading && user) {
+      fetchEssays();
+    }
+  }, [authLoading, user]);
 
   const fetchEssays = async () => {
+    if (!user?.id) {
+      toast.error('請先登入');
+      return;
+    }
+
     try {
       setLoading(true);
       // Admin fetches all essays
-      const response = await fetch('/api/essays?limit=100&sort_by=created_at&order=desc');
+      const response = await fetch(`/api/essays?user_id=${user.id}&limit=100&sort_by=created_at&order=desc`);
       const result = await response.json();
 
       if (!result.success) {

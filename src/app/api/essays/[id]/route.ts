@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
-// GET - 獲取單個作文詳情
+// GET - 獲取單個作文詳情（使用 Admin Client）
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const { id: essayId } = await params;
+    const { searchParams } = new URL(request.url);
 
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 從 URL 參數獲取用戶 ID
+    const userId = searchParams.get('user_id');
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
       );
     }
 
@@ -46,10 +47,10 @@ export async function GET(
     const { data: userInfo } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
-    if (userInfo?.role !== 'admin' && essay.student_id !== user.id) {
+    if (userInfo?.role !== 'admin' && essay.student_id !== userId) {
       return NextResponse.json(
         { success: false, error: '無權訪問' },
         { status: 403 }
@@ -70,23 +71,23 @@ export async function GET(
   }
 }
 
-// PATCH - 更新作文
+// PATCH - 更新作文（使用 Admin Client）
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { id: essayId } = await params;
 
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 從 body 獲取用戶 ID
+    const userId = body.user_id;
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
       );
     }
 
@@ -94,7 +95,7 @@ export async function PATCH(
     const { data: userInfo } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     const isAdmin = userInfo?.role === 'admin';
@@ -149,7 +150,7 @@ export async function PATCH(
           body.score_vocabulary !== undefined ||
           body.score_creativity !== undefined) {
         updateData.reviewed_at = new Date().toISOString();
-        updateData.reviewed_by = user.id;
+        updateData.reviewed_by = userId;
         updateData.status = 'graded';
       }
     }
@@ -199,22 +200,23 @@ export async function PATCH(
   }
 }
 
-// DELETE - 刪除作文
+// DELETE - 刪除作文（使用 Admin Client）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const { id: essayId } = await params;
+    const { searchParams } = new URL(request.url);
 
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 從 URL 參數獲取用戶 ID
+    const userId = searchParams.get('user_id');
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: '未授權' },
-        { status: 401 }
+        { success: false, error: '缺少用戶 ID' },
+        { status: 400 }
       );
     }
 

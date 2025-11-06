@@ -19,6 +19,7 @@ import {
   ImageIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Annotation {
   id: string;
@@ -53,6 +54,7 @@ export default function TeacherGradingPage() {
   const router = useRouter();
   const params = useParams();
   const essayId = params.id as string;
+  const { user, loading: authLoading } = useAuth();
 
   const [essay, setEssay] = useState<Essay | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,15 +75,20 @@ export default function TeacherGradingPage() {
   });
 
   useEffect(() => {
-    if (essayId) {
+    if (!authLoading && user && essayId) {
       fetchEssay();
     }
-  }, [essayId]);
+  }, [authLoading, user, essayId]);
 
   const fetchEssay = async () => {
+    if (!user?.id) {
+      toast.error('請先登入');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await fetch(`/api/essays/${essayId}`);
+      const response = await fetch(`/api/essays/${essayId}?user_id=${user.id}`);
       const result = await response.json();
 
       if (!result.success) {
@@ -137,7 +144,7 @@ export default function TeacherGradingPage() {
   };
 
   const handleSaveQuestion = async () => {
-    if (!essay) return;
+    if (!essay || !user?.id) return;
 
     try {
       setIsSaving(true);
@@ -148,6 +155,7 @@ export default function TeacherGradingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          user_id: user.id,
           essay_topic: essayTopic,
           essay_topic_detail: essayTopicDetail,
         }),
@@ -170,7 +178,7 @@ export default function TeacherGradingPage() {
   };
 
   const handleSaveAnalysis = async () => {
-    if (!essay) return;
+    if (!essay || !user?.id) return;
 
     try {
       setIsSaving(true);
@@ -181,6 +189,7 @@ export default function TeacherGradingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          user_id: user.id,
           teacher_comment: teacherComment,
           annotations: annotations,
         }),
@@ -207,7 +216,7 @@ export default function TeacherGradingPage() {
   };
 
   const handleSaveScores = async () => {
-    if (!essay) return;
+    if (!essay || !user?.id) return;
 
     try {
       setIsSaving(true);
@@ -218,6 +227,7 @@ export default function TeacherGradingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          user_id: user.id,
           score_content: scores.content,
           score_grammar: scores.grammar,
           score_structure: scores.structure,
