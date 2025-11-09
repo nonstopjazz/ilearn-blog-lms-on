@@ -71,24 +71,34 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // 這裡可以串接實際的統計 API
-        // 暫時使用模擬資料
-        setTimeout(() => {
+        // 調用真實的統計 API
+        const response = await fetch('/api/admin/stats');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setStats(result.data);
+        } else {
+          console.error('載入統計資料失敗:', result.error);
+          // 使用預設值
           setStats({
-            totalCourses: 12,
-            totalUsers: 345,
-            totalQuizzes: 28,
-            pendingRequests: 5,
-            recentActivity: [
-              { type: 'course', title: '新課程申請', time: '2小時前' },
-              { type: 'quiz', title: '測驗結果更新', time: '4小時前' },
-              { type: 'user', title: '新用戶註冊', time: '6小時前' }
-            ]
+            totalCourses: 0,
+            totalUsers: 0,
+            totalQuizzes: 0,
+            pendingRequests: 0,
+            recentActivity: []
           });
-          setLoading(false);
-        }, 1000);
+        }
       } catch (error) {
         console.error('載入統計資料失敗:', error);
+        // 使用預設值
+        setStats({
+          totalCourses: 0,
+          totalUsers: 0,
+          totalQuizzes: 0,
+          pendingRequests: 0,
+          recentActivity: []
+        });
+      } finally {
         setLoading(false);
       }
     };
