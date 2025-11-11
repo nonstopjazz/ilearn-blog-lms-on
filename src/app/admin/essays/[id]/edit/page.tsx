@@ -304,15 +304,25 @@ export default function TeacherGradingPage() {
   const handleAIGrading = async () => {
     if (!essay) return;
 
-    // 檢查是否為文字作文
-    if (essay.submission_type !== 'text' || !essay.essay_content) {
-      toast.error('目前僅支援文字作文的 AI 批改功能');
+    // 檢查作文內容
+    if (essay.submission_type === 'text' && (!essay.essay_content || essay.essay_content.trim().length === 0)) {
+      toast.error('文字作文沒有內容');
+      return;
+    }
+
+    if (essay.submission_type === 'image' && (!essay.image_urls || essay.image_urls.length === 0) && !essay.image_url) {
+      toast.error('圖片作文沒有上傳圖片');
       return;
     }
 
     try {
       setIsAIGrading(true);
-      toast.info('AI 正在分析作文...');
+
+      if (essay.submission_type === 'image') {
+        toast.info('正在辨識圖片文字並分析作文...（需要較長時間）');
+      } else {
+        toast.info('AI 正在分析作文...');
+      }
 
       const response = await fetch('/api/essays/ai-grade', {
         method: 'POST',
@@ -320,9 +330,7 @@ export default function TeacherGradingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          essay_content: essay.essay_content,
-          essay_title: essay.essay_title,
-          essay_topic: essayTopic,
+          essay_id: essay.id
         }),
       });
 
@@ -335,7 +343,12 @@ export default function TeacherGradingPage() {
       // 儲存 AI 建議
       setAiSuggestions(result.data);
       setShowAISuggestions(true);
-      toast.success('AI 批改完成！請查看建議');
+
+      if (essay.submission_type === 'image') {
+        toast.success('OCR 辨識 + AI 批改完成！請查看建議');
+      } else {
+        toast.success('AI 批改完成！請查看建議');
+      }
 
     } catch (error: any) {
       console.error('[AI Grading] Error:', error);
@@ -635,31 +648,32 @@ export default function TeacherGradingPage() {
                 <Card className="p-6">
                   <div className="space-y-8">
                     {/* AI Grading Button */}
-                    {essay.submission_type === 'text' && essay.essay_content && (
-                      <div className="pb-6 border-b">
-                        <Button
-                          onClick={handleAIGrading}
-                          disabled={isAIGrading}
-                          variant="outline"
-                          className="w-full gap-2 border-purple-300 hover:bg-purple-50 hover:text-purple-700"
-                        >
-                          {isAIGrading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              AI 分析中...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 text-purple-600" />
-                              AI 輔助批改
-                            </>
-                          )}
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center mt-2">
-                          使用 DeepSeek AI 自動分析作文並提供評分建議
-                        </p>
-                      </div>
-                    )}
+                    <div className="pb-6 border-b">
+                      <Button
+                        onClick={handleAIGrading}
+                        disabled={isAIGrading}
+                        variant="outline"
+                        className="w-full gap-2 border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                      >
+                        {isAIGrading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {essay.submission_type === 'image' ? 'OCR 辨識 + AI 分析中...' : 'AI 分析中...'}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            AI 輔助批改{essay.submission_type === 'image' && ' (含 OCR 辨識)'}
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        {essay.submission_type === 'image'
+                          ? '使用 Google Cloud Vision OCR 辨識手寫文字，再由 DeepSeek AI 批改'
+                          : '使用 DeepSeek AI 自動分析作文並提供評分建議'
+                        }
+                      </p>
+                    </div>
 
                     {/* AI Suggestions Display */}
                     {showAISuggestions && aiSuggestions && (
@@ -707,6 +721,21 @@ export default function TeacherGradingPage() {
                             </div>
                           </div>
                         </div>
+
+                        {/* OCR Text Display (for image essays) */}
+                        {aiSuggestions.ocr_text && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-sm text-purple-800 mb-2">OCR 辨識文字：</h4>
+                            <div className="bg-white p-3 rounded border border-purple-200 text-sm max-h-40 overflow-y-auto">
+                              <pre className="whitespace-pre-wrap font-sans text-xs text-muted-foreground">
+                                {aiSuggestions.ocr_text}
+                              </pre>
+                            </div>
+                            <p className="text-xs text-purple-600 mt-1">
+                              ℹ️ 以上為 Google Cloud Vision 辨識結果，可能有誤差
+                            </p>
+                          </div>
+                        )}
 
                         {/* AI Comments */}
                         {aiSuggestions.teacher_comment && (

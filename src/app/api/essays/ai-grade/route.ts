@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
+
+interface ImageUrl {
+  url: string;
+  order: number;
+}
 
 interface AIGradingRequest {
-  essay_content: string;
-  essay_title?: string;
-  essay_topic?: string;
+  essay_id: string;
 }
 
 interface AIGradingResponse {
@@ -19,6 +23,7 @@ interface AIGradingResponse {
     teacher_comment: string;
     overall_comment: string;
     suggestions: string[];
+    ocr_text?: string; // 如果是圖片作文，返回 OCR 文字
   };
   error?: string;
   message?: string;
@@ -26,19 +31,120 @@ interface AIGradingResponse {
 
 /**
  * POST /api/essays/ai-grade
- * 使用 DeepSeek AI 批改作文（僅支援文字作文）
+ * 使用 DeepSeek AI 批改作文（支援文字作文和圖片作文）
+ * 圖片作文會先使用 Google Cloud Vision OCR 辨識
  */
 export async function POST(request: NextRequest): Promise<NextResponse<AIGradingResponse>> {
   try {
     const body: AIGradingRequest = await request.json();
-    const { essay_content, essay_title, essay_topic } = body;
+    const { essay_id } = body;
 
     // 驗證必填參數
-    if (!essay_content || essay_content.trim().length === 0) {
+    if (!essay_id || essay_id.trim().length === 0) {
       return NextResponse.json({
         success: false,
-        error: '缺少作文內容',
-        message: '請提供作文內容'
+        error: '缺少作文 ID',
+        message: '請提供 essay_id'
+      }, { status: 400 });
+    }
+
+    // 從資料庫讀取作文資料
+    console.log(`[AI Grading] Fetching essay ${essay_id}...`);
+    const supabase = createSupabaseAdminClient();
+
+    const { data: essay, error: fetchError } = await supabase
+      .from('essay_submissions')
+      .select('*')
+      .eq('id', essay_id)
+      .single();
+
+    if (fetchError || !essay) {
+      console.error('[AI Grading] Essay not found:', fetchError);
+      return NextResponse.json({
+        success: false,
+        error: '作文不存在',
+        message: '找不到指定的作文'
+      }, { status: 404 });
+    }
+
+    console.log(`[AI Grading] Essay type: ${essay.submission_type}`);
+
+    let essayContent = '';
+    let ocrText = '';
+
+    // 根據作文類型處理
+    if (essay.submission_type === 'text') {
+      // 文字作文：直接使用內容
+      if (!essay.essay_content || essay.essay_content.trim().length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: '作文內容為空',
+          message: '文字作文沒有內容'
+        }, { status: 400 });
+      }
+      essayContent = essay.essay_content;
+
+    } else if (essay.submission_type === 'image') {
+      // 圖片作文：先進行 OCR
+      const imageUrls: ImageUrl[] = essay.image_urls || [];
+
+      if (imageUrls.length === 0 && !essay.image_url) {
+        return NextResponse.json({
+          success: false,
+          error: '沒有圖片',
+          message: '圖片作文沒有上傳圖片'
+        }, { status: 400 });
+      }
+
+      // 準備圖片 URL 列表
+      const urls = imageUrls.length > 0
+        ? imageUrls.sort((a, b) => a.order - b.order).map(img => img.url)
+        : [essay.image_url];
+
+      console.log(`[AI Grading] Performing OCR on ${urls.length} image(s)...`);
+
+      // 呼叫 OCR API
+      try {
+        const ocrResponse = await fetch(`${request.nextUrl.origin}/api/ocr/vision`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ image_urls: urls })
+        });
+
+        const ocrResult = await ocrResponse.json();
+
+        if (!ocrResult.success) {
+          throw new Error(ocrResult.error || 'OCR 辨識失敗');
+        }
+
+        essayContent = ocrResult.data.text;
+        ocrText = essayContent;
+        console.log(`[AI Grading] OCR extracted ${essayContent.length} characters`);
+
+      } catch (ocrError) {
+        console.error('[AI Grading] OCR failed:', ocrError);
+        return NextResponse.json({
+          success: false,
+          error: 'OCR 辨識失敗',
+          message: ocrError instanceof Error ? ocrError.message : '無法辨識圖片中的文字'
+        }, { status: 500 });
+      }
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: '不支援的作文類型',
+        message: `未知的作文類型: ${essay.submission_type}`
+      }, { status: 400 });
+    }
+
+    // 驗證作文內容
+    if (!essayContent || essayContent.trim().length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: '作文內容為空',
+        message: '無法獲取作文內容'
       }, { status: 400 });
     }
 
@@ -54,7 +160,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<AIGrading
     }
 
     // 建構 AI 提示詞
-    const prompt = buildGradingPrompt(essay_content, essay_title, essay_topic);
+    const prompt = buildGradingPrompt(
+      essayContent,
+      essay.essay_title,
+      essay.essay_topic,
+      essay.submission_type === 'image' ? 'OCR' : undefined
+    );
 
     console.log('[AI Grading] Calling DeepSeek API...');
 
@@ -123,7 +234,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AIGrading
       },
       teacher_comment: parsedResult.teacher_comment || '',
       overall_comment: parsedResult.overall_comment || '',
-      suggestions: parsedResult.suggestions || []
+      suggestions: parsedResult.suggestions || [],
+      ocr_text: ocrText || undefined // 如果是圖片作文，返回 OCR 文字
     };
 
     console.log('[AI Grading] Grading completed successfully');
@@ -131,7 +243,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AIGrading
     return NextResponse.json({
       success: true,
       data: gradingData,
-      message: 'AI 批改完成'
+      message: essay.submission_type === 'image' ? 'OCR + AI 批改完成' : 'AI 批改完成'
     });
 
   } catch (error) {
@@ -151,7 +263,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AIGrading
 function buildGradingPrompt(
   essayContent: string,
   essayTitle?: string,
-  essayTopic?: string
+  essayTopic?: string,
+  source?: 'OCR'
 ): string {
   let prompt = `Please grade the following English essay according to these five criteria (each scored 0-100):
 
@@ -162,6 +275,10 @@ function buildGradingPrompt(
 5. **Creative Expression (創意表達)**: Innovation in ideas and uniqueness in expression
 
 `;
+
+  if (source === 'OCR') {
+    prompt += `**Note**: This essay was extracted from handwritten images using OCR. There may be minor OCR errors in the text, but please grade based on the intended content and overall quality.\n\n`;
+  }
 
   if (essayTitle) {
     prompt += `**Essay Title**: ${essayTitle}\n\n`;
@@ -201,6 +318,10 @@ Important notes:
 - Be constructive, specific, and encouraging in your feedback
 - Highlight both strengths and areas for improvement
 - Provide actionable suggestions for improvement`;
+
+  if (source === 'OCR') {
+    prompt += `\n- If there are obvious OCR errors that don't affect the overall meaning, be lenient in your grammar scoring`;
+  }
 
   return prompt;
 }
