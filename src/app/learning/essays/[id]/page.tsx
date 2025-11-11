@@ -19,6 +19,7 @@ import {
   Save,
   ImageIcon,
   Clock,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -67,24 +68,82 @@ export default function EssayDetailPage() {
   const [essay, setEssay] = useState<Essay | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [studentNotes, setStudentNotes] = useState('');
+
+  // 快取設定
+  const CACHE_KEY = `essay_${essayId}`;
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘
+
+  // 從 sessionStorage 讀取快取
+  const getCachedEssay = (): Essay | null => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+
+      const { data, timestamp } = JSON.parse(cached);
+      const now = Date.now();
+
+      // 檢查快取是否過期
+      if (now - timestamp > CACHE_DURATION) {
+        sessionStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[Cache] Read error:', error);
+      return null;
+    }
+  };
+
+  // 寫入快取到 sessionStorage
+  const setCachedEssay = (data: Essay) => {
+    try {
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          data,
+          timestamp: Date.now(),
+        })
+      );
+    } catch (error) {
+      console.error('[Cache] Write error:', error);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && user && essayId) {
-      fetchEssay();
+      // 優先從快取讀取
+      const cachedEssay = getCachedEssay();
+      if (cachedEssay) {
+        console.log('[Essay Detail] Loading from cache');
+        setEssay(cachedEssay);
+        setStudentNotes(cachedEssay.student_notes || '');
+        setLoading(false);
+      } else {
+        // 快取不存在或已過期，從 API 載入
+        fetchEssay();
+      }
     } else if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [authLoading, user, isAuthenticated, essayId]);
 
-  const fetchEssay = async () => {
+  const fetchEssay = async (forceRefresh = false) => {
     if (!user?.id) {
       toast.error('請先登入');
       return;
     }
 
     try {
-      setLoading(true);
+      // 如果是強制刷新，顯示不同的 loading 狀態
+      if (forceRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const response = await fetch(`/api/essays/${essayId}?user_id=${user.id}`);
       const result = await response.json();
 
@@ -92,15 +151,31 @@ export default function EssayDetailPage() {
         throw new Error(result.error || '獲取作文失敗');
       }
 
+      // 更新狀態
       setEssay(result.data);
       setStudentNotes(result.data.student_notes || '');
+
+      // 存入快取
+      setCachedEssay(result.data);
+
+      if (forceRefresh) {
+        toast.success('已更新至最新資料');
+      }
     } catch (error: any) {
       console.error('[Essay Detail] Error:', error);
       toast.error('載入失敗: ' + error.message);
-      router.push('/learning/essays');
+      if (!forceRefresh) {
+        router.push('/learning/essays');
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  // 重新整理函數
+  const handleRefresh = () => {
+    fetchEssay(true);
   };
 
   const handleSaveNotes = async () => {
@@ -201,14 +276,25 @@ export default function EssayDetailPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/learning/essays')}
-            className="mb-4 gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            返回作文列表
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/learning/essays')}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              返回作文列表
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? '更新中...' : '重新整理'}
+            </Button>
+          </div>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-4xl font-bold text-foreground mb-2">
