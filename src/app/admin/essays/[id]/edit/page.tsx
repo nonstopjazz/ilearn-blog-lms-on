@@ -18,6 +18,9 @@ import {
   Loader2,
   ImageIcon,
   FileText,
+  Sparkles,
+  Check,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,6 +89,16 @@ export default function TeacherGradingPage() {
     vocabulary: 0,
     creativity: 0,
   });
+
+  // AI grading states
+  const [isAIGrading, setIsAIGrading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<{
+    scores: typeof scores;
+    teacher_comment: string;
+    overall_comment: string;
+    suggestions: string[];
+  } | null>(null);
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user && essayId) {
@@ -286,6 +299,67 @@ export default function TeacherGradingPage() {
       scores.vocabulary +
       scores.creativity;
     return Math.round(total / 5);
+  };
+
+  const handleAIGrading = async () => {
+    if (!essay) return;
+
+    // 檢查是否為文字作文
+    if (essay.submission_type !== 'text' || !essay.essay_content) {
+      toast.error('目前僅支援文字作文的 AI 批改功能');
+      return;
+    }
+
+    try {
+      setIsAIGrading(true);
+      toast.info('AI 正在分析作文...');
+
+      const response = await fetch('/api/essays/ai-grade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          essay_content: essay.essay_content,
+          essay_title: essay.essay_title,
+          essay_topic: essayTopic,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'AI 批改失敗');
+      }
+
+      // 儲存 AI 建議
+      setAiSuggestions(result.data);
+      setShowAISuggestions(true);
+      toast.success('AI 批改完成！請查看建議');
+
+    } catch (error: any) {
+      console.error('[AI Grading] Error:', error);
+      toast.error('AI 批改失敗: ' + error.message);
+    } finally {
+      setIsAIGrading(false);
+    }
+  };
+
+  const handleAcceptAISuggestions = () => {
+    if (!aiSuggestions) return;
+
+    // 採用 AI 建議的分數和評語
+    setScores(aiSuggestions.scores);
+    setTeacherComment(aiSuggestions.teacher_comment);
+    setOverallComment(aiSuggestions.overall_comment);
+
+    toast.success('已採用 AI 建議');
+    setShowAISuggestions(false);
+  };
+
+  const handleRejectAISuggestions = () => {
+    setShowAISuggestions(false);
+    toast.info('已關閉 AI 建議');
   };
 
   if (loading) {
@@ -560,6 +634,125 @@ export default function TeacherGradingPage() {
               <TabsContent value="scores">
                 <Card className="p-6">
                   <div className="space-y-8">
+                    {/* AI Grading Button */}
+                    {essay.submission_type === 'text' && essay.essay_content && (
+                      <div className="pb-6 border-b">
+                        <Button
+                          onClick={handleAIGrading}
+                          disabled={isAIGrading}
+                          variant="outline"
+                          className="w-full gap-2 border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                        >
+                          {isAIGrading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              AI 分析中...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 text-purple-600" />
+                              AI 輔助批改
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          使用 DeepSeek AI 自動分析作文並提供評分建議
+                        </p>
+                      </div>
+                    )}
+
+                    {/* AI Suggestions Display */}
+                    {showAISuggestions && aiSuggestions && (
+                      <Card className="p-6 bg-purple-50 border-purple-200">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-purple-600" />
+                            <h3 className="text-lg font-semibold text-purple-900">
+                              AI 批改建議
+                            </h3>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleRejectAISuggestions}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {/* AI Suggested Scores */}
+                        <div className="space-y-3 mb-4">
+                          <h4 className="font-medium text-sm text-purple-800">建議分數：</h4>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">內容完整性：</span>
+                              <span className="font-bold text-purple-700">{aiSuggestions.scores.content}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">文法正確性：</span>
+                              <span className="font-bold text-purple-700">{aiSuggestions.scores.grammar}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">結構組織：</span>
+                              <span className="font-bold text-purple-700">{aiSuggestions.scores.structure}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">用詞精確度：</span>
+                              <span className="font-bold text-purple-700">{aiSuggestions.scores.vocabulary}</span>
+                            </div>
+                            <div className="flex justify-between col-span-2">
+                              <span className="text-muted-foreground">創意表達：</span>
+                              <span className="font-bold text-purple-700">{aiSuggestions.scores.creativity}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* AI Comments */}
+                        {aiSuggestions.teacher_comment && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-sm text-purple-800 mb-2">詳細分析：</h4>
+                            <div className="bg-white p-3 rounded border border-purple-200 text-sm">
+                              {aiSuggestions.teacher_comment}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI Suggestions List */}
+                        {aiSuggestions.suggestions && aiSuggestions.suggestions.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-sm text-purple-800 mb-2">改進建議：</h4>
+                            <ul className="bg-white p-3 rounded border border-purple-200 text-sm space-y-1">
+                              {aiSuggestions.suggestions.map((suggestion, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <span className="text-purple-600 mt-1">•</span>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 mt-4">
+                          <Button
+                            onClick={handleAcceptAISuggestions}
+                            className="flex-1 gap-2 bg-purple-600 hover:bg-purple-700"
+                          >
+                            <Check className="w-4 h-4" />
+                            採用 AI 建議
+                          </Button>
+                          <Button
+                            onClick={handleRejectAISuggestions}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            手動調整
+                          </Button>
+                        </div>
+                      </Card>
+                    )}
+
                     {/* Score Sliders */}
                     <div>
                       <div className="flex justify-between items-center mb-3">
