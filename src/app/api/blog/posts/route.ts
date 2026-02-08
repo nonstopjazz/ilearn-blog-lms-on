@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-server'
+import { authenticateRequest } from '@/lib/api-auth'
+import { isAdmin } from '@/lib/security-config'
 
 // GET - 獲取文章列表
 export async function GET(request: NextRequest) {
@@ -153,10 +155,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - 創建新文章
+// POST - 創建新文章（僅限管理員）
 export async function POST(request: NextRequest) {
   try {
-    console.log('Posts POST: Starting request')
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(request)
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const {
       title,

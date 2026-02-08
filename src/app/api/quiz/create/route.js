@@ -1,12 +1,13 @@
 // src/app/api/quiz/create/route.js
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
-import { getCurrentUserFromCookies } from '@/lib/auth-utils';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 題型轉換
 const getQuestionType = (type) => {
   const typeMap = {
     'single': 'single',
-    'multiple': 'multiple', 
+    'multiple': 'multiple',
     'fill': 'fill',
     'essay': 'essay'
   };
@@ -15,6 +16,12 @@ const getQuestionType = (type) => {
 
 export async function POST(request) {
   try {
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return Response.json({ error: '需要管理員權限' }, { status: 403 });
+    }
+
     const supabase = createSupabaseAdminClient();
 
     const { title, description, courseId, questions } = await request.json();

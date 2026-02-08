@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
 
 // 創建通知（僅限管理員使用）
 export async function POST(req: NextRequest) {
@@ -53,20 +54,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 獲取通知列表（使用 Admin Client）
+// 獲取通知列表
 export async function GET(req: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(req);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
-      );
-    }
+    // 強制只能查詢自己的通知（修復 IDOR）
+    const userId = authUser.id;
 
     const { data: notifications, error } = await supabase
       .from('notifications')
@@ -97,12 +99,20 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 更新通知狀態（使用 Admin Client）
+// 更新通知狀態
 export async function PATCH(req: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(req);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await req.json();
-    const { notification_id, user_id, read, mark_all_read } = body;
+    const { notification_id, read, mark_all_read } = body;
+    // 強制使用認證用戶的 ID
+    const user_id = authUser.id;
 
     if (mark_all_read && user_id) {
       // 標記用戶所有通知為已讀
@@ -174,9 +184,15 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// 刪除通知（使用 Admin Client）
+// 刪除通知
 export async function DELETE(req: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(req);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { notification_id } = body;
@@ -188,10 +204,12 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // 只能刪除自己的通知
     const { error } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', notification_id);
+      .eq('id', notification_id)
+      .eq('user_id', authUser.id);
 
     if (error) {
       console.error('刪除通知失敗:', error);
