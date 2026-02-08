@@ -86,7 +86,6 @@ export async function POST(request) {
   try {
     const supabase = createSupabaseAdminClient();
     const courseData = await request.json();
-    console.log('收到的課程資料:', courseData);
 
     // 驗證必要欄位
     if (!courseData.title || !courseData.description || !courseData.instructor_name) {
@@ -113,7 +112,6 @@ export async function POST(request) {
     }
 
     const courseId = `course_${nextCourseNumber.toString().padStart(3, '0')}`;
-    console.log('生成的課程 ID:', courseId);
 
     // 🔥 修復：只插入資料表實際存在的欄位
     const insertData = {
@@ -131,8 +129,6 @@ export async function POST(request) {
       lessons_count: courseData.lessons?.length || 0,
     };
 
-    console.log('準備插入的資料:', insertData);
-
     // 建立課程
     const { data: course, error: courseError } = await supabase
       .from('courses')
@@ -146,8 +142,6 @@ export async function POST(request) {
         error: '建立課程失敗：' + courseError.message 
       }, { status: 500 });
     }
-
-    console.log('課程建立成功:', course);
 
     // 🔥 修復：建立課程內容
     if (courseData.lessons && courseData.lessons.length > 0) {
@@ -176,8 +170,6 @@ export async function POST(request) {
         attachments: lesson.attachments || []
       }));
 
-      console.log('準備插入的課程內容:', lessonsToInsert);
-
       const { data: insertedLessons, error: lessonsError } = await supabase
         .from('course_lessons')
         .insert(lessonsToInsert)
@@ -191,7 +183,6 @@ export async function POST(request) {
         }, { status: 500 });
       }
 
-      console.log('課程內容建立成功:', insertedLessons);
     }
 
     return Response.json({

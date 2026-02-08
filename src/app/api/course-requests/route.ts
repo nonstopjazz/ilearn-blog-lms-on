@@ -29,8 +29,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('開始檢查重複申請...');
-
     // 檢查是否已經申請過 - 修正：移除錯誤的連線測試
     const { data: existingRequest, error: checkError } = await supabase
       .from('course_requests')
@@ -49,15 +47,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (existingRequest) {
-      console.log('發現重複申請:', existingRequest);
       return NextResponse.json({
         success: false,
         error: '您已經申請過此課程',
         request: existingRequest
       });
     }
-
-    console.log('沒有重複申請，開始創建新申請...');
 
     // 創建申請記錄
     const requestData = {
@@ -68,8 +63,6 @@ export async function POST(req: NextRequest) {
       status: 'pending',
       requested_at: new Date().toISOString(),
     };
-
-    console.log('準備插入的資料:', requestData);
 
     const { data: newRequest, error: requestError } = await supabase
       .from('course_requests')
@@ -84,8 +77,6 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log('申請創建成功:', newRequest);
 
     // 創建通知給用戶
     try {

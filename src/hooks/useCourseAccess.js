@@ -38,8 +38,6 @@ export const useCourseAccess = (courseId) => {
           return
         }
 
-        console.log(`🔍 檢查課程權限 - 用戶: ${user.email}, 課程: ${courseId}`)
-
         // 檢查用戶課程權限
         const { data: accessData, error: accessError } = await supabase
           .from('user_course_access')
@@ -54,7 +52,6 @@ export const useCourseAccess = (courseId) => {
         }
 
         if (!accessData) {
-          console.log(`❌ 無課程權限 - 用戶: ${user.email}, 課程: ${courseId}`)
           setHasAccess(false)
           setAccessInfo(null)
         } else {
@@ -63,11 +60,9 @@ export const useCourseAccess = (courseId) => {
                            new Date(accessData.expires_at) < new Date()
 
           if (isExpired) {
-            console.log(`⏰ 課程權限已過期 - 用戶: ${user.email}, 課程: ${courseId}`)
             setHasAccess(false)
             setError('您的課程權限已過期')
           } else {
-            console.log(`✅ 課程權限有效 - 用戶: ${user.email}, 課程: ${courseId}`)
             setHasAccess(true)
             setAccessInfo(accessData)
           }

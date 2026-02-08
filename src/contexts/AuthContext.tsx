@@ -87,8 +87,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 監聽認證狀態變化
     const { data: { subscription } } = getSupabase().auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AuthContext] 認證狀態變化:', event, session?.user?.id);
-
         if (!mounted) return;
 
         switch (event) {

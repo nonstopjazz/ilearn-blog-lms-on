@@ -111,7 +111,6 @@ export async function requireAdmin(request: Request) {
   }
   
   if (!checkIsAdmin(user)) {
-    console.log(`用戶 ${user.email} 嘗試存取管理員 API 但權限不足`);
     return {
       success: false,
       error: 'Admin access required',
@@ -183,7 +182,6 @@ export async function requirePermission(request: Request, permission: Permission
   }
   
   if (!hasPermission(user, permission)) {
-    console.log(`用戶 ${user.email} 嘗試執行需要 ${permission} 權限的操作`);
     return {
       success: false,
       error: `Permission ${permission} required`,

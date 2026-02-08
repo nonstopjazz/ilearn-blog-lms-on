@@ -125,8 +125,6 @@ const StudentQuizPage: React.FC = () => {
         throw new Error('請先登入後再開始測驗');
       }
       
-      console.log('開始測驗 - 用戶 ID:', user.id);
-      
       const response = await fetch('/api/quiz/attempt', {
         method: 'POST',
         headers: {

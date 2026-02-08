@@ -96,9 +96,6 @@ export default function MyCoursesPage() {
         const { getSupabase } = await import('@/lib/supabase');
         const supabase = getSupabase();
 
-        console.log('[My Courses] 開始載入用戶課程...')
-        console.log('[My Courses] 用戶 ID:', user.id)
-
         // 🔧 方法1：從 course_requests 查詢已批准的課程
         const { data: approvedRequests, error: requestError } = await supabase
           .from('course_requests')

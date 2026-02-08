@@ -33,15 +33,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📹 更新影片進度:', {
-      user_id,
-      lesson_id,
-      course_id,
-      watched_duration: videoPosition,
-      progress_percent: progressValue,
-      completed
-    })
-
     // 先查詢是否已存在記錄
     const { data: existing } = await supabase
       .from('user_lesson_progress')
@@ -100,8 +91,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log('✅ 進度更新成功:', data)
 
     return NextResponse.json({
       success: true,

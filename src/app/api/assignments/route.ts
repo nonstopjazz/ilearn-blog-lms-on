@@ -113,7 +113,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('[POST /api/assignments] 收到請求:', JSON.stringify(body, null, 2));
 
     const {
       title,
@@ -150,7 +149,6 @@ export async function POST(request: NextRequest) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const invalidIds = studentIds.filter(id => !uuidRegex.test(id));
       if (invalidIds.length > 0) {
-        console.error('[POST /api/assignments] 無效的學生 ID 格式:', invalidIds);
         return NextResponse.json({
           success: false,
           error: '無效的學生 ID 格式',
@@ -165,7 +163,6 @@ export async function POST(request: NextRequest) {
     let finalCourseId = courseId;
 
     if (!finalCourseId && studentIds && studentIds.length > 0) {
-      console.log('[POST /api/assignments] 未提供 courseId,嘗試從學生課程註冊中獲取...');
 
       // 查詢第一位學生的課程註冊記錄
       const { data: courseRequests, error: courseError } = await supabase
@@ -177,15 +174,11 @@ export async function POST(request: NextRequest) {
 
       if (!courseError && courseRequests && courseRequests.length > 0) {
         finalCourseId = courseRequests[0].course_id;
-        console.log('[POST /api/assignments] 自動使用課程:', finalCourseId, courseRequests[0].course_title);
-      } else {
-        console.log('[POST /api/assignments] 無法找到學生的課程註冊記錄');
       }
     }
 
     // 如果還是沒有 courseId,使用第一個可用課程
     if (!finalCourseId) {
-      console.log('[POST /api/assignments] 仍無 courseId,嘗試使用第一個可用課程...');
 
       const { data: courses, error: coursesError } = await supabase
         .from('course_lessons')
@@ -194,13 +187,11 @@ export async function POST(request: NextRequest) {
 
       if (!coursesError && courses && courses.length > 0) {
         finalCourseId = courses[0].course_id;
-        console.log('[POST /api/assignments] 使用預設課程:', finalCourseId);
       }
     }
 
     // 最後的保底措施
     if (!finalCourseId) {
-      console.error('[POST /api/assignments] 無法確定 course_id');
       return NextResponse.json({
         success: false,
         error: '無法確定課程',
@@ -233,7 +224,6 @@ export async function POST(request: NextRequest) {
     // 前端的不同作業類型都統一映射為 'task'
     if (assignmentType && assignmentType.trim()) {
       insertData.assignment_type = 'task';
-      console.log('[POST /api/assignments] assignment_type 統一映射為: task (原值:', assignmentType, ')');
     }
 
     // priority 欄位也有 CHECK 約束
@@ -250,10 +240,7 @@ export async function POST(request: NextRequest) {
       // 如果是中文,轉換為英文;否則直接使用
       const mappedPriority = priorityMapping[priority] || priority;
       insertData.priority = mappedPriority;
-      console.log('[POST /api/assignments] priority 映射:', priority, '->', mappedPriority);
     }
-
-    console.log('[POST /api/assignments] 準備插入作業:', JSON.stringify(insertData, null, 2));
 
     // 創建一個作業記錄
     const { data: createdAssignment, error: insertError } = await supabase
@@ -263,17 +250,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('[POST /api/assignments] 新增作業失敗:', {
-        error: insertError,
-        code: insertError.code,
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint
-      });
       throw new Error(`資料庫錯誤: ${insertError.message} (${insertError.code})`);
     }
-
-    console.log('[POST /api/assignments] 作業創建成功:', createdAssignment);
 
     // 如果有指定學生列表，為每個學生創建初始的提交記錄
     if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
@@ -283,23 +261,12 @@ export async function POST(request: NextRequest) {
         status: 'not_submitted'
       }));
 
-      console.log('[POST /api/assignments] 準備插入提交記錄:', JSON.stringify(submissions, null, 2));
-
       const { error: submissionError } = await supabase
         .from('assignment_submissions')
         .insert(submissions);
 
       if (submissionError) {
-        console.error('[POST /api/assignments] 創建提交記錄失敗:', {
-          error: submissionError,
-          code: submissionError.code,
-          message: submissionError.message,
-          details: submissionError.details,
-          hint: submissionError.hint
-        });
         // 不中斷，只記錄錯誤
-      } else {
-        console.log('[POST /api/assignments] 提交記錄創建成功');
       }
     }
 

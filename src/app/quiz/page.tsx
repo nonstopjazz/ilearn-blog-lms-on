@@ -102,9 +102,6 @@ const QuizListPage: React.FC = () => {
       // 確保在有用戶時才傳遞 userId
       if (user?.id) {
         params.append('userId', user.id);
-        console.log('正在以用戶 ID 查詢測驗:', user.id);
-      } else {
-        console.log('未登入用戶，將顯示基本測驗資訊');
       }
       
       if (params.toString()) {

@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
     }
 
     const user = authResult.user;
-    console.log('[Admin Students Info API] Authenticated user:', user.id);
 
     // 檢查用戶角色
     const { data: profile, error: profileError } = await supabase
