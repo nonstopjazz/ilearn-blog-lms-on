@@ -388,6 +388,18 @@ function AuthContent() {
               </div>
             )}
 
+            {/* 忘記密碼連結 */}
+            {isLogin && (
+              <div className="flex items-center justify-end">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                >
+                  忘記密碼？
+                </Link>
+              </div>
+            )}
+
             {/* 提交按鈕 */}
             <div>
               <button
