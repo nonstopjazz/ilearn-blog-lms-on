@@ -1,89 +1,30 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { isAdmin } from '@/lib/security-config';
 
-// 延遲初始化 Supabase 客戶端
-function createSupabaseAdminClient() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Missing Supabase environment variables');
-    return null;
-  }
-  
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-}
-
-// 🔧 修復：改進的管理員權限檢查
+// 檢查管理員權限
 async function checkAdminPermission(request) {
   try {
     const authHeader = request.headers.get('authorization');
-    
-    console.log('=== 權限檢查開始 ===');
-    console.log('Auth Header:', authHeader ? 'Present' : 'Missing');
-    
     if (!authHeader) {
-      console.log('❌ 缺少認證標頭');
       return { error: '缺少認證資訊', status: 401 };
     }
 
     const token = authHeader.replace('Bearer ', '');
-    console.log('Token 長度:', token.length);
-    console.log('Token 開始:', token.substring(0, 50) + '...');
-
-    // 🔧 修復：使用客戶端 supabase 來驗證 token
     const supabase = createSupabaseAdminClient();
-
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    console.log('Supabase 用戶查詢結果:');
-    console.log('- Error:', error);
-    console.log('- User:', user ? { id: user.id, email: user.email } : 'null');
-    
-    if (error) {
-      console.log('❌ Supabase 認證錯誤:', error.message);
-      return { error: '認證失敗: ' + error.message, status: 401 };
+
+    if (error || !user) {
+      return { error: '認證失敗', status: 401 };
     }
 
-    if (!user) {
-      console.log('❌ 無用戶資訊');
-      return { error: '認證失敗：無效的 token', status: 401 };
+    if (!isAdmin(user)) {
+      return { error: '權限不足', status: 403 };
     }
-
-    console.log('✅ 用戶認證成功:', user.email);
-
-    // 🔧 修復：更寬鬆的管理員檢查
-    const adminEmails = [
-      'nonstopjazz@gmail.com',
-      'admin@example.com'
-    ];
-
-    const isAdmin = 
-      adminEmails.includes(user.email) ||
-      user.user_metadata?.role === 'admin' || 
-      user.app_metadata?.role === 'admin' ||
-      user.email?.includes('admin') || 
-      user.id === '36258aeb-f26d-406e-a8ed-25595a736614';
-
-    console.log('管理員檢查結果:');
-    console.log('- Email:', user.email);
-    console.log('- 是否在管理員列表:', adminEmails.includes(user.email));
-    console.log('- user_metadata.role:', user.user_metadata?.role);
-    console.log('- app_metadata.role:', user.app_metadata?.role);
-    console.log('- 最終結果:', isAdmin);
-
-    if (!isAdmin) {
-      console.log('❌ 權限不足');
-      return { error: '權限不足：需要管理員權限', status: 403 };
-    }
-
-    console.log('✅ 管理員權限驗證成功');
-    console.log('=== 權限檢查結束 ===');
 
     return { user, isAdmin: true };
   } catch (error) {
-    console.error('💥 權限檢查異常:', error);
-    return { error: '權限檢查失敗: ' + error.message, status: 500 };
+    return { error: '權限檢查失敗', status: 500 };
   }
 }
 

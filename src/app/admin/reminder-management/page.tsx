@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Plus, Edit2, Trash2, Save, AlertCircle, CheckCircle, Clock, Mail, Smartphone, Monitor, Filter, Search, BookOpen, Settings, Users, Activity, Send, Eye, Play, BarChart, RefreshCw, Zap } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
+import { ADMIN_EMAILS } from '@/lib/security-config';
 
 interface Course {
   id: string;
@@ -137,10 +138,9 @@ export default function AdminReminderManagementPage() {
         console.log('當前用戶:', user.email);
         
         // 檢查是否為管理員
-        const isAdmin = user.user_metadata?.role === 'admin' || 
-                       user.email?.includes('admin') || 
-                       user.email === 'nonstopjazz@gmail.com' ||
-                       user.id === '36258aeb-f26d-406e-a8ed-25595a736614';
+        const isAdmin = user.user_metadata?.role === 'admin' ||
+                       user.user_metadata?.is_admin ||
+                       (user.email && ADMIN_EMAILS.includes(user.email));
         
         if (isAdmin) {
           setAuthStatus('管理員已登入');

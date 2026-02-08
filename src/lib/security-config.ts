@@ -6,16 +6,14 @@ import type { User } from '@supabase/supabase-js';
  * 用於管理用戶權限和管理員設定
  */
 
-// 管理員 Email 列表 (在真實環境中，這應該來自環境變數或資料庫)
-export const ADMIN_EMAILS = [
-  // 'admin@example.com',  // 已註解掉的範例 email
-  // 'admin@yourdomain.com', // 已註解掉的範例 email
-  
-  'nonstopjazz@gmail.com',  // 您的管理員 email
-  
-  // 注意：在生產環境中，建議使用環境變數來管理這些設定
-  // 例如：process.env.ADMIN_EMAILS?.split(',') || []
-];
+// 管理員 Email 列表（從環境變數讀取，逗號分隔）
+const envAdminEmails = typeof process !== 'undefined'
+  ? process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean)
+  : [];
+
+export const ADMIN_EMAILS: string[] = envAdminEmails && envAdminEmails.length > 0
+  ? envAdminEmails
+  : ['nonstopjazz@gmail.com']; // fallback：確保至少有一個管理員
 
 // 角色定義
 export enum UserRole {

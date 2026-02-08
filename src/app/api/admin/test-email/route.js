@@ -1,19 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { sendTestEmail } from '@/lib/emailService';
-
-// 延遲初始化 Supabase 客戶端
-function createSupabaseAdminClient() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Missing Supabase environment variables');
-    return null;
-  }
-  
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-}
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { isAdmin } from '@/lib/security-config';
 
 // 檢查管理員權限
 async function checkAdminPermission(request) {
@@ -24,20 +12,14 @@ async function checkAdminPermission(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-
     const supabase = createSupabaseAdminClient();
-
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    
+
     if (error || !user) {
       return { error: '認證失敗', status: 401 };
     }
 
-    const isAdmin = user.user_metadata?.role === 'admin' || 
-                   user.email?.includes('admin') || 
-                   user.id === '36258aeb-f26d-406e-a8ed-25595a736614';
-
-    if (!isAdmin) {
+    if (!isAdmin(user)) {
       return { error: '權限不足', status: 403 };
     }
 
