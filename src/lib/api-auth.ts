@@ -1,6 +1,8 @@
 // src/lib/api-auth.ts
 import { createClient } from '@supabase/supabase-js';
-import { isAdmin, hasPermission, Permission } from '@/lib/security-config';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { isAdmin as checkIsAdmin, hasPermission, Permission } from '@/lib/security-config';
 
 // 定義 API context 型別
 interface ApiContext {
@@ -22,15 +24,42 @@ function getSupabaseClient() {
 }
 
 /**
- * 從請求中獲取並驗證用戶
+ * 從 cookie 中獲取當前登入的用戶（支援前端 fetch 自動傳送的 cookie）
+ */
+export async function getAuthUserFromCookies() {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return null;
+
+    const cookieStore = await cookies();
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        get(name: string) { return cookieStore.get(name)?.value; },
+        set() {},
+        remove() {},
+      },
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 從請求中獲取並驗證用戶（優先 Bearer token，fallback cookie）
  */
 export async function authenticateRequest(request: Request) {
   try {
     // 嘗試從 Authorization header 獲取 token
     const authHeader = request.headers.get('Authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { user: null, error: null }; // 未認證，但不一定是錯誤
+      // Fallback: 嘗試從 cookie 獲取用戶
+      const cookieUser = await getAuthUserFromCookies();
+      return { user: cookieUser, error: null };
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -81,8 +110,7 @@ export async function requireAdmin(request: Request) {
     };
   }
   
-  if (!isAdmin(user)) {
-    console.log(`用戶 ${user.email} 嘗試存取管理員 API 但權限不足`);
+  if (!checkIsAdmin(user)) {
     return {
       success: false,
       error: 'Admin access required',
@@ -154,7 +182,6 @@ export async function requirePermission(request: Request, permission: Permission
   }
   
   if (!hasPermission(user, permission)) {
-    console.log(`用戶 ${user.email} 嘗試執行需要 ${permission} 權限的操作`);
     return {
       success: false,
       error: `Permission ${permission} required`,

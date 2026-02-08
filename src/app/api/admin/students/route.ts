@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
-import { verifyApiKey } from '@/lib/api-auth';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 建立學生統計資料的輔助函數
 async function buildStudentStats(supabase: any, studentId: string, name: string, email: string, userInfo: any = {}) {
@@ -68,18 +69,12 @@ async function buildStudentStats(supabase: any, studentId: string, name: string,
 // GET - 取得所有學生的學習統計
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰（僅在配置了 API_KEY 時檢查）
-    // 如果未配置 API_KEY，則允許請求通過（假設頁面層級已做認證）
-    if (process.env.API_KEY) {
-      const authResult = await verifyApiKey(request);
-      if (!authResult.valid) {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('[Admin Students API] API_KEY not configured, skipping API key verification');
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
     }
 
     const supabase = createSupabaseAdminClient();
@@ -167,18 +162,12 @@ export async function GET(request: NextRequest) {
 // POST - 新增學生學習記錄
 export async function POST(request: NextRequest) {
   try {
-    // 驗證 API 金鑰（僅在配置了 API_KEY 時檢查）
-    // 如果未配置 API_KEY，則允許請求通過（假設頁面層級已做認證）
-    if (process.env.API_KEY) {
-      const authResult = await verifyApiKey(request);
-      if (!authResult.valid) {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('[Admin Students API] API_KEY not configured, skipping API key verification');
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
     }
 
     const body = await request.json();

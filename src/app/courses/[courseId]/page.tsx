@@ -595,10 +595,8 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
         
         if (!error && user) {
           setUser(user);
-          if (isDevelopment) console.log('✅ 用戶載入成功:', user.email);
         }
-      } catch (error) {
-        if (isDevelopment) console.log('❌ 載入用戶失敗:', error);
+      } catch {
       }
     };
 

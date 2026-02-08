@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
-import { verifyApiKey } from '@/lib/api-auth';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 /**
  * 診斷 API - 檢查資料庫表和權限
@@ -8,12 +9,11 @@ import { verifyApiKey } from '@/lib/api-auth';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid && process.env.NODE_ENV !== 'development') {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: 401 }
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
       );
     }
 

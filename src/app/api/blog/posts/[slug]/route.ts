@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-server'
+import { authenticateRequest } from '@/lib/api-auth'
+import { isAdmin } from '@/lib/security-config'
 
 export async function GET(
   request: NextRequest,
@@ -94,12 +96,17 @@ export async function GET(
   }
 }
 
-// PUT - Update post
+// PUT - Update post（僅限管理員）
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { user: authUser } = await authenticateRequest(request)
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json({ success: false, error: '需要管理員權限' }, { status: 403 })
+    }
+
     const { slug } = await params
     const body = await request.json()
     const supabase = createSupabaseAdminClient()
@@ -178,12 +185,17 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete post
+// DELETE - Delete post（僅限管理員）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { user: authUser } = await authenticateRequest(request)
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json({ success: false, error: '需要管理員權限' }, { status: 403 })
+    }
+
     const { slug } = await params
     const supabase = createSupabaseAdminClient()
 

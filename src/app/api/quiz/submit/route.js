@@ -1,8 +1,15 @@
 // src/app/api/quiz/submit/route.js
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
 
 export async function POST(request) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
+      return Response.json({ error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const { attempt_id, quiz_set_id, answers, score, completed_at } = await request.json();
     

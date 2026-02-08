@@ -3,6 +3,8 @@ import { sendTestEmail } from '@/lib/emailService';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/security-config';
 
+const supabase = createSupabaseAdminClient();
+
 // 檢查管理員權限
 async function checkAdminPermission(request) {
   try {
@@ -12,7 +14,6 @@ async function checkAdminPermission(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const supabase = createSupabaseAdminClient();
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {

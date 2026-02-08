@@ -111,7 +111,6 @@ export default function AdminReminderManagementPage() {
       }
       
       if (session?.access_token) {
-        console.log('找到 Supabase access_token:', session.access_token.substring(0, 20) + '...');
         return session.access_token;
       }
       
@@ -135,8 +134,7 @@ export default function AdminReminderManagementPage() {
       
       if (user) {
         setCurrentUser(user);
-        console.log('當前用戶:', user.email);
-        
+
         // 檢查是否為管理員
         const isAdmin = user.user_metadata?.role === 'admin' ||
                        user.user_metadata?.is_admin ||

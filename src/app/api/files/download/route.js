@@ -32,8 +32,6 @@ export async function GET(request) {
       )
     }
 
-    console.log(`🔐 檔案下載請求 - 用戶: ${user.email}, 課程: ${courseId}, 檔案: ${fileName}`)
-
     // 2. 檢查用戶是否有課程存取權限
     const { data: accessData, error: accessError } = await supabase
       .from('user_course_access')
@@ -43,7 +41,6 @@ export async function GET(request) {
       .single()
 
     if (accessError || !accessData) {
-      console.log(`❌ 權限檢查失敗 - 用戶: ${user.email}, 課程: ${courseId}`)
       return NextResponse.json(
         { error: '您沒有此課程的存取權限，請先申請課程權限' },
         { status: 403 }
@@ -119,8 +116,6 @@ export async function GET(request) {
       console.warn('下載記錄錯誤:', logErr)
       // 繼續下載流程
     }
-
-    console.log(`✅ 權限驗證通過 - 用戶: ${user.email}, 檔案: ${fileName}`)
 
     // 7. 處理不同類型的檔案 URL
     if (fileUrl.includes('drive.google.com')) {

@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 創建訂單
 export async function POST(request: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json({ error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { course_id, course_title, user_id, amount, payment_method, user_info } = body;
+
+    // 防止冒充其他使用者下單
+    if (user_id !== authUser.id) {
+      return NextResponse.json({ error: '無權為其他使用者建立訂單' }, { status: 403 });
+    }
 
     // 驗證必要欄位
     if (!course_id || !user_id || !payment_method || !user_info) {
@@ -103,23 +116,24 @@ export async function POST(request: NextRequest) {
 // 獲取用戶訂單
 export async function GET(request: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json({ error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('user_id');
     const orderId = searchParams.get('order_id');
 
-    if (!userId && !orderId) {
-      return NextResponse.json(
-        { error: '需要提供 user_id 或 order_id' },
-        { status: 400 }
-      );
-    }
+    // 強制只能查詢自己的訂單（修復 IDOR）
+    const userId = authUser.id;
 
     let query = supabase.from('orders').select('*');
 
     if (orderId) {
-      query = query.eq('id', orderId);
-    } else if (userId) {
+      query = query.eq('id', orderId).eq('user_id', userId);
+    } else {
       query = query.eq('user_id', userId).order('created_at', { ascending: false });
     }
 
@@ -147,9 +161,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 更新訂單狀態
+// 更新訂單狀態（僅限管理員）
 export async function PATCH(request: NextRequest) {
   try {
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json({ error: '需要管理員權限' }, { status: 403 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { order_id, status, payment_info } = body;

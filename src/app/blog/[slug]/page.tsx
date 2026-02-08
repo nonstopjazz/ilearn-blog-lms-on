@@ -1,5 +1,6 @@
 'use client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import DOMPurify from 'isomorphic-dompurify';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -331,10 +332,13 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ params }) => {
 
         {/* 文章內容 */}
         <div className="bg-white rounded-lg border border-gray-200 p-8 mb-8">
-          <div 
+          <div
             className="prose prose-lg max-w-none text-gray-800 leading-relaxed"
-            dangerouslySetInnerHTML={{ 
-              __html: `<p class="mb-4">${formatContent(post.content)}</p>` 
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(
+                `<p class="mb-4">${formatContent(post.content)}</p>`,
+                { ADD_ATTR: ['target', 'rel'] }
+              )
             }}
           />
         </div>

@@ -1,27 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 提交課程申請
 export async function POST(req: NextRequest) {
   try {
+    // 認證檢查
+    const { user: authUser } = await authenticateRequest(req);
+    if (!authUser) {
+      return NextResponse.json({ error: '請先登入' }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdminClient();
-    console.log('=== 課程申請 API 開始 ===');
-    
     const body = await req.json();
-    console.log('收到的資料:', body);
-    
     const { user_id, course_id, course_title, user_info } = body;
+
+    // 防止冒充其他使用者申請
+    if (user_id !== authUser.id) {
+      return NextResponse.json({ error: '無權為其他使用者申請' }, { status: 403 });
+    }
 
     // 驗證必要欄位
     if (!user_id || !course_id || !user_info) {
-      console.log('驗證失敗，缺少必要資訊');
       return NextResponse.json(
         { error: '缺少必要的申請資訊' },
         { status: 400 }
       );
     }
-
-    console.log('開始檢查重複申請...');
 
     // 檢查是否已經申請過 - 修正：移除錯誤的連線測試
     const { data: existingRequest, error: checkError } = await supabase
@@ -41,15 +47,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (existingRequest) {
-      console.log('發現重複申請:', existingRequest);
       return NextResponse.json({
         success: false,
         error: '您已經申請過此課程',
         request: existingRequest
       });
     }
-
-    console.log('沒有重複申請，開始創建新申請...');
 
     // 創建申請記錄
     const requestData = {
@@ -60,8 +63,6 @@ export async function POST(req: NextRequest) {
       status: 'pending',
       requested_at: new Date().toISOString(),
     };
-
-    console.log('準備插入的資料:', requestData);
 
     const { data: newRequest, error: requestError } = await supabase
       .from('course_requests')
@@ -76,8 +77,6 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log('申請創建成功:', newRequest);
 
     // 創建通知給用戶
     try {
@@ -181,9 +180,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 更新申請狀態（管理員用）
+// 更新申請狀態（僅限管理員）
 export async function PATCH(req: NextRequest) {
   try {
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(req);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json({ error: '需要管理員權限' }, { status: 403 });
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await req.json();
     const { request_id, status, admin_note } = body;

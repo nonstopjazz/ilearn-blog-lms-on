@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/contexts/AuthContext';
 import { Bell, Clock, Mail, Settings, Save, RotateCcw, CheckCircle, BookOpen, ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 

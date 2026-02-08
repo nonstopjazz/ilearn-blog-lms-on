@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseClient, createSupabaseAdminClient } from '@/lib/supabase-server'
+import { authenticateRequest } from '@/lib/api-auth'
+import { isAdmin } from '@/lib/security-config'
 
 // GET - 獲取文章列表
 export async function GET(request: NextRequest) {
@@ -67,13 +69,6 @@ export async function GET(request: NextRequest) {
     const { data: posts, error, count } = await query
     
     if (error) {
-      console.error('Posts GET: Database error:', error)
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      })
       return NextResponse.json(
         { 
           success: false, 
@@ -83,8 +78,6 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       )
     }
-    
-    console.log('Posts GET: Fetched posts count:', posts?.length || 0)
     
     // 如果有標籤篩選，需要額外查詢
     let filteredPosts = posts || []
@@ -100,11 +93,13 @@ export async function GET(request: NextRequest) {
       filteredPosts = posts.filter(p => taggedPostIds.includes(p.id))
     }
     
-    // 獲取每篇文章的標籤
-    for (const post of filteredPosts) {
-      const { data: postTags } = await supabase
+    // 批次獲取所有文章的標籤（避免 N+1 查詢）
+    if (filteredPosts.length > 0) {
+      const postIds = filteredPosts.map(p => p.id)
+      const { data: allPostTags } = await supabase
         .from('blog_post_tags')
         .select(`
+          post_id,
           blog_tags (
             id,
             name,
@@ -112,11 +107,21 @@ export async function GET(request: NextRequest) {
             color
           )
         `)
-        .eq('post_id', post.id)
-      
-      post.tags = postTags?.map(pt => pt.blog_tags).filter(Boolean) || []
-      
-      // 格式化作者資訊
+        .in('post_id', postIds)
+
+      const tagsMap = new Map()
+      allPostTags?.forEach(pt => {
+        if (!tagsMap.has(pt.post_id)) tagsMap.set(pt.post_id, [])
+        if (pt.blog_tags) tagsMap.get(pt.post_id).push(pt.blog_tags)
+      })
+
+      for (const post of filteredPosts) {
+        post.tags = tagsMap.get(post.id) || []
+      }
+    }
+
+    // 格式化作者資訊
+    for (const post of filteredPosts) {
       if (post.author) {
         post.users = {
           name: post.author.name || post.author.email?.split('@')[0] || 'Unknown',
@@ -153,10 +158,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - 創建新文章
+// POST - 創建新文章（僅限管理員）
 export async function POST(request: NextRequest) {
   try {
-    console.log('Posts POST: Starting request')
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(request)
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const {
       title,

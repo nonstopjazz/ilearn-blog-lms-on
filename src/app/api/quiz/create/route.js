@@ -1,12 +1,13 @@
 // src/app/api/quiz/create/route.js
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
-import { getCurrentUserFromCookies } from '@/lib/auth-utils';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 題型轉換
 const getQuestionType = (type) => {
   const typeMap = {
     'single': 'single',
-    'multiple': 'multiple', 
+    'multiple': 'multiple',
     'fill': 'fill',
     'essay': 'essay'
   };
@@ -15,6 +16,12 @@ const getQuestionType = (type) => {
 
 export async function POST(request) {
   try {
+    // 管理員認證檢查
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return Response.json({ error: '需要管理員權限' }, { status: 403 });
+    }
+
     const supabase = createSupabaseAdminClient();
 
     const { title, description, courseId, questions } = await request.json();
@@ -80,81 +87,85 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // 儲存每個題目
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      
-      // 儲存題目基本資料
-      const { data: savedQuestion, error: questionError } = await supabase
-        .from('quiz_questions')
-        .insert({
-          quiz_set_id: quizSet.id,
-          question_number: i + 1,
-          question_type: getQuestionType(question.type),
-          question_text: question.question,
-          explanation: question.explanation || null,
-          points: question.points || 10
-        })
-        .select()
-        .single();
+    // 批次儲存所有題目
+    const { data: savedQuestions, error: questionsError } = await supabase
+      .from('quiz_questions')
+      .insert(questions.map((q, i) => ({
+        quiz_set_id: quizSet.id,
+        question_number: i + 1,
+        question_type: getQuestionType(q.type),
+        question_text: q.question,
+        explanation: q.explanation || null,
+        points: q.points || 10
+      })))
+      .select();
 
-      if (questionError) {
-        console.error(`儲存第 ${i + 1} 題失敗:`, questionError);
-        // 清理已建立的資料
-        await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
-        return Response.json({ 
-          error: `儲存第 ${i + 1} 題失敗：` + questionError.message 
-        }, { status: 500 });
-      }
+    if (questionsError) {
+      await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
+      return Response.json({
+        error: '儲存題目失敗：' + questionsError.message
+      }, { status: 500 });
+    }
 
-      // 根據題型儲存答案資料
+    // 批次儲存所有選擇題選項
+    const allOptions = [];
+    questions.forEach((question, i) => {
       if (['single', 'multiple'].includes(question.type)) {
-        // 儲存選擇題選項
         const validOptions = question.options.filter(opt => opt && opt.trim());
-        const correctAnswers = Array.isArray(question.correctAnswer) 
-          ? question.correctAnswer 
+        const correctAnswers = Array.isArray(question.correctAnswer)
+          ? question.correctAnswer
           : [question.correctAnswer];
 
-        for (let j = 0; j < validOptions.length; j++) {
-          const optionLabel = String.fromCharCode(65 + j); // A, B, C, D
-          
-          const { error: optionError } = await supabase
-            .from('quiz_options')
-            .insert({
-              question_id: savedQuestion.id,
-              option_label: optionLabel,
-              option_text: validOptions[j],
-              is_correct: correctAnswers.includes(optionLabel)
-            });
+        validOptions.forEach((opt, j) => {
+          const optionLabel = String.fromCharCode(65 + j);
+          allOptions.push({
+            question_id: savedQuestions[i].id,
+            option_label: optionLabel,
+            option_text: opt,
+            is_correct: correctAnswers.includes(optionLabel)
+          });
+        });
+      }
+    });
 
-          if (optionError) {
-            console.error(`儲存第 ${i + 1} 題選項 ${optionLabel} 失敗:`, optionError);
-            // 清理已建立的資料
-            await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
-            return Response.json({ 
-              error: `儲存第 ${i + 1} 題選項失敗：` + optionError.message 
-            }, { status: 500 });
-          }
-        }
-      } else if (['fill', 'essay'].includes(question.type)) {
-        // 儲存填空題/問答題答案
-        const { error: answerError } = await supabase
-          .from('quiz_fill_answers')
-          .insert({
-            question_id: savedQuestion.id,
+    if (allOptions.length > 0) {
+      const { error: optionsError } = await supabase
+        .from('quiz_options')
+        .insert(allOptions);
+
+      if (optionsError) {
+        await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
+        return Response.json({
+          error: '儲存選項失敗：' + optionsError.message
+        }, { status: 500 });
+      }
+    }
+
+    // 批次儲存所有填空/問答題答案
+    const allAnswers = questions
+      .map((question, i) => {
+        if (['fill', 'essay'].includes(question.type)) {
+          return {
+            question_id: savedQuestions[i].id,
             correct_answer: question.correctAnswer,
             case_sensitive: false,
             exact_match: question.type === 'essay'
-          });
-
-        if (answerError) {
-          console.error(`儲存第 ${i + 1} 題答案失敗:`, answerError);
-          // 清理已建立的資料
-          await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
-          return Response.json({ 
-            error: `儲存第 ${i + 1} 題答案失敗：` + answerError.message 
-          }, { status: 500 });
+          };
         }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (allAnswers.length > 0) {
+      const { error: answersError } = await supabase
+        .from('quiz_fill_answers')
+        .insert(allAnswers);
+
+      if (answersError) {
+        await supabase.from('quiz_sets').delete().eq('id', quizSet.id);
+        return Response.json({
+          error: '儲存答案失敗：' + answersError.message
+        }, { status: 500 });
       }
     }
 
@@ -204,40 +215,39 @@ export async function GET(request) {
       }, { status: 500 });
     }
 
-    // 為每個測驗加入使用者的嘗試次數資訊
-    const quizSetsWithAttempts = await Promise.all(
-      (quizSets || []).map(async (quiz) => {
-        let userAttemptCount = 0;
-        let remainingAttempts = quiz.max_attempts;
-        
-        if (userId) {
-          console.log(`查詢用戶 ${userId} 在測驗 ${quiz.id} 的嘗試次數`);
-          
-          const { data: attempts, error: attemptsError } = await supabase
-            .from('quiz_attempts')
-            .select('id, status, completed_at')
-            .eq('quiz_set_id', quiz.id)
-            .eq('user_id', userId)
-            .eq('status', 'completed');
-          
-          if (attemptsError) {
-            console.error(`查詢嘗試次數失敗:`, attemptsError);
-          } else {
-            userAttemptCount = attempts?.length || 0;
-            remainingAttempts = quiz.max_attempts - userAttemptCount;
-            console.log(`測驗 ${quiz.title}: 已嘗試 ${userAttemptCount} 次，剩餘 ${remainingAttempts} 次`);
-            console.log(`嘗試記錄:`, attempts);
-          }
-        }
-        
+    // 批次查詢使用者的嘗試次數（避免 N+1 查詢）
+    let quizSetsWithAttempts = quizSets || [];
+    if (userId && quizSets?.length > 0) {
+      const quizIds = quizSets.map(q => q.id);
+      const { data: allAttempts } = await supabase
+        .from('quiz_attempts')
+        .select('id, quiz_set_id, status, completed_at')
+        .in('quiz_set_id', quizIds)
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+
+      const attemptsMap = new Map();
+      allAttempts?.forEach(a => {
+        attemptsMap.set(a.quiz_set_id, (attemptsMap.get(a.quiz_set_id) || 0) + 1);
+      });
+
+      quizSetsWithAttempts = quizSets.map(quiz => {
+        const userAttemptCount = attemptsMap.get(quiz.id) || 0;
         return {
           ...quiz,
           user_attempt_count: userAttemptCount,
-          remaining_attempts: remainingAttempts,
+          remaining_attempts: quiz.max_attempts - userAttemptCount,
           can_take_quiz: userAttemptCount < quiz.max_attempts
         };
-      })
-    );
+      });
+    } else {
+      quizSetsWithAttempts = (quizSets || []).map(quiz => ({
+        ...quiz,
+        user_attempt_count: 0,
+        remaining_attempts: quiz.max_attempts,
+        can_take_quiz: true
+      }));
+    }
 
     return Response.json({
       success: true,

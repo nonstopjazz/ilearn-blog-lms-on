@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // GET - 生成週報告
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
 
     const { searchParams } = new URL(request.url);
     const student_id = searchParams.get('student_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveStudentId = student_id && student_id !== authUser.id && isAdmin(authUser)
+      ? student_id
+      : authUser.id;
     const send_notification = searchParams.get('send_notification') === 'true';
-
-    if (!student_id) {
-      return NextResponse.json(
-        { success: false, error: 'Student ID is required' },
-        { status: 400 }
-      );
-    }
 
     const supabase = getSupabase();
     const now = new Date();
@@ -63,7 +61,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('assignment_submissions')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', effectiveStudentId)
         .gte('submission_date', startDate)
         .lte('submission_date', endDate),
 
@@ -71,7 +69,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('vocabulary_sessions')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', effectiveStudentId)
         .gte('session_date', startDate)
         .lte('session_date', endDate),
 
@@ -79,7 +77,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('exam_records')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', effectiveStudentId)
         .gte('exam_date', startDate)
         .lte('exam_date', endDate),
 
@@ -87,13 +85,13 @@ export async function GET(request: NextRequest) {
       supabase
         .from('special_projects')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', effectiveStudentId)
         .eq('status', 'in_progress')
     ]);
 
     // 生成週報告內容
     const report = generateWeeklyReport({
-      student_id,
+      student_id: effectiveStudentId,
       week_number: weekNumber,
       year,
       date_range: { start: startDate, end: endDate },
@@ -125,7 +123,7 @@ export async function GET(request: NextRequest) {
     const { data: savedReport, error: saveError } = await supabase
       .from('parent_notifications')
       .insert([{
-        student_id,
+        student_id: effectiveStudentId,
         notification_type: 'weekly_report',
         subject: `第${weekNumber}週學習報告 (${startDate} - ${endDate})`,
         content: report.text,
@@ -144,7 +142,7 @@ export async function GET(request: NextRequest) {
     // 如果需要發送通知
     if (send_notification) {
       // 這裡可以整合郵件服務或推送通知服務
-      console.log(`[Weekly Report] Notification sent for student ${student_id}`);
+      console.log(`[Weekly Report] Notification sent for student ${effectiveStudentId}`);
     }
 
     return NextResponse.json({
@@ -169,11 +167,11 @@ export async function GET(request: NextRequest) {
 // POST - 批量生成所有學生的週報告
 export async function POST(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
