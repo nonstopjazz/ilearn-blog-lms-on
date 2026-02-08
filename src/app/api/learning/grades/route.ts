@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // 工具函數：計算週次
 function getWeekNumber(date: Date): number {
@@ -81,11 +82,11 @@ function getDateRangeFromRange(range: string, currentYear: number = new Date().g
 // GET - 取得成績趨勢數據
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -95,17 +96,13 @@ export async function GET(request: NextRequest) {
 
     // 取得查詢參數
     const student_id = searchParams.get('student_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveStudentId = student_id && student_id !== authUser.id && isAdmin(authUser)
+      ? student_id
+      : authUser.id;
     const course_id = searchParams.get('course_id');
     const range = searchParams.get('range') || 'month';
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
-
-    // 驗證必填參數
-    if (!student_id) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required parameter: student_id' },
-        { status: 400 }
-      );
-    }
 
     // 計算日期範圍
     const { startDate, endDate, startWeek, endWeek } = getDateRangeFromRange(range, year);
@@ -114,7 +111,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('exam_records')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', effectiveStudentId)
       .gte('exam_date', startDate)
       .lte('exam_date', endDate)
       .order('exam_date', { ascending: true });
@@ -258,7 +255,7 @@ export async function GET(request: NextRequest) {
       stats: stats,
       metadata: {
         range: range,
-        student_id: student_id,
+        student_id: effectiveStudentId,
         course_id: course_id,
         start_date: startDate,
         end_date: endDate,

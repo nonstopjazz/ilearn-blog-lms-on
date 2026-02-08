@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 import type { LearningProgressStats, LearningSummary, ApiResponse } from '@/types/learning-management';
 
 // 取得當前週數
@@ -13,30 +14,30 @@ function getWeekNumber(date: Date): number {
 // GET - 取得學習進度統計
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰（開發環境下會自動通過）
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
-      console.warn('[Progress API] API key validation failed:', authResult.error);
-      // 在開發環境仍然允許請求
-      if (process.env.NODE_ENV !== 'development') {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: '請先登入' },
+        { status: 401 }
+      );
     }
 
     const supabase = getSupabase();
     const { searchParams } = new URL(request.url);
 
     const student_id = searchParams.get('student_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveStudentId = student_id && student_id !== authUser.id && isAdmin(authUser)
+      ? student_id
+      : authUser.id;
     const course_id = searchParams.get('course_id');
     const week_number = searchParams.get('week_number');
     const year = searchParams.get('year');
     const summary = searchParams.get('summary') === 'true';
 
     // 如果請求摘要資料
-    if (summary && student_id) {
+    if (summary && effectiveStudentId) {
       const startDate = searchParams.get('start_date') ||
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const endDate = searchParams.get('end_date') ||
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
         supabase
           .from('vocabulary_sessions')
           .select('words_learned, accuracy_rate, session_duration')
-          .eq('student_id', student_id)
+          .eq('student_id', effectiveStudentId)
           .gte('session_date', startDate)
           .lte('session_date', endDate),
 
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
         supabase
           .from('exam_records')
           .select('percentage_score')
-          .eq('student_id', student_id)
+          .eq('student_id', effectiveStudentId)
           .gte('exam_date', startDate)
           .lte('exam_date', endDate),
 
@@ -78,20 +79,20 @@ export async function GET(request: NextRequest) {
         supabase
           .from('special_projects')
           .select('status')
-          .eq('student_id', student_id),
+          .eq('student_id', effectiveStudentId),
 
         // 作業提交統計
         supabase
           .from('assignment_submissions')
           .select('assignment_id, is_late, created_at')
-          .eq('student_id', student_id)
+          .eq('student_id', effectiveStudentId)
           .gte('submission_date', startDate)
           .lte('submission_date', endDate)
       ]);
 
       // 計算統計摘要
       const learniSummary: LearningSummary = {
-        student_id: student_id,
+        student_id: effectiveStudentId,
         period: {
           start: startDate,
           end: endDate
@@ -151,8 +152,8 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('week_number', { ascending: false });
 
-    if (student_id) {
-      query = query.eq('student_id', student_id);
+    if (effectiveStudentId) {
+      query = query.eq('student_id', effectiveStudentId);
     }
     if (course_id) {
       query = query.eq('course_id', course_id);
@@ -191,11 +192,11 @@ export async function GET(request: NextRequest) {
 // POST - 生成週進度報告
 export async function POST(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -203,8 +204,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const supabase = getSupabase();
 
+    // IDOR 防護：只允許操作自己的資料，除非是管理員
+    const effectiveStudentId = body.student_id && body.student_id !== authUser.id && isAdmin(authUser)
+      ? body.student_id
+      : authUser.id;
+
     // 驗證必填欄位
-    if (!body.student_id || !body.course_id) {
+    if (!body.course_id) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -243,7 +249,7 @@ export async function POST(request: NextRequest) {
       supabase
         .from('assignment_submissions')
         .select('assignment_id')
-        .eq('student_id', body.student_id)
+        .eq('student_id', effectiveStudentId)
         .gte('submission_date', startDate)
         .lte('submission_date', endDate),
 
@@ -251,7 +257,7 @@ export async function POST(request: NextRequest) {
       supabase
         .from('vocabulary_sessions')
         .select('words_learned, accuracy_rate, session_duration')
-        .eq('student_id', body.student_id)
+        .eq('student_id', effectiveStudentId)
         .eq('course_id', body.course_id)
         .gte('session_date', startDate)
         .lte('session_date', endDate),
@@ -260,7 +266,7 @@ export async function POST(request: NextRequest) {
       supabase
         .from('exam_records')
         .select('percentage_score')
-        .eq('student_id', body.student_id)
+        .eq('student_id', effectiveStudentId)
         .eq('course_id', body.course_id)
         .gte('exam_date', startDate)
         .lte('exam_date', endDate)
@@ -268,7 +274,7 @@ export async function POST(request: NextRequest) {
 
     // 計算統計數據
     const stats = {
-      student_id: body.student_id,
+      student_id: effectiveStudentId,
       course_id: body.course_id,
       week_number: week_number,
       year: year,
@@ -290,7 +296,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('learning_progress_stats')
       .select('id')
-      .eq('student_id', body.student_id)
+      .eq('student_id', effectiveStudentId)
       .eq('course_id', body.course_id)
       .eq('week_number', week_number)
       .eq('year', year)
@@ -323,7 +329,7 @@ export async function POST(request: NextRequest) {
     // 如果需要，生成家長通知
     if (body.generate_notification) {
       const notification = {
-        student_id: body.student_id,
+        student_id: effectiveStudentId,
         notification_type: 'weekly_report',
         subject: `第${week_number}週學習報告`,
         content: `

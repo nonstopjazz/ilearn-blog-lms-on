@@ -727,14 +727,8 @@ const DashboardContent = () => {
 
     setLoadingAssignments(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/assignments/progress?student_id=${effectiveStudentId}&range=${assignmentTimeRange}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
+        `/api/learning/assignments/progress?student_id=${effectiveStudentId}&range=${assignmentTimeRange}`
       );
 
       const result = await response.json();
@@ -834,14 +828,8 @@ const DashboardContent = () => {
 
     setLoadingStudentTasks(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/tasks?student_id=${effectiveStudentId}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
+        `/api/learning/tasks?student_id=${effectiveStudentId}`
       );
 
       const result = await response.json();
@@ -890,14 +878,8 @@ const DashboardContent = () => {
 
     setLoadingExams(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/exams/list?student_id=${effectiveStudentId}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
+        `/api/learning/exams/list?student_id=${effectiveStudentId}`
       );
 
       const result = await response.json();
@@ -922,14 +904,8 @@ const DashboardContent = () => {
 
     setLoadingVocabularySessions(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/vocabulary/sessions?student_id=${effectiveStudentId}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
+        `/api/learning/vocabulary/sessions?student_id=${effectiveStudentId}`
       );
 
       const result = await response.json();
@@ -953,14 +929,8 @@ const DashboardContent = () => {
 
     setLoadingProgress(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY || '';
       const response = await fetch(
-        `/api/learning/lessons/progress?user_id=${currentUser.id}`,
-        {
-          headers: {
-            'x-api-key': apiKey
-          }
-        }
+        `/api/learning/lessons/progress?user_id=${currentUser.id}`
       );
 
       const result = await response.json();

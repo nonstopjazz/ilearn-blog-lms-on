@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 import type { VocabularySession, ApiResponse } from '@/types/learning-management';
 
 // GET - 取得單字學習記錄
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -19,6 +20,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const student_id = searchParams.get('student_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveStudentId = student_id && student_id !== authUser.id && isAdmin(authUser)
+      ? student_id
+      : authUser.id;
     const course_id = searchParams.get('course_id');
     const date_from = searchParams.get('date_from');
     const date_to = searchParams.get('date_to');
@@ -31,9 +36,7 @@ export async function GET(request: NextRequest) {
       .order('session_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (student_id) {
-      query = query.eq('student_id', student_id);
-    }
+    query = query.eq('student_id', effectiveStudentId);
     if (course_id) {
       query = query.eq('course_id', course_id);
     }
@@ -85,11 +88,11 @@ export async function GET(request: NextRequest) {
 // POST - 新增單字學習記錄
 export async function POST(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -97,8 +100,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const supabase = getSupabase();
 
+    // IDOR 防護：只允許操作自己的資料，除非是管理員
+    const effectiveStudentId = body.student_id && body.student_id !== authUser.id && isAdmin(authUser)
+      ? body.student_id
+      : authUser.id;
+
     // 驗證必填欄位
-    if (!body.student_id || !body.course_id || !body.session_date ||
+    if (!body.course_id || !body.session_date ||
         body.start_number === undefined || body.end_number === undefined) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('vocabulary_sessions')
       .select('id')
-      .eq('student_id', body.student_id)
+      .eq('student_id', effectiveStudentId)
       .eq('course_id', body.course_id)
       .eq('session_date', body.session_date)
       .single();
@@ -126,7 +134,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('vocabulary_sessions')
       .insert([{
-        student_id: body.student_id,
+        student_id: effectiveStudentId,
         course_id: body.course_id,
         session_date: body.session_date,
         start_number: body.start_number,
@@ -167,11 +175,11 @@ export async function POST(request: NextRequest) {
 // PUT - 更新單字學習記錄
 export async function PUT(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -233,11 +241,11 @@ export async function PUT(request: NextRequest) {
 // DELETE - 刪除單字學習記錄
 export async function DELETE(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }

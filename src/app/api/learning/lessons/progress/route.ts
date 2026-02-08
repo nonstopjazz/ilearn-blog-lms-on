@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // GET - 取得上課進度列表
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰（可選）
-    if (process.env.API_KEY) {
-      const authResult = await verifyApiKey(request);
-      if (!authResult.valid) {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('[Lessons Progress API] API_KEY not configured, skipping API key verification');
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: '請先登入' },
+        { status: 401 }
+      );
     }
 
     const supabase = getSupabase();
@@ -23,23 +20,19 @@ export async function GET(request: NextRequest) {
 
     // 取得查詢參數
     const user_id = searchParams.get('user_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveUserId = user_id && user_id !== authUser.id && isAdmin(authUser)
+      ? user_id
+      : authUser.id;
     const course_id = searchParams.get('course_id');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
-
-    // 驗證必填參數
-    if (!user_id) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required parameter: user_id' },
-        { status: 400 }
-      );
-    }
 
     // 查詢用戶的課程進度記錄
     let query = supabase
       .from('user_lesson_progress')
       .select('*')
-      .eq('user_id', user_id)
+      .eq('user_id', effectiveUserId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -181,7 +174,7 @@ export async function GET(request: NextRequest) {
       data: progressData,
       stats: stats,
       metadata: {
-        user_id: user_id,
+        user_id: effectiveUserId,
         course_id: course_id,
         limit: limit,
         offset: offset,

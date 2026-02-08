@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // POST - 新增學生任務
 export async function POST(request: NextRequest) {
   try {
-    // 安全增強：API Key 驗證（可選）
-    if (process.env.API_KEY) {
-      const authResult = await verifyApiKey(request);
-      if (!authResult.valid) {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('[Student Tasks API] API_KEY not configured, skipping API key verification');
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
     }
 
     const supabase = getSupabase();
@@ -110,17 +106,12 @@ export async function POST(request: NextRequest) {
 // GET - 取得學生任務列表
 export async function GET(request: NextRequest) {
   try {
-    // 安全增強：API Key 驗證（可選）
-    if (process.env.API_KEY) {
-      const authResult = await verifyApiKey(request);
-      if (!authResult.valid) {
-        return NextResponse.json(
-          { success: false, error: authResult.error },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('[Student Tasks API] API_KEY not configured, skipping API key verification');
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
     }
 
     const supabase = getSupabase();

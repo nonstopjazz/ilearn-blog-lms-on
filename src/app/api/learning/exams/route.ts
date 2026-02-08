@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { verifyApiKey } from '@/lib/api-auth';
+import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 import type { ExamRecord, ApiResponse } from '@/types/learning-management';
 
 // GET - 取得考試記錄
 export async function GET(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -19,6 +20,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const student_id = searchParams.get('student_id');
+    // IDOR 防護：只允許查看自己的資料，除非是管理員
+    const effectiveStudentId = student_id && student_id !== authUser.id && isAdmin(authUser)
+      ? student_id
+      : authUser.id;
     const course_id = searchParams.get('course_id');
     const exam_type = searchParams.get('exam_type');
     const date_from = searchParams.get('date_from');
@@ -32,9 +37,7 @@ export async function GET(request: NextRequest) {
       .order('exam_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (student_id) {
-      query = query.eq('student_id', student_id);
-    }
+    query = query.eq('student_id', effectiveStudentId);
     if (course_id) {
       query = query.eq('course_id', course_id);
     }
@@ -93,11 +96,11 @@ export async function GET(request: NextRequest) {
 // POST - 新增考試記錄
 export async function POST(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -105,8 +108,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const supabase = getSupabase();
 
+    // IDOR 防護：只允許操作自己的資料，除非是管理員
+    const effectiveStudentId = body.student_id && body.student_id !== authUser.id && isAdmin(authUser)
+      ? body.student_id
+      : authUser.id;
+
     // 驗證必填欄位
-    if (!body.student_id || !body.course_id || !body.exam_type ||
+    if (!body.course_id || !body.exam_type ||
         !body.exam_name || !body.exam_date) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
@@ -131,7 +139,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('exam_records')
       .insert([{
-        student_id: body.student_id,
+        student_id: effectiveStudentId,
         course_id: body.course_id,
         exam_type: body.exam_type,
         exam_name: body.exam_name,
@@ -164,7 +172,7 @@ export async function POST(request: NextRequest) {
     // 如果成績低於標準，可能需要發送通知
     if (body.percentage_score && body.percentage_score < 60) {
       // 這裡可以加入發送通知的邏輯
-      console.log(`Low score alert for student ${body.student_id}: ${body.percentage_score}%`);
+      console.log(`Low score alert for student ${effectiveStudentId}: ${body.percentage_score}%`);
     }
 
     return NextResponse.json({
@@ -185,11 +193,11 @@ export async function POST(request: NextRequest) {
 // PUT - 更新考試記錄
 export async function PUT(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
@@ -265,11 +273,11 @@ export async function PUT(request: NextRequest) {
 // DELETE - 刪除考試記錄
 export async function DELETE(request: NextRequest) {
   try {
-    // 驗證 API 金鑰
-    const authResult = await verifyApiKey(request);
-    if (!authResult.valid) {
+    // Cookie 認證
+    const authUser = await getAuthUserFromCookies();
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: authResult.error },
+        { success: false, error: '請先登入' },
         { status: 401 }
       );
     }
