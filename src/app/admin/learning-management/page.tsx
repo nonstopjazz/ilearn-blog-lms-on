@@ -65,6 +65,7 @@ import { LearningReport } from '@/components/LearningReport';
 import { Checkbox } from '@/components/ui/checkbox';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import { ProjectAssignmentManager } from '@/components/admin/ProjectAssignmentManager';
+import { getSupabase } from '@/lib/supabase';
 
 interface Student {
   id: string;
@@ -161,6 +162,28 @@ export default function AdminLearningManagementPage() {
     completion_date: ''
   });
 
+  // 獲取 Supabase 認證 token
+  const getAuthToken = async (): Promise<string | null> => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      return session?.access_token || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // 帶認證的 fetch 包裝器
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, { ...options, headers });
+  };
+
   // 載入數據
   useEffect(() => {
     loadStudentsData();
@@ -171,7 +194,7 @@ export default function AdminLearningManagementPage() {
   const loadStudentsData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/students');
+      const response = await authFetch('/api/admin/students');
       const data = await response.json();
 
       if (data.success) {
@@ -192,7 +215,7 @@ export default function AdminLearningManagementPage() {
   const loadExamTypes = async () => {
     setLoadingExamTypes(true);
     try {
-      const response = await fetch('/api/admin/exam-types?active_only=true');
+      const response = await authFetch('/api/admin/exam-types?active_only=true');
       const data = await response.json();
 
       if (data.success) {
@@ -212,7 +235,7 @@ export default function AdminLearningManagementPage() {
   const loadAssignments = async () => {
     setLoadingAssignments(true);
     try {
-      const response = await fetch('/api/assignments?is_published=true');
+      const response = await authFetch('/api/assignments?is_published=true');
       const data = await response.json();
 
       if (data.success) {
@@ -251,7 +274,7 @@ export default function AdminLearningManagementPage() {
     setLoadingCourses(true);
     try {
       // 從 course_requests 表中獲取該學生已批准的課程
-      const response = await fetch(`/api/course-requests?user_id=${studentId}&status=approved`);
+      const response = await authFetch(`/api/course-requests?user_id=${studentId}&status=approved`);
       const data = await response.json();
 
       if (data.success) {
@@ -311,7 +334,7 @@ export default function AdminLearningManagementPage() {
         data: newRecordForm.data
       });
 
-      response = await fetch('/api/admin/students', {
+      response = await authFetch('/api/admin/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -391,7 +414,7 @@ export default function AdminLearningManagementPage() {
     setReportStudent(student);
 
     try {
-      const response = await fetch(`/api/admin/students/${student.id}/learning-data?range=${reportType}`);
+      const response = await authFetch(`/api/admin/students/${student.id}/learning-data?range=${reportType}`);
       const result = await response.json();
 
       if (result.success) {
@@ -423,7 +446,7 @@ export default function AdminLearningManagementPage() {
     setIsSendingReport(true);
 
     try {
-      const response = await fetch('/api/admin/send-report-email', {
+      const response = await authFetch('/api/admin/send-report-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -459,7 +482,7 @@ export default function AdminLearningManagementPage() {
     setLoadingStudentTasks(true);
 
     try {
-      const response = await fetch(`/api/admin/student-tasks?student_id=${student.id}`);
+      const response = await authFetch(`/api/admin/student-tasks?student_id=${student.id}`);
       const result = await response.json();
 
       if (result.success) {
@@ -483,7 +506,7 @@ export default function AdminLearningManagementPage() {
     setLoadingStudentTasks(true);
 
     try {
-      const response = await fetch(`/api/admin/student-tasks?student_id=${managingTasksStudent.id}`);
+      const response = await authFetch(`/api/admin/student-tasks?student_id=${managingTasksStudent.id}`);
       const result = await response.json();
 
       if (result.success) {
@@ -636,7 +659,7 @@ export default function AdminLearningManagementPage() {
       const dates = generateDateList(editingDailyTask);
       const streak = calculateStreak(dailyCompletionChanges, dates);
 
-      const response = await fetch(`/api/admin/student-tasks/${editingDailyTask.id}`, {
+      const response = await authFetch(`/api/admin/student-tasks/${editingDailyTask.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -703,7 +726,7 @@ export default function AdminLearningManagementPage() {
         updateData.completion_date = new Date().toISOString().split('T')[0];
       }
 
-      const response = await fetch(`/api/admin/student-tasks/${editingOnetimeTask.id}`, {
+      const response = await authFetch(`/api/admin/student-tasks/${editingOnetimeTask.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -742,7 +765,7 @@ export default function AdminLearningManagementPage() {
       console.log('[handleSubmitAssignment] 請求方法:', method);
       console.log('[handleSubmitAssignment] 請求 body:', JSON.stringify(formData, null, 2));
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -778,7 +801,7 @@ export default function AdminLearningManagementPage() {
 
     setDeletingAssignmentId(assignmentId);
     try {
-      const response = await fetch(`/api/assignments/${assignmentId}`, {
+      const response = await authFetch(`/api/assignments/${assignmentId}`, {
         method: 'DELETE'
       });
 
@@ -1802,7 +1825,7 @@ export default function AdminLearningManagementPage() {
                 onClick={async () => {
                   try {
                     // 呼叫 API 更新學生資訊
-                    const response = await fetch(`/api/admin/students/${editingStudent.id}`, {
+                    const response = await authFetch(`/api/admin/students/${editingStudent.id}`, {
                       method: 'PATCH',
                       headers: {
                         'Content-Type': 'application/json',
@@ -1860,7 +1883,7 @@ export default function AdminLearningManagementPage() {
                 if (reportStudent) {
                   setLoadingReport(true);
                   try {
-                    const response = await fetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${value}`);
+                    const response = await authFetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${value}`);
                     const result = await response.json();
                     if (result.success) {
                       setReportData(result.data);
@@ -2019,7 +2042,7 @@ export default function AdminLearningManagementPage() {
                 if (!reportData && reportStudent) {
                   setLoadingReport(true);
                   try {
-                    const response = await fetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${reportType}`);
+                    const response = await authFetch(`/api/admin/students/${reportStudent.id}/learning-data?range=${reportType}`);
                     const result = await response.json();
                     if (result.success) {
                       setReportData(result.data);
