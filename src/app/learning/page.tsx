@@ -80,6 +80,7 @@ const DashboardContent = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // 課程學習狀態
   const [courses, setCourses] = useState<any[]>([]);
@@ -606,6 +607,12 @@ const DashboardContent = () => {
         setIsAuthenticated(true);
         setCurrentUser(user);
 
+        // 取得並儲存 session token 用於 API 認證
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAuthToken(session.access_token);
+        }
+
         // 檢查是否是 admin
         const { data: profile } = await supabase
           .from('users')
@@ -692,6 +699,17 @@ const DashboardContent = () => {
     loadExamTypes();
   }, []);
 
+  // 帶認證的 fetch 包裝器
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    return fetch(url, { ...options, headers });
+  };
+
   // 載入資料（根據認證狀態）
   useEffect(() => {
     if (authLoading) return; // 等待認證檢查完成
@@ -708,7 +726,7 @@ const DashboardContent = () => {
       // 未登入：使用 mock 數據
       loadMockData();
     }
-  }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange, viewingStudentId]);
+  }, [isAuthenticated, authLoading, gradeTimeRange, vocabularyTimeRange, assignmentTimeRange, viewingStudentId, authToken]);
 
   // 當切換到課程頁籤時載入課程數據
   useEffect(() => {
@@ -727,7 +745,7 @@ const DashboardContent = () => {
 
     setLoadingAssignments(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/assignments/progress?student_id=${effectiveStudentId}&range=${assignmentTimeRange}`
       );
 
@@ -783,7 +801,7 @@ const DashboardContent = () => {
       console.log('[loadGanttAssignments] 開始載入甘特圖作業資料...');
 
       // 從新的學生專屬 API 載入專案作業（顯示所有狀態）
-      const response = await fetch(`/api/assignments/student?student_id=${effectiveStudentId}`);
+      const response = await authFetch(`/api/assignments/student?student_id=${effectiveStudentId}`);
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -828,7 +846,7 @@ const DashboardContent = () => {
 
     setLoadingStudentTasks(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/tasks?student_id=${effectiveStudentId}`
       );
 
@@ -878,7 +896,7 @@ const DashboardContent = () => {
 
     setLoadingExams(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/exams/list?student_id=${effectiveStudentId}`
       );
 
@@ -904,7 +922,7 @@ const DashboardContent = () => {
 
     setLoadingVocabularySessions(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/vocabulary/sessions?student_id=${effectiveStudentId}`
       );
 
@@ -929,7 +947,7 @@ const DashboardContent = () => {
 
     setLoadingProgress(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/lessons/progress?user_id=${currentUser.id}`
       );
 
@@ -977,7 +995,7 @@ const DashboardContent = () => {
   const loadExamTypes = async () => {
     setLoadingExamTypes(true);
     try {
-      const response = await fetch('/api/admin/exam-types?active_only=true');
+      const response = await authFetch('/api/admin/exam-types?active_only=true');
       const data = await response.json();
 
       if (data.success) {
@@ -1019,7 +1037,7 @@ const DashboardContent = () => {
 
     setLoadingCourses(true);
     try {
-      const response = await fetch(`/api/learning/courses?user_id=${currentUser.id}`);
+      const response = await authFetch(`/api/learning/courses?user_id=${currentUser.id}`);
       const data = await response.json();
 
       if (data.success) {
@@ -1042,7 +1060,7 @@ const DashboardContent = () => {
 
     setLoadingLessons(true);
     try {
-      const response = await fetch(`/api/learning/courses/${courseId}/progress?user_id=${currentUser.id}`);
+      const response = await authFetch(`/api/learning/courses/${courseId}/progress?user_id=${currentUser.id}`);
       const data = await response.json();
 
       if (data.success) {
@@ -1064,7 +1082,7 @@ const DashboardContent = () => {
     setLoading(true);
     try {
       // 這裡應該調用 API
-      const response = await fetch('/api/assignments', {
+      const response = await authFetch('/api/assignments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
