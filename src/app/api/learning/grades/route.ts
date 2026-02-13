@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { getAuthUserFromCookies } from '@/lib/api-auth';
+import { authenticateRequest } from '@/lib/api-auth';
 import { isAdmin } from '@/lib/security-config';
 
 // 工具函數：計算週次
@@ -83,7 +83,7 @@ function getDateRangeFromRange(range: string, currentYear: number = new Date().g
 export async function GET(request: NextRequest) {
   try {
     // Cookie 認證
-    const authUser = await getAuthUserFromCookies();
+    const { user: authUser } = await authenticateRequest(request);
     if (!authUser) {
       return NextResponse.json(
         { success: false, error: '請先登入' },
