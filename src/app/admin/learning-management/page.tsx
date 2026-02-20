@@ -59,7 +59,8 @@ import {
   Mail,
   Loader2,
   ClipboardList,
-  Calendar
+  Calendar,
+  Key
 } from 'lucide-react';
 import { LearningReport } from '@/components/LearningReport';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -161,6 +162,12 @@ export default function AdminLearningManagementPage() {
     teacher_feedback: '',
     completion_date: ''
   });
+
+  // 重設密碼狀態
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordStudent, setResetPasswordStudent] = useState<Student | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
   // 獲取 Supabase 認證 token
   const getAuthToken = async (): Promise<string | null> => {
@@ -496,6 +503,41 @@ export default function AdminLearningManagementPage() {
       setIsManagingTasks(false);
     } finally {
       setLoadingStudentTasks(false);
+    }
+  };
+
+  // 重設學生密碼
+  const handleResetPassword = async () => {
+    if (!resetPasswordStudent || !newPassword) return;
+
+    if (newPassword.length < 6) {
+      alert('密碼長度至少需要 6 個字元');
+      return;
+    }
+
+    setResetPasswordLoading(true);
+    try {
+      const response = await authFetch(`/api/admin/students/${resetPasswordStudent.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`已成功重設 ${resetPasswordStudent.name} 的密碼`);
+        setIsResettingPassword(false);
+        setResetPasswordStudent(null);
+        setNewPassword('');
+      } else {
+        throw new Error(result.error || '重設密碼失敗');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`重設密碼失敗: ${errorMessage}`);
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -1525,6 +1567,18 @@ export default function AdminLearningManagementPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => {
+                                setResetPasswordStudent(student);
+                                setIsResettingPassword(true);
+                                setNewPassword('');
+                              }}
+                              title="重設密碼"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleManageTasks(student)}
                               title="管理作業"
                             >
@@ -2072,6 +2126,64 @@ export default function AdminLearningManagementPage() {
                   <Mail className="h-4 w-4 mr-2" />
                   立即寄送
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 重設密碼對話框 */}
+      <Dialog open={isResettingPassword} onOpenChange={setIsResettingPassword}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>重設密碼 - {resetPasswordStudent?.name}</DialogTitle>
+            <DialogDescription>
+              直接為學生設定新密碼（不需要寄送 Email）
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>學生 Email</Label>
+              <p className="text-sm text-muted-foreground">{resetPasswordStudent?.email}</p>
+            </div>
+            <div>
+              <Label htmlFor="new-password">新密碼</Label>
+              <Input
+                id="new-password"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="請輸入新密碼（至少 6 個字元）"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                密碼會直接更新，請在設定後通知學生新密碼
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsResettingPassword(false);
+                setResetPasswordStudent(null);
+                setNewPassword('');
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={resetPasswordLoading || !newPassword || newPassword.length < 6}
+            >
+              {resetPasswordLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  重設中...
+                </>
+              ) : (
+                '確認重設密碼'
               )}
             </Button>
           </DialogFooter>

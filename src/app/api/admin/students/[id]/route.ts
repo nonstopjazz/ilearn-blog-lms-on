@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -15,6 +17,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
+    }
+
     const { id: studentId } = await params;
     const body = await request.json();
     const { name, email, phone, parent, status } = body;
@@ -98,6 +108,61 @@ export async function PATCH(
     });
   } catch (error) {
     console.error('更新學生資訊時發生錯誤:', error);
+    return NextResponse.json(
+      { success: false, error: '伺服器錯誤' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/admin/students/[id]
+ * Admin 重設學生密碼
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json(
+        { success: false, error: '需要管理員權限' },
+        { status: authUser ? 403 : 401 }
+      );
+    }
+
+    const { id: studentId } = await params;
+    const body = await request.json();
+    const { password } = body;
+
+    if (!password || password.length < 6) {
+      return NextResponse.json(
+        { success: false, error: '密碼長度至少需要 6 個字元' },
+        { status: 400 }
+      );
+    }
+
+    // 使用 Admin API 直接重設密碼（不走 email，不受 rate limit 影響）
+    const { error } = await supabase.auth.admin.updateUserById(
+      studentId,
+      { password }
+    );
+
+    if (error) {
+      console.error('[Admin] 重設學生密碼失敗:', error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '密碼已成功重設',
+    });
+  } catch (error) {
+    console.error('[Admin] 重設密碼時發生錯誤:', error);
     return NextResponse.json(
       { success: false, error: '伺服器錯誤' },
       { status: 500 }
