@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { Menu, X, User, LogOut, Settings, BookOpen, FileText, Brain, Users, Bell } from 'lucide-react'
+import { Menu, X, User, LogOut, Settings, BookOpen, FileText, Brain, Users, Bell, Key } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
 
 interface NavbarProps {
@@ -173,6 +173,14 @@ export default function Navbar({ user: propUser, onSignOut }: NavbarProps = {}) 
                 </Link>
                 
                 <Link
+                  href="/settings/change-password"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Key className="h-4 w-4" />
+                  <span>修改密碼</span>
+                </Link>
+
+                <Link
                   href="/user/reminder-preferences"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActivePath('/user/reminder-preferences')
@@ -183,7 +191,7 @@ export default function Navbar({ user: propUser, onSignOut }: NavbarProps = {}) 
                   <Bell className="h-4 w-4" />
                   <span>提醒設定</span>
                 </Link>
-                
+
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -296,6 +304,15 @@ export default function Navbar({ user: propUser, onSignOut }: NavbarProps = {}) 
                   </Link>
                   
                   <Link
+                    href="/settings/change-password"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <Key className="h-5 w-5" />
+                    <span>修改密碼</span>
+                  </Link>
+
+                  <Link
                     href="/user/reminder-preferences"
                     onClick={() => setIsMenuOpen(false)}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
@@ -307,7 +324,7 @@ export default function Navbar({ user: propUser, onSignOut }: NavbarProps = {}) 
                     <Bell className="h-5 w-5" />
                     <span>提醒設定</span>
                   </Link>
-                  
+
                   <button
                     onClick={() => {
                       handleLogout()
