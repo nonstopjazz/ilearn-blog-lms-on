@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // GET - 獲取作文列表（使用 Admin Client 繞過認證問題）
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();
-    const searchParams = request.nextUrl.searchParams;
-
-    // 從 URL 參數獲取用戶 ID（由前端從認證傳遞）
-    const userId = searchParams.get('user_id');
-
-    if (!userId) {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
+        { success: false, error: '請先登入' },
+        { status: 401 }
       );
     }
+
+    const supabase = createSupabaseAdminClient();
+    const searchParams = request.nextUrl.searchParams;
 
     // 獲取查詢參數
     const studentId = searchParams.get('student_id');
@@ -29,16 +29,10 @@ export async function GET(request: NextRequest) {
       .from('essay_submissions')
       .select('*');
 
-    // 檢查用戶角色
-    const { data: userInfo } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    // 如果是學生，只能看自己的作文
-    if (userInfo?.role !== 'admin') {
-      query = query.eq('student_id', userId);
+    // 使用 isAdmin 檢查管理員權限（不依賴 users 表）
+    if (!isAdmin(authUser)) {
+      // 學生只能看自己的作文
+      query = query.eq('student_id', authUser.id);
     } else if (studentId) {
       // 管理員可以查詢特定學生的作文
       query = query.eq('student_id', studentId);
@@ -83,18 +77,19 @@ export async function GET(request: NextRequest) {
 // POST - 建立新的作文提交記錄（使用 Admin Client）
 export async function POST(request: NextRequest) {
   try {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: '請先登入' },
+        { status: 401 }
+      );
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await request.json();
 
-    // 從 body 獲取用戶 ID（由前端從認證傳遞）
-    const userId = body.user_id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
-      );
-    }
+    // 使用認證用戶的 ID
+    const userId = authUser.id;
 
     // 提交類型驗證
     const submissionType = body.submission_type || 'image';

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSupabase } from '@/lib/supabase';
 
 interface Annotation {
   id: string;
@@ -100,6 +101,20 @@ export default function TeacherGradingPage() {
   } | null>(null);
   const [showAISuggestions, setShowAISuggestions] = useState(false);
 
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(url, { ...options, headers });
+    } catch {
+      return fetch(url, options);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && user && essayId) {
       fetchEssay();
@@ -114,7 +129,7 @@ export default function TeacherGradingPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/essays/${essayId}?user_id=${user.id}`);
+      const response = await authFetch(`/api/essays/${essayId}`);
       const result = await response.json();
 
       if (!result.success) {
@@ -175,13 +190,12 @@ export default function TeacherGradingPage() {
     try {
       setIsSaving(true);
 
-      const response = await fetch(`/api/essays/${essay.id}`, {
+      const response = await authFetch(`/api/essays/${essay.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user.id,
           essay_topic: essayTopic,
           essay_topic_detail: essayTopicDetail,
         }),
@@ -209,13 +223,12 @@ export default function TeacherGradingPage() {
     try {
       setIsSaving(true);
 
-      const response = await fetch(`/api/essays/${essay.id}`, {
+      const response = await authFetch(`/api/essays/${essay.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user.id,
           teacher_comment: teacherComment,
           annotations: annotations,
         }),
@@ -247,13 +260,12 @@ export default function TeacherGradingPage() {
     try {
       setIsSaving(true);
 
-      const response = await fetch(`/api/essays/${essay.id}`, {
+      const response = await authFetch(`/api/essays/${essay.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user.id,
           score_content: scores.content,
           score_grammar: scores.grammar,
           score_structure: scores.structure,
@@ -324,7 +336,7 @@ export default function TeacherGradingPage() {
         toast.info('AI 正在分析作文...');
       }
 
-      const response = await fetch('/api/essays/ai-grade', {
+      const response = await authFetch('/api/essays/ai-grade', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
