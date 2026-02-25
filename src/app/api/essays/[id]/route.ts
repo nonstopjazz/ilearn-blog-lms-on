@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 // GET - 獲取單個作文詳情（使用 Admin Client）
 export async function GET(
@@ -7,19 +9,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createSupabaseAdminClient();
-    const { id: essayId } = await params;
-    const { searchParams } = new URL(request.url);
-
-    // 從 URL 參數獲取用戶 ID
-    const userId = searchParams.get('user_id');
-
-    if (!userId) {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
+        { success: false, error: '請先登入' },
+        { status: 401 }
       );
     }
+
+    const supabase = createSupabaseAdminClient();
+    const { id: essayId } = await params;
 
     // 查詢作文
     const { data: essay, error } = await supabase
@@ -44,13 +43,7 @@ export async function GET(
     }
 
     // 權限檢查：學生只能看自己的，管理員可以看所有
-    const { data: userInfo } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (userInfo?.role !== 'admin' && essay.student_id !== userId) {
+    if (!isAdmin(authUser) && essay.student_id !== authUser.id) {
       return NextResponse.json(
         { success: false, error: '無權訪問' },
         { status: 403 }
@@ -77,28 +70,19 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, error: '請先登入' },
+        { status: 401 }
+      );
+    }
+
     const supabase = createSupabaseAdminClient();
     const body = await request.json();
     const { id: essayId } = await params;
 
-    // 從 body 獲取用戶 ID
-    const userId = body.user_id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
-      );
-    }
-
-    // 獲取用戶角色
-    const { data: userInfo } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    const isAdmin = userInfo?.role === 'admin';
+    const userIsAdmin = isAdmin(authUser);
 
     // 允許更新的欄位
     const allowedFields = [
@@ -136,7 +120,7 @@ export async function PATCH(
     });
 
     // 管理員可以更新的額外欄位
-    if (isAdmin) {
+    if (userIsAdmin) {
       Object.keys(body).forEach(key => {
         if (adminFields.includes(key)) {
           updateData[key] = body[key];
@@ -150,7 +134,7 @@ export async function PATCH(
           body.score_vocabulary !== undefined ||
           body.score_creativity !== undefined) {
         updateData.reviewed_at = new Date().toISOString();
-        updateData.reviewed_by = userId;
+        updateData.reviewed_by = authUser.id;
         updateData.status = 'graded';
       }
     }
@@ -206,19 +190,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createSupabaseAdminClient();
-    const { id: essayId } = await params;
-    const { searchParams } = new URL(request.url);
-
-    // 從 URL 參數獲取用戶 ID
-    const userId = searchParams.get('user_id');
-
-    if (!userId) {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, error: '缺少用戶 ID' },
-        { status: 400 }
+        { success: false, error: '請先登入' },
+        { status: 401 }
       );
     }
+
+    const supabase = createSupabaseAdminClient();
+    const { id: essayId } = await params;
 
     // 獲取作文資訊以刪除 Storage 中的圖片
     const { data: essay } = await supabase

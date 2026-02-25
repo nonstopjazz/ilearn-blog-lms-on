@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSupabase } from '@/lib/supabase';
 
 interface Essay {
   id: string;
@@ -63,6 +64,20 @@ export default function EssayListPage() {
     }
   }, [authLoading, isAuthenticated]);
 
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(url, { ...options, headers });
+    } catch {
+      return fetch(url, options);
+    }
+  };
+
   const fetchEssays = async () => {
     try {
       if (!user?.id) {
@@ -70,7 +85,7 @@ export default function EssayListPage() {
       }
 
       setLoading(true);
-      const response = await fetch(`/api/essays?user_id=${user.id}&limit=100&sort_by=created_at&order=desc`);
+      const response = await authFetch(`/api/essays?limit=100&sort_by=created_at&order=desc`);
       const result = await response.json();
 
       if (!result.success) {

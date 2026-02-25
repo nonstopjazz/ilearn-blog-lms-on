@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSupabase } from '@/lib/supabase';
 
 interface Essay {
   id: string;
@@ -54,6 +55,20 @@ export default function AdminEssayListPage() {
     }
   }, [authLoading, user]);
 
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(url, { ...options, headers });
+    } catch {
+      return fetch(url, options);
+    }
+  };
+
   const fetchEssays = async () => {
     if (!user?.id) {
       toast.error('請先登入');
@@ -63,7 +78,7 @@ export default function AdminEssayListPage() {
     try {
       setLoading(true);
       // Admin fetches all essays
-      const response = await fetch(`/api/essays?user_id=${user.id}&limit=100&sort_by=created_at&order=desc`);
+      const response = await authFetch(`/api/essays?limit=100&sort_by=created_at&order=desc`);
       const result = await response.json();
 
       if (!result.success) {

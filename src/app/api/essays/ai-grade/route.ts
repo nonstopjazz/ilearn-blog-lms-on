@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { authenticateRequest } from '@/lib/api-auth';
+import { isAdmin } from '@/lib/security-config';
 
 interface ImageUrl {
   url: string;
@@ -36,6 +38,14 @@ interface AIGradingResponse {
  */
 export async function POST(request: NextRequest): Promise<NextResponse<AIGradingResponse>> {
   try {
+    const { user: authUser } = await authenticateRequest(request);
+    if (!authUser || !isAdmin(authUser)) {
+      return NextResponse.json({
+        success: false,
+        error: '需要管理員權限',
+      }, { status: authUser ? 403 : 401 });
+    }
+
     const body: AIGradingRequest = await request.json();
     const { essay_id } = body;
 
