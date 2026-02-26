@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/api-auth';
-import { isAdmin } from '@/lib/security-config';
+import { isAdmin, ADMIN_EMAILS } from '@/lib/security-config';
 
 // GET - 獲取作文列表（使用 Admin Client 繞過認證問題）
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser } = await authenticateRequest(request);
+    const authHeader = request.headers.get('Authorization');
+
+    // 診斷日誌：追蹤 isAdmin 為何回傳 false
+    console.log('[Essays API] Auth debug:', {
+      hasUser: !!authUser,
+      userEmail: authUser?.email,
+      userId: authUser?.id,
+      hasBearer: !!authHeader?.startsWith('Bearer '),
+      isAdminResult: authUser ? isAdmin(authUser) : 'no-user',
+      adminEmails: ADMIN_EMAILS,
+      userMetadataRole: authUser?.user_metadata?.role,
+      userMetadataIsAdmin: authUser?.user_metadata?.is_admin,
+    });
+
     if (!authUser) {
       return NextResponse.json(
         { success: false, error: '請先登入' },
@@ -30,7 +44,8 @@ export async function GET(request: NextRequest) {
       .select('*');
 
     // 使用 isAdmin 檢查管理員權限（不依賴 users 表）
-    if (!isAdmin(authUser)) {
+    const userIsAdmin = isAdmin(authUser);
+    if (!userIsAdmin) {
       // 學生只能看自己的作文
       query = query.eq('student_id', authUser.id);
     } else if (studentId) {
@@ -58,6 +73,12 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('[Essays API] Query result:', {
+      count: essays?.length || 0,
+      isAdmin: userIsAdmin,
+      hasStudentFilter: !userIsAdmin,
+    });
 
     return NextResponse.json({
       success: true,
@@ -90,6 +111,30 @@ export async function POST(request: NextRequest) {
 
     // 使用認證用戶的 ID
     const userId = authUser.id;
+
+    // Just-in-time user sync：確保 public.users 有此用戶（防止 FK 約束失敗）
+    try {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (!existingUser) {
+        const { error: syncError } = await supabase.from('users').upsert({
+          id: userId,
+          email: authUser.email,
+          full_name: authUser.user_metadata?.full_name || authUser.email,
+          role: 'student',
+          is_admin: false,
+        });
+        if (syncError) {
+          console.log('[Essays API] User sync warning:', syncError.message);
+        }
+      }
+    } catch (syncErr) {
+      console.log('[Essays API] User sync check skipped:', syncErr);
+    }
 
     // 提交類型驗證
     const submissionType = body.submission_type || 'image';
