@@ -1,8 +1,9 @@
 // src/components/NotificationCenter.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Bell, BellRing, Check, CheckCheck, Eye, EyeOff, X, ExternalLink, Clock, BookOpen, FileText, Trash2 } from 'lucide-react'
+import { getSupabase } from '@/lib/supabase'
 
 // 通知類型定義（適配您現有的 API）
 interface Notification {
@@ -30,6 +31,21 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
   const [loading, setLoading] = useState(false)
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
 
+  // 帶認證的 fetch
+  const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(url, { ...options, headers });
+    } catch {
+      return fetch(url, options);
+    }
+  }, []);
+
   // 載入通知
   const loadNotifications = async () => {
     if (!userId) return
@@ -37,11 +53,10 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
     setLoading(true)
     try {
       const params = new URLSearchParams({
-        user_id: userId,
         limit: '20'
       })
 
-      const response = await fetch(`/api/notifications?${params.toString()}`)
+      const response = await authFetch(`/api/notifications?${params.toString()}`)
       const data = await response.json()
 
       if (data.success) {
@@ -72,7 +87,7 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
   // 標記單個通知為已讀
   const markAsRead = async (notificationId: number) => {
     try {
-      const response = await fetch('/api/notifications', {
+      const response = await authFetch('/api/notifications', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -104,13 +119,12 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
   // 標記所有通知為已讀
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications', {
+      const response = await authFetch('/api/notifications', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          user_id: userId,
           mark_all_read: true
         })
       })
@@ -135,7 +149,7 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
   // 刪除通知
   const deleteNotification = async (notificationId: number) => {
     try {
-      const response = await fetch('/api/notifications', {
+      const response = await authFetch('/api/notifications', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
