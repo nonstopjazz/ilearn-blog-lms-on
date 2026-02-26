@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/api-auth';
-import { isAdmin, ADMIN_EMAILS } from '@/lib/security-config';
+import { isAdmin } from '@/lib/security-config';
 
 // GET - 獲取作文列表（使用 Admin Client 繞過認證問題）
 export async function GET(request: NextRequest) {
   try {
     const { user: authUser } = await authenticateRequest(request);
-    const authHeader = request.headers.get('Authorization');
-
-    // 診斷日誌：追蹤 isAdmin 為何回傳 false
-    console.log('[Essays API] Auth debug:', {
-      hasUser: !!authUser,
-      userEmail: authUser?.email,
-      userId: authUser?.id,
-      hasBearer: !!authHeader?.startsWith('Bearer '),
-      isAdminResult: authUser ? isAdmin(authUser) : 'no-user',
-      adminEmails: ADMIN_EMAILS,
-      userMetadataRole: authUser?.user_metadata?.role,
-      userMetadataIsAdmin: authUser?.user_metadata?.is_admin,
-    });
-
     if (!authUser) {
       return NextResponse.json(
         { success: false, error: '請先登入' },
@@ -73,12 +59,6 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log('[Essays API] Query result:', {
-      count: essays?.length || 0,
-      isAdmin: userIsAdmin,
-      hasStudentFilter: !userIsAdmin,
-    });
 
     return NextResponse.json({
       success: true,
