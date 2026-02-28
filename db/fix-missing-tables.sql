@@ -188,10 +188,107 @@ CREATE TRIGGER update_exam_types_updated_at BEFORE UPDATE ON exam_types
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ===========================
--- 5. 驗證結果
+-- 5. 建立 vocabulary_sessions 表
+-- ===========================
+CREATE TABLE IF NOT EXISTS vocabulary_sessions (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    student_id UUID NOT NULL,
+    course_id VARCHAR NOT NULL,
+    session_date DATE NOT NULL,
+    start_number INTEGER NOT NULL,
+    end_number INTEGER NOT NULL,
+    words_learned INTEGER GENERATED ALWAYS AS (end_number - start_number + 1) STORED,
+    session_duration INTEGER,
+    accuracy_rate DECIMAL(5,2),
+    review_count INTEGER DEFAULT 0,
+    notes TEXT,
+    status VARCHAR(20) DEFAULT 'completed',
+    parent_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_student_course_date UNIQUE(student_id, course_id, session_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocabulary_sessions_student_id ON vocabulary_sessions(student_id);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_sessions_course_id ON vocabulary_sessions(course_id);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_sessions_date ON vocabulary_sessions(session_date);
+
+DROP TRIGGER IF EXISTS update_vocabulary_sessions_updated_at ON vocabulary_sessions;
+CREATE TRIGGER update_vocabulary_sessions_updated_at BEFORE UPDATE ON vocabulary_sessions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ===========================
+-- 6. 建立 exam_records 表
+-- ===========================
+CREATE TABLE IF NOT EXISTS exam_records (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    student_id UUID NOT NULL,
+    course_id VARCHAR NOT NULL,
+    exam_type VARCHAR(50) NOT NULL,
+    exam_name VARCHAR(200) NOT NULL,
+    exam_date DATE NOT NULL,
+    subject VARCHAR(100),
+    total_score DECIMAL(5,2),
+    max_score DECIMAL(5,2) DEFAULT 100,
+    percentage_score DECIMAL(5,2) GENERATED ALWAYS AS
+        (CASE WHEN max_score > 0 THEN (total_score / max_score * 100) ELSE 0 END) STORED,
+    grade VARCHAR(10),
+    class_rank INTEGER,
+    class_size INTEGER,
+    topics JSONB,
+    mistakes JSONB,
+    teacher_feedback TEXT,
+    improvement_areas TEXT[],
+    is_retake BOOLEAN DEFAULT FALSE,
+    original_exam_id VARCHAR,
+    attachment_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_exam_records_student_date ON exam_records(student_id, exam_date);
+
+DROP TRIGGER IF EXISTS update_exam_records_updated_at ON exam_records;
+CREATE TRIGGER update_exam_records_updated_at BEFORE UPDATE ON exam_records
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ===========================
+-- 7. 建立 learning_progress_stats 表
+-- ===========================
+CREATE TABLE IF NOT EXISTS learning_progress_stats (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    student_id UUID NOT NULL,
+    course_id VARCHAR NOT NULL,
+    week_number INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    assignments_completed INTEGER DEFAULT 0,
+    assignments_total INTEGER DEFAULT 0,
+    vocabulary_words_learned INTEGER DEFAULT 0,
+    vocabulary_accuracy DECIMAL(5,2),
+    quiz_average DECIMAL(5,2),
+    attendance_rate DECIMAL(5,2),
+    study_time_minutes INTEGER DEFAULT 0,
+    parent_feedback TEXT,
+    teacher_notes TEXT,
+    generated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_student_week UNIQUE(student_id, course_id, week_number, year)
+);
+
+CREATE INDEX IF NOT EXISTS idx_learning_progress_student_week ON learning_progress_stats(student_id, week_number, year);
+
+-- ===========================
+-- 8. 驗證結果
 -- ===========================
 SELECT '建立完成' as status, tablename
 FROM pg_tables
 WHERE schemaname = 'public'
-AND tablename IN ('assignments', 'assignment_submissions', 'student_tasks', 'exam_types')
+AND tablename IN (
+    'assignments',
+    'assignment_submissions',
+    'student_tasks',
+    'exam_types',
+    'vocabulary_sessions',
+    'exam_records',
+    'learning_progress_stats'
+)
 ORDER BY tablename;
