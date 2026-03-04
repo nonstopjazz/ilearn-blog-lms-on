@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import puppeteer from 'puppeteer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 /**
  * 生成完整的報告 PDF（用於 Email 附件）
@@ -398,7 +400,7 @@ export async function POST(request: NextRequest) {
 
     // 發送郵件
     const emailPromises = emailList.map(email =>
-      resend.emails.send({
+      getResend().emails.send({
         from: 'iLearn 學習管理系統 <onboarding@resend.dev>', // 開發環境用的預設寄件者
         to: email,
         subject: `【學習週報】${student.name} - ${new Date().toLocaleDateString('zh-TW')}`,

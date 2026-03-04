@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { authenticateRequest } from '@/lib/api-auth';
 import { isAdmin } from '@/lib/security-config';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 /**
  * PATCH /api/admin/students/[id]
@@ -30,7 +25,7 @@ export async function PATCH(
     const { name, email, phone, parent, status } = body;
 
     // 1. 查詢該學生的所有課程申請記錄
-    const { data: courseRequests, error: fetchError } = await supabase
+    const { data: courseRequests, error: fetchError } = await createSupabaseAdminClient()
       .from('course_requests')
       .select('*')
       .eq('user_id', studentId)
@@ -63,7 +58,7 @@ export async function PATCH(
 
     // 3. 更新 Auth user_metadata（用於批次上傳學生姓名匹配）
     try {
-      const { data: authUser, error: authUpdateError } = await supabase.auth.admin.updateUserById(
+      const { data: authUser, error: authUpdateError } = await createSupabaseAdminClient().auth.admin.updateUserById(
         studentId,
         {
           user_metadata: {
@@ -85,7 +80,7 @@ export async function PATCH(
     }
 
     // 4. 更新所有該學生的課程申請記錄的 user_info
-    const { error: updateError } = await supabase
+    const { error: updateError } = await createSupabaseAdminClient()
       .from('course_requests')
       .update({ user_info: updatedUserInfo })
       .eq('user_id', studentId);
@@ -144,7 +139,7 @@ export async function POST(
     }
 
     // 使用 Admin API 直接重設密碼（不走 email，不受 rate limit 影響）
-    const { error } = await supabase.auth.admin.updateUserById(
+    const { error } = await createSupabaseAdminClient().auth.admin.updateUserById(
       studentId,
       { password }
     );

@@ -3,7 +3,7 @@ import { sendTestEmail } from '@/lib/emailService';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/security-config';
 
-const supabase = createSupabaseAdminClient();
+function getSupabaseAdmin() { return createSupabaseAdminClient(); }
 
 // 檢查管理員權限
 async function checkAdminPermission(request) {
@@ -14,7 +14,7 @@ async function checkAdminPermission(request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
 
     if (error || !user) {
       return { error: '認證失敗', status: 401 };
@@ -65,7 +65,7 @@ export async function POST(request) {
 
     if (result.success) {
       // 記錄測試發送
-      await supabase
+      await getSupabaseAdmin()
         .from('reminder_logs')
         .insert([{
           user_id: authResult.user.id,
@@ -91,7 +91,7 @@ export async function POST(request) {
       });
     } else {
       // 記錄測試失敗
-      await supabase
+      await getSupabaseAdmin()
         .from('reminder_logs')
         .insert([{
           user_id: authResult.user.id,
@@ -155,7 +155,7 @@ export async function GET(request) {
     }
 
     // 檢查最近的 Email 發送記錄
-    const { data: recentLogs, error } = await supabase
+    const { data: recentLogs, error } = await getSupabaseAdmin()
       .from('reminder_logs')
       .select('*')
       .eq('delivery_method', 'email')

@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { createSupabaseAdminClient } from '@/lib/supabase-server';
 
 /**
  * 計算日期範圍
@@ -58,6 +53,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = createSupabaseAdminClient();
     const { id: studentId } = await params;
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || 'week';
