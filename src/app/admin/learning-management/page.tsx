@@ -316,6 +316,47 @@ export default function AdminLearningManagementPage() {
     }
 
     // 針對不同記錄類型的欄位驗證
+    if (newRecordForm.recordType === 'vocabulary') {
+      if (!newRecordForm.data.course_id) {
+        alert('請選擇課程');
+        return;
+      }
+      if (!newRecordForm.data.session_date) {
+        alert('請選擇學習日期');
+        return;
+      }
+      if (newRecordForm.data.start_number == null || newRecordForm.data.start_number === '') {
+        alert('請填寫起始號碼');
+        return;
+      }
+      if (newRecordForm.data.end_number == null || newRecordForm.data.end_number === '') {
+        alert('請填寫結束號碼');
+        return;
+      }
+    }
+
+    if (newRecordForm.recordType === 'exam') {
+      if (!newRecordForm.data.exam_name || !newRecordForm.data.exam_name.trim()) {
+        alert('請填寫考試名稱');
+        return;
+      }
+      if (!newRecordForm.data.exam_date) {
+        alert('請選擇考試日期');
+        return;
+      }
+      if (newRecordForm.data.total_score == null || newRecordForm.data.total_score === '') {
+        alert('請填寫得分');
+        return;
+      }
+    }
+
+    if (newRecordForm.recordType === 'assignment') {
+      if (!newRecordForm.data.assignment_id) {
+        alert('請選擇作業');
+        return;
+      }
+    }
+
     if (newRecordForm.recordType === 'task') {
       if (!newRecordForm.data.task_description || !newRecordForm.data.task_description.trim()) {
         alert('請填寫任務內容');
@@ -956,6 +997,13 @@ export default function AdminLearningManagementPage() {
                         defaultData = {
                           session_date: today
                         };
+                      } else if (value === 'assignment') {
+                        defaultData = {
+                          assignment_id: '',
+                          submission_type: 'text',
+                          content: '',
+                          status: 'submitted'
+                        };
                       } else if (value === 'task') {
                         defaultData = {
                           task_description: '',
@@ -976,6 +1024,7 @@ export default function AdminLearningManagementPage() {
                     <SelectContent>
                       <SelectItem value="vocabulary">單字學習</SelectItem>
                       <SelectItem value="exam">考試成績</SelectItem>
+                      <SelectItem value="assignment">作業繳交</SelectItem>
                       <SelectItem value="task">學生任務</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1237,6 +1286,110 @@ export default function AdminLearningManagementPage() {
                           data: { ...prev.data, teacher_feedback: e.target.value }
                         }))}
                         rows={4}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {newRecordForm.recordType === 'assignment' && (
+                  <>
+                    <div>
+                      <Label>
+                        選擇作業 <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={newRecordForm.data.assignment_id || ''}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, assignment_id: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingAssignments ? "載入作業中..." : "選擇作業"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignments.map(assignment => (
+                            <SelectItem key={assignment.id} value={assignment.id}>
+                              {assignment.title}{assignment.dueDate ? ` (截止: ${assignment.dueDate})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {assignments.length === 0 && !loadingAssignments && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          目前沒有已發佈的作業
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>繳交方式</Label>
+                      <Select
+                        value={newRecordForm.data.submission_type || 'text'}
+                        onValueChange={(value) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, submission_type: value }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">文字</SelectItem>
+                          <SelectItem value="photo">照片</SelectItem>
+                          <SelectItem value="file">檔案</SelectItem>
+                          <SelectItem value="link">連結</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>繳交內容</Label>
+                      <Textarea
+                        placeholder="作業內容或說明..."
+                        value={newRecordForm.data.content || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, content: e.target.value }
+                        }))}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>得分</Label>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="例如: 85"
+                          value={newRecordForm.data.score ?? ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, score: e.target.value === '' ? '' : parseFloat(e.target.value) }
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>滿分</Label>
+                        <Input
+                          type="number"
+                          placeholder="例如: 100"
+                          value={newRecordForm.data.max_score ?? ''}
+                          onChange={(e) => setNewRecordForm(prev => ({
+                            ...prev,
+                            data: { ...prev.data, max_score: e.target.value === '' ? '' : parseFloat(e.target.value) }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>老師評語</Label>
+                      <Textarea
+                        placeholder="作業評語..."
+                        value={newRecordForm.data.feedback || ''}
+                        onChange={(e) => setNewRecordForm(prev => ({
+                          ...prev,
+                          data: { ...prev.data, feedback: e.target.value }
+                        }))}
+                        rows={3}
                       />
                     </div>
                   </>

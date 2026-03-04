@@ -211,8 +211,8 @@ export async function POST(request: NextRequest) {
 
     switch (record_type) {
       case 'vocabulary':
-        // 檢查必填欄位
-        if (!data.course_id || !data.session_date || !data.start_number || !data.end_number) {
+        // 檢查必填欄位（start_number/end_number 用 == null 避免 0 被誤判為缺少）
+        if (!data.course_id || !data.session_date || data.start_number == null || data.end_number == null) {
           return NextResponse.json(
             { success: false, error: 'Missing required fields for vocabulary record' },
             { status: 400 }
@@ -242,8 +242,8 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'exam':
-        // 檢查必填欄位
-        if (!data.exam_name || !data.exam_date || !data.total_score) {
+        // 檢查必填欄位（total_score 用 == null 避免 0 分被誤判為缺少）
+        if (!data.exam_name || !data.exam_date || data.total_score == null) {
           return NextResponse.json(
             { success: false, error: 'Missing required fields: exam_name, exam_date, total_score' },
             { status: 400 }
@@ -290,6 +290,14 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'assignment':
+        // 檢查必填欄位
+        if (!data.assignment_id) {
+          return NextResponse.json(
+            { success: false, error: 'Missing required field: assignment_id' },
+            { status: 400 }
+          );
+        }
+
         const { data: assignResult, error: assignError } = await supabase
           .from('assignment_submissions')
           .insert([{
