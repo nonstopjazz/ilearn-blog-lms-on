@@ -316,6 +316,25 @@ export default function AdminLearningManagementPage() {
     }
 
     // 針對不同記錄類型的欄位驗證
+    if (newRecordForm.recordType === 'vocabulary') {
+      if (!newRecordForm.data.course_id) {
+        alert('請選擇課程');
+        return;
+      }
+      if (!newRecordForm.data.session_date) {
+        alert('請選擇學習日期');
+        return;
+      }
+      if (newRecordForm.data.start_number == null || newRecordForm.data.start_number === '') {
+        alert('請填寫起始號碼');
+        return;
+      }
+      if (newRecordForm.data.end_number == null || newRecordForm.data.end_number === '') {
+        alert('請填寫結束號碼');
+        return;
+      }
+    }
+
     if (newRecordForm.recordType === 'task') {
       if (!newRecordForm.data.task_description || !newRecordForm.data.task_description.trim()) {
         alert('請填寫任務內容');
