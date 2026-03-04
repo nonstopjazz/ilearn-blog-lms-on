@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { authFetch } from '@/lib/auth-fetch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -101,19 +102,6 @@ export default function TeacherGradingPage() {
   } | null>(null);
   const [showAISuggestions, setShowAISuggestions] = useState(false);
 
-  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession();
-      const token = session?.access_token;
-      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      return fetch(url, { ...options, headers });
-    } catch {
-      return fetch(url, options);
-    }
-  };
 
   useEffect(() => {
     if (!authLoading && user && essayId) {

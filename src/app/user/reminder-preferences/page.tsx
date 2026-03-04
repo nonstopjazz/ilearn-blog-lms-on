@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Clock, Mail, Settings, Save, CheckCircle, BookOpen, User, Activity, AlertCircle, Monitor, Smartphone } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface ReminderSetting {
   id: number;
@@ -84,19 +85,7 @@ export default function UserReminderPreferencesPage() {
     try {
       setLoading(true);
       
-      // 獲取 Supabase session token
-      const { getSupabase } = await import('@/lib/supabase');
-        const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const headers: HeadersInit = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      
-      const response = await fetch(`/api/user/reminder-preferences?userId=${user?.id}`, {
-        headers
-      });
+      const response = await authFetch(`/api/user/reminder-preferences?userId=${user?.id}`);
       
       const result = await response.json();
       
@@ -116,21 +105,9 @@ export default function UserReminderPreferencesPage() {
   const updateReminderPreference = async (courseId: string, reminderType: string, isEnabled: boolean) => {
     setSaving(true);
     try {
-      // 獲取 Supabase session token
-      const { getSupabase } = await import('@/lib/supabase');
-        const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      
-      const response = await fetch('/api/user/reminder-preferences', {
+      const response = await authFetch('/api/user/reminder-preferences', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.id,
           courseId: courseId,
@@ -173,21 +150,9 @@ export default function UserReminderPreferencesPage() {
         isEnabled: enabled
       }));
 
-      // 獲取 Supabase session token
-      const { getSupabase } = await import('@/lib/supabase');
-        const supabase = getSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      
-      const response = await fetch('/api/user/reminder-preferences', {
+      const response = await authFetch('/api/user/reminder-preferences', {
         method: 'PUT',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.id,
           preferences: preferences

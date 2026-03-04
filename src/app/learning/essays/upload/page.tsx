@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, Send, Loader2, Image as ImageIcon, FileText, X, GripVertical } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabase';
 import { compressImage, formatFileSize, isImageFile } from '@/lib/imageCompression';
@@ -265,18 +266,9 @@ export default function EssayUploadPage() {
       // 4. 建立資料庫記錄
       toast.info('正在建立記錄...');
 
-      // 取得 auth token 用於 API 認證
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (session?.access_token) {
-        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      const response = await fetch('/api/essays', {
+      const response = await authFetch('/api/essays', {
         method: 'POST',
-        headers: authHeaders,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
 

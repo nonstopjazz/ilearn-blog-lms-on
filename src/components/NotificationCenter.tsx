@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Bell, BellRing, Check, CheckCheck, Eye, EyeOff, X, ExternalLink, Clock, BookOpen, FileText, Trash2 } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/auth-fetch'
 
 // 通知類型定義（適配您現有的 API）
 interface Notification {
@@ -30,21 +31,6 @@ export default function NotificationCenter({ userId, className = '' }: Notificat
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
-
-  // 帶認證的 fetch
-  const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession();
-      const token = session?.access_token;
-      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      return fetch(url, { ...options, headers });
-    } catch {
-      return fetch(url, options);
-    }
-  }, []);
 
   // 載入通知
   const loadNotifications = async () => {
