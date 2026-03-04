@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
+import { isAdmin } from '@/lib/security-config';
 
 // 檢查用戶認證
 async function checkUserAuth(request: NextRequest) {
@@ -54,16 +55,9 @@ export async function GET(request: NextRequest) {
 
     const user = authResult.user;
 
-    // 檢查用戶角色
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    console.log('[Admin Students Info API] User role:', profile?.role, 'Error:', profileError);
-
-    if (profileError || profile?.role !== 'admin') {
+    // 檢查用戶是否為 admin（使用 email 白名單）
+    if (!isAdmin(user)) {
+      console.log('[Admin Students Info API] User is not admin:', user.email);
       return NextResponse.json(
         { success: false, error: 'Only admin can access this endpoint' },
         { status: 403 }
@@ -71,29 +65,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 使用 service role 查詢學生資料（繞過 RLS）
-    // 先嘗試從 profiles 表查詢
-    const { data: userInfo, error: userError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, role')
-      .eq('id', studentId)
-      .single();
+    // 先嘗試從 auth.users 取得學生基本資料
+    const { data: { user: studentUser }, error: studentAuthError } = await supabase.auth.admin.getUserById(studentId);
 
-    console.log('[Admin Students Info API] Profiles table query result:', userInfo, 'Error:', userError);
-
-    // 如果 profiles 表有完整資料，直接返回（轉換欄位名稱保持 API 一致性）
-    if (!userError && userInfo) {
+    if (!studentAuthError && studentUser) {
       return NextResponse.json({
         success: true,
         data: {
-          id: userInfo.id,
-          name: userInfo.full_name,
-          email: userInfo.email,
-          role: userInfo.role
+          id: studentUser.id,
+          name: studentUser.user_metadata?.full_name || studentUser.email,
+          email: studentUser.email,
+          role: 'student'
         }
       });
     }
 
-    // 如果 profiles 表沒有或資料不完整，從 course_requests 查詢
+    // 如果 auth.users 找不到，從 course_requests 查詢
     console.log('[Admin Students Info API] Trying course_requests table...');
 
     const { data: courseRequest, error: requestError } = await supabase

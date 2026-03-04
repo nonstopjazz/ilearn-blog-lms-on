@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
+import { isAdmin as checkIsAdmin } from '@/lib/security-config';
 import { useSearchParams } from 'next/navigation';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -613,14 +614,8 @@ const DashboardContent = () => {
           setAuthToken(session.access_token);
         }
 
-        // 檢查是否是 admin
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        const userIsAdmin = profile?.role === 'admin';
+        // 檢查是否是 admin（使用 email 白名單，不查資料庫）
+        const userIsAdmin = checkIsAdmin(user);
         setIsAdmin(userIsAdmin);
 
         // 處理 student_id 參數（僅 admin 可用）
