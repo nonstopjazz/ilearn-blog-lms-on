@@ -290,6 +290,14 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'assignment':
+        // 檢查必填欄位
+        if (!data.assignment_id) {
+          return NextResponse.json(
+            { success: false, error: 'Missing required field: assignment_id' },
+            { status: 400 }
+          );
+        }
+
         const { data: assignResult, error: assignError } = await supabase
           .from('assignment_submissions')
           .insert([{
