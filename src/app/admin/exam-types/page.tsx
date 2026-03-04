@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   Table,
   TableBody,
@@ -64,7 +65,7 @@ export default function ExamTypesManagementPage() {
   const loadExamTypes = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/exam-types');
+      const response = await authFetch('/api/admin/exam-types');
       const result = await response.json();
 
       if (result.success) {
@@ -132,7 +133,7 @@ export default function ExamTypesManagementPage() {
         ? { ...formData, id: currentType?.id }
         : formData;
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -157,7 +158,7 @@ export default function ExamTypesManagementPage() {
     if (!confirm('確定要刪除此考試類型嗎？')) return;
 
     try {
-      const response = await fetch(`/api/admin/exam-types?id=${id}`, {
+      const response = await authFetch(`/api/admin/exam-types?id=${id}`, {
         method: 'DELETE'
       });
 
@@ -177,7 +178,7 @@ export default function ExamTypesManagementPage() {
 
   const handleToggleActive = async (type: ExamType) => {
     try {
-      const response = await fetch('/api/admin/exam-types', {
+      const response = await authFetch('/api/admin/exam-types', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

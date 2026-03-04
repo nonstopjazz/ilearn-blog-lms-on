@@ -67,6 +67,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
 import { ProjectAssignmentManager } from '@/components/admin/ProjectAssignmentManager';
 import { getSupabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Student {
   id: string;
@@ -168,28 +169,6 @@ export default function AdminLearningManagementPage() {
   const [resetPasswordStudent, setResetPasswordStudent] = useState<Student | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
-
-  // 獲取 Supabase 認證 token
-  const getAuthToken = async (): Promise<string | null> => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession();
-      return session?.access_token || null;
-    } catch {
-      return null;
-    }
-  };
-
-  // 帶認證的 fetch 包裝器
-  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    const token = await getAuthToken();
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string> || {}),
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(url, { ...options, headers });
-  };
 
   // 載入數據
   useEffect(() => {

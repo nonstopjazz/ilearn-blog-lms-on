@@ -4,9 +4,10 @@ import { User } from '@supabase/supabase-js';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { 
-  Save, 
-  Eye, 
+import { authFetch } from '@/lib/auth-fetch';
+import {
+  Save,
+  Eye,
   Upload, 
   X, 
   Plus, 
@@ -116,7 +117,7 @@ const BlogAdminCreate: React.FC = () => {
   const loadCategories = async () => {
     try {
       setLoadingCategories(true);
-      const response = await fetch('/api/blog/categories');
+      const response = await authFetch('/api/blog/categories');
       const result = await response.json();
       if (response.ok && result.success) {
         setCategories(result.categories || []);
@@ -134,7 +135,7 @@ const BlogAdminCreate: React.FC = () => {
 
   const loadTags = async () => {
     try {
-      const response = await fetch('/api/blog/tags');
+      const response = await authFetch('/api/blog/tags');
       const result = await response.json();
       if (response.ok) {
         setAvailableTags(result.tags);
@@ -181,7 +182,7 @@ const BlogAdminCreate: React.FC = () => {
     if (!newTagName.trim()) return;
     
     try {
-      const response = await fetch('/api/blog/tags', {
+      const response = await authFetch('/api/blog/tags', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -224,7 +225,7 @@ const BlogAdminCreate: React.FC = () => {
 
     setAddingCategory(true);
     try {
-      const response = await fetch('/api/blog/categories', {
+      const response = await authFetch('/api/blog/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -295,7 +296,7 @@ const BlogAdminCreate: React.FC = () => {
         published_at: status === 'published' ? new Date().toISOString() : null
       };
 
-      const response = await fetch('/api/blog/posts', {
+      const response = await authFetch('/api/blog/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

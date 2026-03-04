@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings, Clock, Users, Eye, EyeOff, Calendar, Save, Edit, Trash2, Plus } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface QuizSettings {
   id: string;
@@ -40,7 +41,7 @@ const QuizSettingsPage: React.FC = () => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/quiz/create');
+      const response = await authFetch('/api/quiz/create');
       const result = await response.json();
 
       if (!response.ok) {
@@ -85,7 +86,7 @@ const QuizSettingsPage: React.FC = () => {
       setSaving(true);
       
       // 這裡需要建立一個更新測驗設定的 API 端點
-      const response = await fetch(`/api/quiz/update/${selectedQuiz.id}`, {
+      const response = await authFetch(`/api/quiz/update/${selectedQuiz.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +131,7 @@ const QuizSettingsPage: React.FC = () => {
       const targetQuiz = quizzes.find(q => q.id === quizId);
       if (!targetQuiz) return;
 
-      const response = await fetch(`/api/quiz/update/${quizId}`, {
+      const response = await authFetch(`/api/quiz/update/${quizId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

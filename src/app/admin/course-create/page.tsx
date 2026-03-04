@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Save, Plus, Trash2, ArrowLeft, AlertCircle, Loader2, Link as LinkIcon, Download, Play, Eye, Edit, CheckCircle, GripVertical, Video, FileText, Lock, Unlock, RefreshCw, FileImage, Music, Archive, Film, File, Clock } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Lesson {
   id: string;
@@ -513,7 +514,7 @@ const CourseCreateEditPage: React.FC = () => {
       console.log('準備儲存課程資料:', coursePayload);
       
       // 🔥 實際呼叫 API 而不是模擬
-      const response = await fetch('/api/courses', {
+      const response = await authFetch('/api/courses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

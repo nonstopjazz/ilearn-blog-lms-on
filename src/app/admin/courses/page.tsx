@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Play, Users, Clock, Star, Trash2, Plus, Eye, Settings } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Course {
   id: string;
@@ -39,7 +40,7 @@ const CourseListPage: React.FC = () => {
       setError(null);
       
       // 🔥 從真實 API 載入所有課程（管理員可以看到所有狀態的課程）
-      const response = await fetch('/api/courses');
+      const response = await authFetch('/api/courses');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -75,7 +76,7 @@ const CourseListPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/courses/${courseId}`, {
+      const response = await authFetch(`/api/courses/${courseId}`, {
         method: 'DELETE',
       });
 
@@ -95,7 +96,7 @@ const CourseListPage: React.FC = () => {
 
   const handleStatusChange = async (courseId: string, newStatus: Course['status']) => {
     try {
-      const response = await fetch(`/api/courses/${courseId}`, {
+      const response = await authFetch(`/api/courses/${courseId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
