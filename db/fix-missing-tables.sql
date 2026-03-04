@@ -277,7 +277,60 @@ CREATE TABLE IF NOT EXISTS learning_progress_stats (
 CREATE INDEX IF NOT EXISTS idx_learning_progress_student_week ON learning_progress_stats(student_id, week_number, year);
 
 -- ===========================
--- 8. 驗證結果
+-- 8. 建立 courses 表
+-- ===========================
+CREATE TABLE IF NOT EXISTS courses (
+    id VARCHAR PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    short_description VARCHAR(500),
+    thumbnail_url TEXT,
+    instructor_name VARCHAR(200),
+    price DECIMAL(10,2) DEFAULT 0,
+    is_free BOOLEAN DEFAULT TRUE,
+    category VARCHAR(100),
+    difficulty_level VARCHAR(50) DEFAULT 'beginner',
+    duration_hours INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'draft',
+    lessons_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_courses_status ON courses(status);
+CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
+
+DROP TRIGGER IF EXISTS update_courses_updated_at ON courses;
+CREATE TRIGGER update_courses_updated_at BEFORE UPDATE ON courses
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ===========================
+-- 9. 建立 user_course_access 表
+-- ===========================
+CREATE TABLE IF NOT EXISTS user_course_access (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id UUID NOT NULL,
+    course_id VARCHAR NOT NULL,
+    access_type VARCHAR(50) DEFAULT 'approved',
+    status VARCHAR(20) DEFAULT 'active',
+    order_id VARCHAR,
+    granted_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_user_course UNIQUE(user_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_course_access_user ON user_course_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_course_access_course ON user_course_access(course_id);
+CREATE INDEX IF NOT EXISTS idx_user_course_access_status ON user_course_access(status);
+
+DROP TRIGGER IF EXISTS update_user_course_access_updated_at ON user_course_access;
+CREATE TRIGGER update_user_course_access_updated_at BEFORE UPDATE ON user_course_access
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ===========================
+-- 10. 驗證結果
 -- ===========================
 SELECT '建立完成' as status, tablename
 FROM pg_tables
@@ -289,6 +342,8 @@ AND tablename IN (
     'exam_types',
     'vocabulary_sessions',
     'exam_records',
-    'learning_progress_stats'
+    'learning_progress_stats',
+    'courses',
+    'user_course_access'
 )
 ORDER BY tablename;
