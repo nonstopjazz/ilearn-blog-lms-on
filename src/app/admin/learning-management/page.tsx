@@ -335,6 +335,21 @@ export default function AdminLearningManagementPage() {
       }
     }
 
+    if (newRecordForm.recordType === 'exam') {
+      if (!newRecordForm.data.exam_name || !newRecordForm.data.exam_name.trim()) {
+        alert('請填寫考試名稱');
+        return;
+      }
+      if (!newRecordForm.data.exam_date) {
+        alert('請選擇考試日期');
+        return;
+      }
+      if (newRecordForm.data.total_score == null || newRecordForm.data.total_score === '') {
+        alert('請填寫得分');
+        return;
+      }
+    }
+
     if (newRecordForm.recordType === 'task') {
       if (!newRecordForm.data.task_description || !newRecordForm.data.task_description.trim()) {
         alert('請填寫任務內容');

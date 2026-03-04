@@ -242,8 +242,8 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'exam':
-        // 檢查必填欄位
-        if (!data.exam_name || !data.exam_date || !data.total_score) {
+        // 檢查必填欄位（total_score 用 == null 避免 0 分被誤判為缺少）
+        if (!data.exam_name || !data.exam_date || data.total_score == null) {
           return NextResponse.json(
             { success: false, error: 'Missing required fields: exam_name, exam_date, total_score' },
             { status: 400 }
