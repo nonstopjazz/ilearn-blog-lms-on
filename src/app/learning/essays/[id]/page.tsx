@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { authFetch } from '@/lib/auth-fetch';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -131,19 +132,6 @@ export default function EssayDetailPage() {
     }
   }, [authLoading, user, isAuthenticated, essayId]);
 
-  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession();
-      const token = session?.access_token;
-      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      return fetch(url, { ...options, headers });
-    } catch {
-      return fetch(url, options);
-    }
-  };
 
   const fetchEssay = async (forceRefresh = false) => {
     if (!user?.id) {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, AlertCircle, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Question {
   id: string;
@@ -257,7 +258,7 @@ const StudentQuizPage: React.FC = () => {
     try {
       const calculatedScore = calculateScore();
       
-      const response = await fetch('/api/quiz/submit', {
+      const response = await authFetch('/api/quiz/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

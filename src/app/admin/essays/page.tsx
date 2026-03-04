@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   Select,
   SelectContent,
@@ -55,19 +56,6 @@ export default function AdminEssayListPage() {
     }
   }, [authLoading, user]);
 
-  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession();
-      const token = session?.access_token;
-      const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      return fetch(url, { ...options, headers });
-    } catch {
-      return fetch(url, options);
-    }
-  };
 
   const fetchEssays = async () => {
     if (!user?.id) {

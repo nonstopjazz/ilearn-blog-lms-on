@@ -5,6 +5,7 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { BookOpen, User, Play, Clock, Users, Star, Tag, ArrowLeft, CheckCircle, PlayCircle, AlertCircle, XCircle, RefreshCw, Home, Download, Eye, FileText, FileImage, Music, Archive, Film, File, ChevronDown, ChevronUp } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 // 🎯 導入統一的 Navbar 組件
 import Navbar from '@/components/Navbar';
@@ -698,7 +699,7 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
       if (!user || !course) return;
       
       try {
-        const response = await fetch(`/api/course-requests?user_id=${user.id}&course_id=${courseId}`);
+        const response = await authFetch(`/api/course-requests?user_id=${user.id}&course_id=${courseId}`);
         const result = await response.json();
         
         if (result.success && result.request) {
@@ -749,11 +750,10 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
         }
       };
 
-      const response = await fetch('/api/course-requests', {
+      const response = await authFetch('/api/course-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(requestData),
       });

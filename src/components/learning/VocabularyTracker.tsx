@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { authFetch } from '@/lib/auth-fetch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
@@ -53,7 +54,7 @@ export function VocabularyTracker({ studentId, courseId }: VocabularyTrackerProp
   const loadSessions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/learning/vocabulary?student_id=${studentId}&course_id=${courseId}`
       );
       const data = await response.json();
@@ -90,7 +91,7 @@ export function VocabularyTracker({ studentId, courseId }: VocabularyTrackerProp
 
     setLoading(true);
     try {
-      const response = await fetch('/api/learning/vocabulary', {
+      const response = await authFetch('/api/learning/vocabulary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

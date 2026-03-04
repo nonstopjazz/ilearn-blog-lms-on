@@ -14,6 +14,7 @@ import GanttChart, { GanttTask } from '@/components/gantt/GanttChart';
 import GanttChartYearly from '@/components/gantt/GanttChartYearly';
 import DHtmlxGanttChart from '@/components/gantt/DHtmlxGanttChart';
 import AssignmentFormDialog from '@/components/assignments/AssignmentFormDialog';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   ClipboardList,
   Target,
@@ -638,11 +639,7 @@ const DashboardContent = () => {
 
             console.log('[Learning Page] Calling /api/admin/students/info with student_id:', studentIdParam);
 
-            const response = await fetch(`/api/admin/students/info?student_id=${studentIdParam}`, {
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`
-              }
-            });
+            const response = await authFetch(`/api/admin/students/info?student_id=${studentIdParam}`);
 
             console.log('[Learning Page] API response status:', response.status);
 
@@ -693,17 +690,6 @@ const DashboardContent = () => {
     setAssignments(mockAssignments);
     loadExamTypes();
   }, []);
-
-  // 帶認證的 fetch 包裝器
-  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string> || {}),
-    };
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    return fetch(url, { ...options, headers });
-  };
 
   // 載入資料（根據認證狀態）
   useEffect(() => {
