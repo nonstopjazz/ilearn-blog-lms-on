@@ -9,19 +9,16 @@ import { BookOpen, User, Play, Clock, Users, Star, Tag, ArrowLeft, CheckCircle, 
 // 🎯 導入統一的 Navbar 組件
 import Navbar from '@/components/Navbar';
 
-// 🕐 時間格式化函數 - 將分鐘數轉換為 MM:SS 格式顯示
-const formatDuration = (minutes: number): string => {
-  if (minutes < 1) {
-    // 如果少於1分鐘，顯示秒數
-    const seconds = Math.round(minutes * 60);
-    return `0:${seconds.toString().padStart(2, '0')}`;
+// 🕐 時間格式化函數 - 將秒數轉換為 MM:SS 格式顯示
+const formatDuration = (totalSeconds: number): string => {
+  if (!totalSeconds || totalSeconds === 0) {
+    return '0:00';
   }
-  
-  // 如果是整數分鐘，顯示為 MM:00
-  const wholeMinutes = Math.floor(minutes);
-  const remainingSeconds = Math.round((minutes - wholeMinutes) * 60);
-  
-  return `${wholeMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
 interface Course {
@@ -659,10 +656,10 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
             description: `包含 ${lessonsData.length} 個精心設計的學習單元`,
             category: 'programming',
             difficulty_level: 'beginner',
-            duration_hours: Math.round(lessonsData.reduce((total, lesson) => total + (lesson.video_duration || 300), 0) / 3600) || 2,
-            student_count: Math.floor(Math.random() * 1000) + 500,
-            rating: 4.8,
-            review_count: Math.floor(Math.random() * 100) + 50,
+            duration_hours: Math.round(lessonsData.reduce((total, lesson) => total + (lesson.video_duration || 0), 0) / 3600),
+            student_count: 0,
+            rating: 0,
+            review_count: 0,
             instructor_name: '專業講師',
             instructor_title: '資深教育者',
             instructor_experience: '豐富教學經驗'
@@ -729,8 +726,19 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
     }
 
     setRequestLoading(true);
-    
+
     try {
+      // 取得 access token 用於 API 認證
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        alert('登入狀態已過期，請重新登入');
+        window.location.href = '/auth';
+        return;
+      }
+
       const requestData = {
         user_id: user.id,
         course_id: courseId,
@@ -745,6 +753,7 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(requestData),
       });

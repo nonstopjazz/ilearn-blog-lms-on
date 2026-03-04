@@ -57,10 +57,8 @@ export default function CoursesPage() {
         // 為了兼容性，添加一些前端需要的欄位
         const coursesWithDefaults = result.courses.map((course: Course) => ({
           ...course,
-          // 使用 API 返回的真實學員人數
-          enrolled_count: course.enrolled_count || 0,
-          // 固定評分，避免隨機變動
-          rating: course.rating || 4.8,
+          enrolled_count: course.enrolled_count ?? 0,
+          rating: course.rating ?? 0,
         }))
         
         setCourses(coursesWithDefaults)

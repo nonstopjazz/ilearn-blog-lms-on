@@ -669,10 +669,11 @@ const CourseCreateEditPage: React.FC = () => {
     setEditingLessonFile(undefined);
   };
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+  const formatDuration = (totalSeconds: number) => {
+    if (!totalSeconds || totalSeconds === 0) return '0:00';
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
