@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // 檢查用戶角色
     const { data: profile, error: profileError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
@@ -71,24 +71,29 @@ export async function GET(request: NextRequest) {
     }
 
     // 使用 service role 查詢學生資料（繞過 RLS）
-    // 先嘗試從 users 表查詢
+    // 先嘗試從 profiles 表查詢
     const { data: userInfo, error: userError } = await supabase
-      .from('users')
-      .select('id, name, email, role')
+      .from('profiles')
+      .select('id, full_name, email, role')
       .eq('id', studentId)
       .single();
 
-    console.log('[Admin Students Info API] User table query result:', userInfo, 'Error:', userError);
+    console.log('[Admin Students Info API] Profiles table query result:', userInfo, 'Error:', userError);
 
-    // 如果 users 表有完整資料，直接返回
+    // 如果 profiles 表有完整資料，直接返回（轉換欄位名稱保持 API 一致性）
     if (!userError && userInfo) {
       return NextResponse.json({
         success: true,
-        data: userInfo
+        data: {
+          id: userInfo.id,
+          name: userInfo.full_name,
+          email: userInfo.email,
+          role: userInfo.role
+        }
       });
     }
 
-    // 如果 users 表沒有或資料不完整，從 course_requests 查詢
+    // 如果 profiles 表沒有或資料不完整，從 course_requests 查詢
     console.log('[Admin Students Info API] Trying course_requests table...');
 
     const { data: courseRequest, error: requestError } = await supabase

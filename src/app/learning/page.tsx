@@ -615,7 +615,7 @@ const DashboardContent = () => {
 
         // 檢查是否是 admin
         const { data: profile } = await supabase
-          .from('users')
+          .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
