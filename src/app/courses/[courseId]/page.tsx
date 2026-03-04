@@ -726,8 +726,19 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
     }
 
     setRequestLoading(true);
-    
+
     try {
+      // 取得 access token 用於 API 認證
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        alert('登入狀態已過期，請重新登入');
+        window.location.href = '/auth';
+        return;
+      }
+
       const requestData = {
         user_id: user.id,
         course_id: courseId,
@@ -742,6 +753,7 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(requestData),
       });
