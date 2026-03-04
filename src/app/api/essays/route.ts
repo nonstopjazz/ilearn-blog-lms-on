@@ -92,21 +92,20 @@ export async function POST(request: NextRequest) {
     // 使用認證用戶的 ID
     const userId = authUser.id;
 
-    // Just-in-time user sync：確保 public.users 有此用戶（防止 FK 約束失敗）
+    // Just-in-time user sync：確保 profiles 有此用戶（防止 FK 約束失敗）
     try {
       const { data: existingUser } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id')
         .eq('id', userId)
         .single();
 
       if (!existingUser) {
-        const { error: syncError } = await supabase.from('users').upsert({
+        const { error: syncError } = await supabase.from('profiles').upsert({
           id: userId,
           email: authUser.email,
           full_name: authUser.user_metadata?.full_name || authUser.email,
           role: 'student',
-          is_admin: false,
         });
         if (syncError) {
           console.log('[Essays API] User sync warning:', syncError.message);
