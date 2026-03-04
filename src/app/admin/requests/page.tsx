@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, 
-  User, 
-  LogOut, 
-  Check, 
-  X, 
-  Clock, 
+import {
+  BookOpen,
+  User,
+  LogOut,
+  Check,
+  X,
+  Clock,
   Search,
   Filter,
   Eye,
@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface CourseRequest {
   id: string;
@@ -70,7 +71,7 @@ export default function AdminRequestsPage() {
 
   const loadRequests = async () => {
     try {
-      const response = await fetch('/api/course-requests');
+      const response = await authFetch('/api/course-requests');
       const result = await response.json();
       
       if (result.success) {
@@ -89,7 +90,7 @@ export default function AdminRequestsPage() {
     setActionLoading(requestId);
     
     try {
-      const response = await fetch('/api/course-requests', {
+      const response = await authFetch('/api/course-requests', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
