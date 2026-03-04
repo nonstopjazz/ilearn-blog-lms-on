@@ -51,9 +51,8 @@ const CourseListPage: React.FC = () => {
         // 為了兼容性，添加一些前端需要的欄位
         const coursesWithDefaults = result.courses.map((course: Course) => ({
           ...course,
-          // 模擬學員數和評分（真實值需要從其他表格獲取）
-          enrolled_count: course.enrolled_count || Math.floor(Math.random() * 500) + 10,
-          rating: course.rating || (4.0 + Math.random() * 1.0),
+          enrolled_count: course.enrolled_count ?? 0,
+          rating: course.rating ?? 0,
         }));
         
         setCourses(coursesWithDefaults);
