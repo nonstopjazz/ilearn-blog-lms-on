@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import Navbar from '@/components/Navbar';
-import { 
-  Save, 
-  Eye, 
+import { authFetch } from '@/lib/auth-fetch';
+import {
+  Save,
+  Eye,
   Upload, 
   X, 
   Plus, 
@@ -107,7 +108,7 @@ const BlogAdminEdit: React.FC = () => {
   const loadBlogPost = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/blog/posts/id/${blogId}`);
+      const response = await authFetch(`/api/blog/posts/id/${blogId}`);
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -143,7 +144,7 @@ const BlogAdminEdit: React.FC = () => {
 
   const loadCategories = async () => {
     try {
-      const response = await fetch('/api/blog/categories');
+      const response = await authFetch('/api/blog/categories');
       const result = await response.json();
       if (result.success) {
         setCategories(result.categories || []);
@@ -155,7 +156,7 @@ const BlogAdminEdit: React.FC = () => {
 
   const loadTags = async () => {
     try {
-      const response = await fetch('/api/blog/tags');
+      const response = await authFetch('/api/blog/tags');
       const result = await response.json();
       if (result.success) {
         setTags(result.tags || []);
@@ -193,7 +194,7 @@ const BlogAdminEdit: React.FC = () => {
     if (!newTagName.trim()) return;
 
     try {
-      const response = await fetch('/api/blog/tags', {
+      const response = await authFetch('/api/blog/tags', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -271,7 +272,7 @@ const BlogAdminEdit: React.FC = () => {
         published_at: status === 'published' ? new Date().toISOString() : null
       };
 
-      const response = await fetch(`/api/blog/posts/id/${blogId}`, {
+      const response = await authFetch(`/api/blog/posts/id/${blogId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

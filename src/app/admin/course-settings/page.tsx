@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Settings, BookOpen, ChevronRight, Search, Filter, Users, Star, Clock } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Course {
   id: string;
@@ -38,7 +39,7 @@ export default function CourseSettingsIndexPage() {
       setError(null);
       
       // 🔥 修正 API 呼叫邏輯
-      const response = await fetch('/api/courses');
+      const response = await authFetch('/api/courses');
       
       if (response.ok) {
         const result = await response.json();

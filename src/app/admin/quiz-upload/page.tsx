@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, Package, AlertCircle, CheckCircle, Eye, Download } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Course {
   id: string;
@@ -79,7 +80,7 @@ const QuizUploadPage: React.FC = () => {
       formData.append('zipFile', uploadedFile);
       formData.append('preview', 'true');
 
-      const response = await fetch('/api/quiz/upload', {
+      const response = await authFetch('/api/quiz/upload', {
         method: 'POST',
         body: formData,
       });
@@ -144,7 +145,7 @@ const QuizUploadPage: React.FC = () => {
       formData.append('zipFile', uploadedFile);
       formData.append('preview', 'false');
 
-      const response = await fetch('/api/quiz/upload', {
+      const response = await authFetch('/api/quiz/upload', {
         method: 'POST',
         body: formData,
       });

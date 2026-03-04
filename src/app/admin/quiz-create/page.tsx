@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, BookOpen, HelpCircle } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Question {
   id: string;
@@ -147,7 +148,7 @@ const SimpleQuizCreator: React.FC = () => {
     console.log('準備儲存測驗:', quizData); 
 
     try {
-      const response = await fetch('/api/quiz/create', {
+      const response = await authFetch('/api/quiz/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,9 +4,10 @@ import { User } from '@supabase/supabase-js';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { 
-  Plus, 
-  Edit, 
+import { authFetch } from '@/lib/auth-fetch';
+import {
+  Plus,
+  Edit,
   Trash2, 
   Tag,
   Loader2,
@@ -83,7 +84,7 @@ export default function BlogCategoriesPage() {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/blog/categories');
+      const response = await authFetch('/api/blog/categories');
       const result = await response.json();
       
       if (result.success) {
@@ -154,7 +155,7 @@ export default function BlogCategoriesPage() {
         ? { id: editingId, ...formData }
         : formData;
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +185,7 @@ export default function BlogCategoriesPage() {
     }
 
     try {
-      const response = await fetch(`/api/blog/categories?id=${id}`, {
+      const response = await authFetch(`/api/blog/categories?id=${id}`, {
         method: 'DELETE',
       });
 

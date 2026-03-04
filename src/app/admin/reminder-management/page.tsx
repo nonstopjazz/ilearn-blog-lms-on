@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Plus, Edit2, Trash2, Save, AlertCircle, CheckCircle, Clock, Mail, Smartphone, Monitor, Filter, Search, BookOpen, Settings, Users, Activity, Send, Eye, Play, BarChart, RefreshCw, Zap } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 import { ADMIN_EMAILS } from '@/lib/security-config';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Course {
   id: string;
@@ -166,7 +167,7 @@ export default function AdminReminderManagementPage() {
       console.warn('無法獲取認證 token，嘗試無認證呼叫');
       // 如果沒有 token，嘗試無認證呼叫
       try {
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           ...options,
           headers: {
             'Content-Type': 'application/json',
@@ -197,7 +198,7 @@ export default function AdminReminderManagementPage() {
     
     try {
       console.log(`API 呼叫: ${url}`, { method: finalOptions.method || 'GET' });
-      const response = await fetch(url, finalOptions);
+      const response = await authFetch(url, finalOptions);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -272,7 +273,7 @@ export default function AdminReminderManagementPage() {
   // 載入系統狀態
   const loadSystemStatus = async () => {
     try {
-      const response = await fetch('/api/test-email-simple');
+      const response = await authFetch('/api/test-email-simple');
       const data = await response.json();
       setSystemStatus(data);
     } catch (error) {
@@ -291,7 +292,7 @@ export default function AdminReminderManagementPage() {
     setTestResult(null);
 
     try {
-      const response = await fetch('/api/test-email-simple', {
+      const response = await authFetch('/api/test-email-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

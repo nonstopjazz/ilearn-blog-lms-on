@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   Table,
   TableBody,
@@ -105,7 +106,7 @@ export function ProjectAssignmentManager() {
   const loadAssignments = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/project-assignments');
+      const response = await authFetch('/api/admin/project-assignments');
       const result = await response.json();
 
       if (result.success) {
@@ -120,7 +121,7 @@ export function ProjectAssignmentManager() {
 
   const loadTemplates = async () => {
     try {
-      const response = await fetch('/api/admin/project-templates');
+      const response = await authFetch('/api/admin/project-templates');
       const result = await response.json();
 
       if (result.success) {
@@ -133,7 +134,7 @@ export function ProjectAssignmentManager() {
 
   const loadStudents = async () => {
     try {
-      const response = await fetch('/api/admin/students');
+      const response = await authFetch('/api/admin/students');
       const result = await response.json();
 
       if (result.success) {
@@ -161,7 +162,7 @@ export function ProjectAssignmentManager() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/project-assignments', {
+      const response = await authFetch('/api/admin/project-assignments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -197,7 +198,7 @@ export function ProjectAssignmentManager() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/project-templates/distribute', {
+      const response = await authFetch('/api/admin/project-templates/distribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,7 +246,7 @@ export function ProjectAssignmentManager() {
 
       console.log('[批次上傳] 準備上傳:', assignments);
 
-      const response = await fetch('/api/admin/project-assignments/batch', {
+      const response = await authFetch('/api/admin/project-assignments/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignments })
@@ -341,7 +342,7 @@ export function ProjectAssignmentManager() {
 
       console.log('[刪除] 準備刪除作業 IDs:', assignmentIds);
 
-      const response = await fetch('/api/admin/project-assignments', {
+      const response = await authFetch('/api/admin/project-assignments', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignmentIds })

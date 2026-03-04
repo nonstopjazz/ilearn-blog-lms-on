@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   Plus,
   Edit,
@@ -92,7 +93,7 @@ const BlogAdminList: React.FC = () => {
       if (statusFilter) url += `&status=${statusFilter}`;
       if (categoryFilter) url += `&category=${categoryFilter}`;
 
-      const response = await fetch(url);
+      const response = await authFetch(url);
       const result = await response.json();
       
       if (response.ok) {
@@ -120,7 +121,7 @@ const BlogAdminList: React.FC = () => {
     if (!confirm('確定要刪除此文章嗎？此操作無法復原。')) return;
 
     try {
-      const response = await fetch(`/api/blog/posts/${postId}`, {
+      const response = await authFetch(`/api/blog/posts/${postId}`, {
         method: 'DELETE',
       });
 

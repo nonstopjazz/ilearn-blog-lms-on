@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { authFetch } from '@/lib/auth-fetch';
 import { 
   BookOpen, 
   Users, 
@@ -72,7 +73,7 @@ export default function AdminDashboardPage() {
     const loadStats = async () => {
       try {
         // 調用真實的統計 API
-        const response = await fetch('/api/admin/stats');
+        const response = await authFetch('/api/admin/stats');
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -114,7 +115,7 @@ export default function AdminDashboardPage() {
       
       if (!token) {
         console.log('No token found, using test API');
-        const response = await fetch('/api/test-email-simple', {
+        const response = await authFetch('/api/test-email-simple', {
           method: 'GET'
         });
         
@@ -135,7 +136,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/test-email', {
+      const response = await authFetch('/api/admin/test-email', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -147,7 +148,7 @@ export default function AdminDashboardPage() {
         setEmailSystemStatus(data.data);
       } else if (response.status === 401) {
         console.log('Token invalid, using test API');
-        const testResponse = await fetch('/api/test-email-simple', {
+        const testResponse = await authFetch('/api/test-email-simple', {
           method: 'GET'
         });
         
