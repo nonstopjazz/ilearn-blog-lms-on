@@ -3,11 +3,17 @@ import { sendReminderEmail } from '@/lib/emailService';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/security-config';
 
-const supabase = createSupabaseAdminClient();
+// 延遲初始化 Supabase admin client
+let _supabase = null;
+function getSupabase() {
+  if (!_supabase) _supabase = createSupabaseAdminClient();
+  return _supabase;
+}
 
 // 檢查管理員權限
 async function checkAdminPermission(request) {
   try {
+    const supabase = getSupabase();
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return { error: '缺少認證資訊', status: 401 };
@@ -55,7 +61,8 @@ const reminderTypeMapping = {
 // 檢查學習進度提醒條件
 async function checkProgressReminders() {
   const results = [];
-  
+  const supabase = getSupabase();
+
   try {
     // 查詢啟用的進度提醒設定
     const { data: progressReminders } = await supabase
@@ -134,7 +141,8 @@ async function checkProgressReminders() {
 // 檢查學習中斷提醒
 async function checkInactivityReminders() {
   const results = [];
-  
+  const supabase = getSupabase();
+
   try {
     // 查詢啟用的學習中斷提醒設定
     const { data: inactivityReminders } = await supabase
@@ -212,7 +220,8 @@ async function checkInactivityReminders() {
 // 檢查作業截止提醒
 async function checkDeadlineReminders() {
   const results = [];
-  
+  const supabase = getSupabase();
+
   try {
     // 查詢啟用的截止日期提醒設定
     const { data: deadlineReminders } = await supabase
@@ -290,7 +299,8 @@ async function checkDeadlineReminders() {
 // 檢查作業提醒
 async function checkAssignmentReminders() {
   const results = [];
-  
+  const supabase = getSupabase();
+
   try {
     // 查詢啟用的作業提醒設定
     const { data: assignmentReminders } = await supabase
@@ -363,7 +373,8 @@ async function checkAssignmentReminders() {
 // 檢查新內容提醒
 async function checkNewContentReminders() {
   const results = [];
-  
+  const supabase = getSupabase();
+
   try {
     // 查詢啟用的新內容提醒設定
     const { data: newContentReminders } = await supabase
@@ -438,7 +449,7 @@ async function checkNewContentReminders() {
 // 發送站內通知
 async function sendInAppNotification(userId, title, message, actionUrl) {
   try {
-    await supabase
+    await getSupabase()
       .from('notifications')
       .insert([{
         user_id: userId,
@@ -458,7 +469,7 @@ async function sendInAppNotification(userId, title, message, actionUrl) {
 // 記錄提醒發送
 async function logReminderSent(userId, courseId, reminderType, deliveryMethod, subject, message, triggerData, success = true, error = null) {
   try {
-    await supabase
+    await getSupabase()
       .from('reminder_logs')
       .insert([{
         user_id: userId,
