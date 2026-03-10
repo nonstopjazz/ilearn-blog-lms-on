@@ -172,7 +172,7 @@ export default function EssayUploadPage() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         toast.error('請先登入');
-        router.push('/login');
+        router.push('/auth');
         return;
       }
 

@@ -61,7 +61,7 @@ export default function EssayListPage() {
       return () => clearTimeout(timer);
     } else if (!authLoading && !isAuthenticated) {
       // 如果未登入，導向登入頁
-      router.push('/login');
+      router.push('/auth');
     }
   }, [authLoading, isAuthenticated]);
 

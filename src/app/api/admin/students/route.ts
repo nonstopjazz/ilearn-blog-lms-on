@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/api-auth';
-import { isAdmin } from '@/lib/security-config';
+import { isAdmin, ADMIN_EMAILS } from '@/lib/security-config';
 
 // 建立學生統計資料的輔助函數
 async function buildStudentStats(supabase: any, studentId: string, name: string, email: string, userInfo: any = {}) {
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // 使用與 requests 頁面完全相同的查詢方式
+    // 1. 從 course_requests 取得已批准的學生
     const { data: approvedRequests, error: requestsError } = await supabase
       .from('course_requests')
       .select('*')
@@ -92,13 +92,51 @@ export async function GET(request: NextRequest) {
 
     if (requestsError) {
       console.error('[Admin Students API] Error fetching course requests:', requestsError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch student data' },
-        { status: 500 }
-      );
     }
 
-    if (!approvedRequests || approvedRequests.length === 0) {
+    // 從批准的申請中提取唯一的學生
+    const uniqueStudents = new Map();
+    if (approvedRequests) {
+      approvedRequests.forEach(request => {
+        if (!uniqueStudents.has(request.user_id)) {
+          uniqueStudents.set(request.user_id, {
+            id: request.user_id,
+            name: request.user_info?.name || '未知學生',
+            email: request.user_info?.email || 'no-email@example.com',
+            user_info: request.user_info || {},
+            first_approved_at: request.reviewed_at
+          });
+        }
+      });
+    }
+
+    // 2. 從 auth.users 取得所有已註冊用戶（排除管理員），補充未在 course_requests 中的用戶
+    try {
+      const { data: { users: allAuthUsers }, error: authUsersError } = await supabase.auth.admin.listUsers();
+      if (!authUsersError && allAuthUsers) {
+        for (const authUser of allAuthUsers) {
+          // 跳過管理員帳號
+          if (authUser.email && ADMIN_EMAILS.includes(authUser.email)) continue;
+          // 跳過已經在列表中的用戶
+          if (uniqueStudents.has(authUser.id)) continue;
+
+          uniqueStudents.set(authUser.id, {
+            id: authUser.id,
+            name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || '未知學生',
+            email: authUser.email || 'no-email@example.com',
+            user_info: {
+              name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || '未知學生',
+              email: authUser.email,
+            },
+            first_approved_at: authUser.created_at
+          });
+        }
+      }
+    } catch (authError) {
+      console.error('[Admin Students API] Error fetching auth users:', authError);
+    }
+
+    if (uniqueStudents.size === 0) {
       return NextResponse.json({
         success: true,
         data: [],
@@ -109,20 +147,6 @@ export async function GET(request: NextRequest) {
         }
       });
     }
-
-    // 從批准的申請中提取唯一的學生 - 確保使用正確的資料結構
-    const uniqueStudents = new Map();
-    approvedRequests.forEach(request => {
-      if (!uniqueStudents.has(request.user_id)) {
-        uniqueStudents.set(request.user_id, {
-          id: request.user_id,
-          name: request.user_info?.name || '未知學生',
-          email: request.user_info?.email || 'no-email@example.com',
-          user_info: request.user_info || {},
-          first_approved_at: request.reviewed_at
-        });
-      }
-    });
 
     // 轉換為陣列並分頁
     const studentsList = Array.from(uniqueStudents.values()).slice(offset, offset + limit);
