@@ -128,7 +128,7 @@ export default function EssayDetailPage() {
         fetchEssay();
       }
     } else if (!authLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push('/auth');
     }
   }, [authLoading, user, isAuthenticated, essayId]);
 
